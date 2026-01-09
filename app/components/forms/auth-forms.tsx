@@ -86,8 +86,16 @@ export function ForgotPasswordForm() {
   );
 }
 
-export function ResetPasswordForm({ token }: { token?: string }) {
+export function ResetPasswordForm({
+  token,
+  tokenValid
+}: {
+  token?: string;
+  tokenValid: boolean;
+}) {
   const [state, formAction] = useFormState(resetPasswordFormAction, initialState);
+  const hasToken = Boolean(token);
+  const canSubmit = hasToken && tokenValid;
 
   return (
     <form action={formAction} className="space-y-4">
@@ -96,15 +104,28 @@ export function ResetPasswordForm({ token }: { token?: string }) {
           {state.error ?? state.success}
         </div>
       )}
-      <div>
-        <label className="text-sm text-slate-300">Token</label>
-        <Input name="token" defaultValue={token ?? ""} required />
-      </div>
+      {!hasToken && (
+        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+          Missing reset token. Please use the link from your email.
+        </div>
+      )}
+      {hasToken && !tokenValid && (
+        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+          This reset link is invalid or expired. Please request a new one.
+        </div>
+      )}
+      <input type="hidden" name="token" value={token ?? ""} />
       <div>
         <label className="text-sm text-slate-300">New password</label>
         <Input name="password" type="password" required minLength={10} />
       </div>
-      <Button className="w-full">Update password</Button>
+      <div>
+        <label className="text-sm text-slate-300">Confirm password</label>
+        <Input name="confirmPassword" type="password" required minLength={10} />
+      </div>
+      <Button className="w-full" disabled={!canSubmit}>
+        Update password
+      </Button>
     </form>
   );
 }

@@ -207,7 +207,7 @@ model AccountApprovalToken {
 model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String
-  token     String   @unique
+  tokenHash String   @unique
   expiresAt DateTime
   usedAt    DateTime?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -1,12 +1,19 @@
 import { z } from "zod";
 
+const passwordSchema = z
+  .string()
+  .min(10)
+  .regex(/[a-z]/, "Password must include a lowercase letter.")
+  .regex(/[A-Z]/, "Password must include an uppercase letter.")
+  .regex(/[0-9]/, "Password must include a number.");
+
 // AUTH-002: validate registration inputs with strong password rules
 export const registerSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
   phone: z.string().min(7),
   // AUTH-012: enforce minimum password length
-  password: z.string().min(10)
+  password: passwordSchema
 });
 
 export const loginSchema = z.object({
@@ -18,10 +25,16 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email()
 });
 
-export const resetPasswordSchema = z.object({
-  token: z.string().min(10),
-  password: z.string().min(10)
-});
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(10),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1)
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"]
+  });
 
 export const flightSchema = z.object({
   tailNumber: z.string().min(3),
