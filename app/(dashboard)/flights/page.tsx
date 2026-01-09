@@ -14,7 +14,7 @@ export default async function FlightsPage() {
 
   const flights = await prisma.flight.findMany({
     where: { userId: user.id },
-    orderBy: { departAt: "desc" }
+    orderBy: { startTime: "desc" }
   });
 
   return (
@@ -38,9 +38,9 @@ export default async function FlightsPage() {
             <Input name="tailNumber" placeholder="Tail #" required />
             <Input name="origin" placeholder="Origin (ICAO)" required />
             <Input name="destination" placeholder="Destination (ICAO)" />
-            <Input name="departAt" type="datetime-local" required />
-            <Input name="arriveAt" type="datetime-local" />
-            <Input name="durationMins" type="number" placeholder="Duration (mins)" />
+            <Input name="startTime" type="datetime-local" required />
+            <Input name="endTime" type="datetime-local" />
+            <Input name="durationMinutes" type="number" placeholder="Duration (mins)" />
             <div className="md:col-span-3">
               <Button type="submit">Save flight</Button>
             </div>
@@ -68,7 +68,7 @@ export default async function FlightsPage() {
                     {flight.origin} → {flight.destination ?? "TBD"}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {flight.departAt.toLocaleString()}
+                    {flight.startTime.toLocaleString()}
                   </p>
                 </div>
                 <Button variant="outline" asChild>

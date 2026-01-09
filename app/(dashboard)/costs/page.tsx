@@ -12,7 +12,7 @@ export default async function CostsPage() {
     return null;
   }
 
-  const costs = await prisma.cost.findMany({
+  const costs = await prisma.costItem.findMany({
     where: { userId: user.id },
     orderBy: { date: "desc" }
   });

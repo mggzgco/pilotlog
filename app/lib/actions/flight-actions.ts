@@ -10,7 +10,7 @@ export async function createFlightAction(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
   const parsed = flightSchema.safeParse({
     ...raw,
-    durationMins: raw.durationMins ? Number(raw.durationMins) : undefined
+    durationMinutes: raw.durationMinutes ? Number(raw.durationMinutes) : undefined
   });
 
   if (!parsed.success) {
@@ -18,7 +18,7 @@ export async function createFlightAction(formData: FormData) {
   }
 
   const user = await requireUser();
-  const { tailNumber, origin, destination, departAt, arriveAt, durationMins } =
+  const { tailNumber, origin, destination, startTime, endTime, durationMinutes } =
     parsed.data;
 
   // FLIGHT-001: create a flight record with basic metadata
@@ -28,9 +28,9 @@ export async function createFlightAction(formData: FormData) {
       tailNumber,
       origin,
       destination,
-      departAt: new Date(departAt),
-      arriveAt: arriveAt ? new Date(arriveAt) : null,
-      durationMins: durationMins ?? null
+      startTime: new Date(startTime),
+      endTime: endTime ? new Date(endTime) : null,
+      durationMinutes: durationMinutes ?? null
     }
   });
 

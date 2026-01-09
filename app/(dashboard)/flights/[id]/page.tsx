@@ -52,7 +52,7 @@ export default async function FlightDetailPage({
             <div>
               <p className="text-xs uppercase text-slate-400">Duration</p>
               <p className="text-lg font-semibold">
-                {flight.durationMins ?? "--"} mins
+                {flight.durationMinutes ?? "--"} mins
               </p>
             </div>
             <div>
@@ -64,7 +64,7 @@ export default async function FlightDetailPage({
             <div>
               <p className="text-xs uppercase text-slate-400">Departure</p>
               <p className="text-lg font-semibold">
-                {flight.departAt.toLocaleString()}
+                {flight.startTime.toLocaleString()}
               </p>
             </div>
           </div>
