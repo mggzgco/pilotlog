@@ -4,6 +4,7 @@ import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { importSchema } from "@/app/lib/validation";
 import { getAdsbProvider, defaultProviderName } from "@/app/lib/adsb";
+import { dedupeImportCandidates } from "@/app/lib/flights/imports";
 
 const searchSchema = importSchema.extend({
   tailNumber: z.string().min(3)
@@ -34,10 +35,11 @@ export async function POST(request: Request) {
 
   const provider = getAdsbProvider();
   const flights = await provider.searchFlights(parsed.data.tailNumber.trim(), start, end);
+  const deduped = dedupeImportCandidates(flights);
 
   return NextResponse.json({
     provider: defaultProviderName,
-    flights: flights.map((flight) => ({
+    flights: deduped.map((flight) => ({
       providerFlightId: flight.providerFlightId,
       tailNumber: flight.tailNumber,
       startTime: flight.startTime.toISOString(),

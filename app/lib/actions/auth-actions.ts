@@ -14,7 +14,7 @@ import {
   consumeLoginAttempt,
   formatRateLimitError,
   resetLoginAttempts
-} from "@/app/lib/auth/rate-limit";
+} from "@/src/lib/security/ratelimit";
 import {
   registerSchema,
   loginSchema,
@@ -140,20 +140,61 @@ export async function loginAction(formData: FormData) {
 
   const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user) {
+    await recordAuditEvent({
+      action: "auth.login.failed",
+      metadata: {
+        email: normalizedEmail,
+        reason: "not_found",
+        ipAddress: getClientIp()
+      }
+    });
     return { error: "Invalid credentials." };
   }
 
   // AUTH-004: pending accounts cannot sign in until approved
   if (user.status === "PENDING") {
+    await recordAuditEvent({
+      userId: user.id,
+      action: "auth.login.failed",
+      entityType: "User",
+      entityId: user.id,
+      metadata: {
+        email: user.email,
+        reason: "pending",
+        ipAddress: getClientIp()
+      }
+    });
     return { error: "Account pending approval. Please wait for an admin to approve." };
   }
 
   if (user.status === "DISABLED") {
+    await recordAuditEvent({
+      userId: user.id,
+      action: "auth.login.failed",
+      entityType: "User",
+      entityId: user.id,
+      metadata: {
+        email: user.email,
+        reason: "disabled",
+        ipAddress: getClientIp()
+      }
+    });
     return { error: "Account disabled. Contact support for help." };
   }
 
   const valid = await verifyPassword(user.passwordHash, password);
   if (!valid) {
+    await recordAuditEvent({
+      userId: user.id,
+      action: "auth.login.failed",
+      entityType: "User",
+      entityId: user.id,
+      metadata: {
+        email: user.email,
+        reason: "invalid_password",
+        ipAddress: getClientIp()
+      }
+    });
     return { error: "Invalid credentials." };
   }
 
@@ -167,7 +208,10 @@ export async function loginAction(formData: FormData) {
     userId: user.id,
     action: "auth.login",
     entityType: "User",
-    entityId: user.id
+    entityId: user.id,
+    metadata: {
+      ipAddress: getClientIp()
+    }
   });
 
   redirect("/dashboard");
