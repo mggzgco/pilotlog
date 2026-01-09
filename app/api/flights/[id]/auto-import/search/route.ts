@@ -4,18 +4,7 @@ import { getCurrentUser } from "@/app/lib/auth/session";
 import { prisma } from "@/app/lib/db";
 import { defaultProviderName, getAdsbProvider } from "@/app/lib/adsb";
 import { dedupeImportCandidates } from "@/app/lib/flights/imports";
-import { deriveAutoImportWindow } from "@/app/lib/flights/auto-import";
-
-function candidateScore(
-  referenceStart: Date,
-  referenceEnd: Date,
-  candidateStart: Date,
-  candidateEnd: Date
-) {
-  const startDiff = Math.abs(candidateStart.getTime() - referenceStart.getTime());
-  const endDiff = Math.abs(candidateEnd.getTime() - referenceEnd.getTime());
-  return startDiff + endDiff;
-}
+import { deriveAutoImportWindow, scoreAutoImportCandidate } from "@/app/lib/flights/auto-import";
 
 export async function POST(
   request: Request,
@@ -60,8 +49,18 @@ export async function POST(
   const deduped = dedupeImportCandidates(flights);
   deduped.sort(
     (a, b) =>
-      candidateScore(window.referenceStart, window.referenceEnd, a.startTime, a.endTime) -
-      candidateScore(window.referenceStart, window.referenceEnd, b.startTime, b.endTime)
+      scoreAutoImportCandidate(
+        window.referenceStart,
+        window.referenceEnd,
+        a.startTime,
+        a.endTime
+      ) -
+      scoreAutoImportCandidate(
+        window.referenceStart,
+        window.referenceEnd,
+        b.startTime,
+        b.endTime
+      )
   );
 
   return NextResponse.json({
