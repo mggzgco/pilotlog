@@ -12,6 +12,18 @@ enum UserRole {
   ADMIN
 }
 
+enum ChecklistType {
+  PREFLIGHT
+  POSTFLIGHT
+}
+
+enum AdsbMatchStatus {
+  PENDING
+  MATCHED
+  AMBIGUOUS
+  MISSING
+}
+
 model User {
   id           String             @id @default(cuid())
   email        String             @unique
@@ -22,6 +34,7 @@ model User {
   createdAt    DateTime           @default(now())
   sessions     Session[]
   flights      Flight[]
+  planned      PlannedFlight[]
   aircraft     Aircraft[]
   logbook      LogbookEntry[]
   costs        Cost[]
@@ -49,8 +62,42 @@ model Flight {
   statsJson      Json?
   createdAt      DateTime      @default(now())
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plannedFlight  PlannedFlight?
   logbookEntries LogbookEntry[]
   costs          Cost[]
+}
+
+model PlannedFlight {
+  id                String               @id @default(cuid())
+  userId            String
+  tailNumber        String
+  plannedAt         DateTime?
+  preflightSignedAt DateTime?
+  preflightSignedBy String?
+  postflightSignedAt DateTime?
+  postflightSignedBy String?
+  postflightStartedAt DateTime?
+  adsbMatchStatus   AdsbMatchStatus      @default(PENDING)
+  adsbCandidates    Json?
+  flightId          String?
+  createdAt         DateTime             @default(now())
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight            Flight?              @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  checklistItems    PlannedChecklistItem[]
+}
+
+model PlannedChecklistItem {
+  id              String         @id @default(cuid())
+  plannedFlightId String
+  type            ChecklistType
+  title           String
+  required        Boolean        @default(true)
+  order           Int            @default(0)
+  completedAt     DateTime?
+  completedBy     String?
+  plannedFlight   PlannedFlight  @relation(fields: [plannedFlightId], references: [id], onDelete: Cascade)
+
+  @@index([plannedFlightId])
 }
 
 model Aircraft {
