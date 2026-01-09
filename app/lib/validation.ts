@@ -53,3 +53,33 @@ export const importSchema = z.object({
   start: z.string().min(1),
   end: z.string().min(1)
 });
+
+export const plannedFlightSchema = z.object({
+  tailNumber: z.string().min(3),
+  plannedAt: z.string().optional()
+});
+
+export const checklistItemSchema = z.object({
+  itemId: z.string().min(1),
+  completed: z.string().optional()
+});
+
+export const plannedFlightSignoffSchema = z.object({
+  plannedFlightId: z.string().min(1)
+});
+
+export const plannedAdsbSelectionSchema = z.object({
+  plannedFlightId: z.string().min(1),
+  tailNumber: z.string().min(3),
+  origin: z.string().min(3),
+  destination: z.string().optional(),
+  departAt: z.string().min(1),
+  arriveAt: z.string().min(1),
+  durationMins: z.string().optional(),
+  distanceNm: z.string().optional(),
+  routePolyline: z.string().optional()
+});
+
+export const logbookWithFlightSchema = logbookSchema.extend({
+  flightId: z.string().min(1)
+});
