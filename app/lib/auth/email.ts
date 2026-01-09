@@ -9,6 +9,12 @@ type ApprovalEmailInput = {
   rejectUrl: string;
 };
 
+type PasswordResetEmailInput = {
+  recipientEmail: string;
+  recipientName: string | null;
+  resetUrl: string;
+};
+
 function getTransport() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT ?? 587);
@@ -50,6 +56,34 @@ export async function sendApprovalEmail(payload: ApprovalEmailInput) {
   await transporter.sendMail({
     from,
     to: payload.approverEmail,
+    subject,
+    text
+  });
+}
+
+export async function sendPasswordResetEmail(payload: PasswordResetEmailInput) {
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "no-reply@pilotlog.app";
+  if (!from) {
+    throw new Error("SMTP_FROM is not configured.");
+  }
+
+  const transporter = getTransport();
+
+  const subject = "Reset your PilotLog password";
+  const text = [
+    `Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},`,
+    "",
+    "We received a request to reset your PilotLog password.",
+    "Use the link below to set a new password. This link expires in 60 minutes.",
+    "",
+    payload.resetUrl,
+    "",
+    "If you did not request this, you can safely ignore this email."
+  ].join("\n");
+
+  await transporter.sendMail({
+    from,
+    to: payload.recipientEmail,
     subject,
     text
   });

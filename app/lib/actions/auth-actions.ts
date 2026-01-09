@@ -2,7 +2,6 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import crypto from "crypto";
 import { lucia } from "@/app/lib/auth/lucia";
 import { prisma } from "@/app/lib/db";
 import { hashPassword, verifyPassword } from "@/app/lib/password";
@@ -22,6 +21,10 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema
 } from "@/app/lib/validation";
+import {
+  requestPasswordReset,
+  resetPassword as performPasswordReset
+} from "@/app/lib/auth/password-reset";
 
 export type AuthFormState = { error?: string; success?: string };
 
@@ -199,27 +202,11 @@ export async function forgotPasswordAction(formData: FormData) {
   }
 
   const { email } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return { error: "If the email exists, a reset link will be sent." };
+  const result = await requestPasswordReset({ email, ipAddress: getClientIp() });
+  if (result.error) {
+    return { error: result.error };
   }
-
-  // AUTH-008: issue expiring password reset tokens
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
-
-  await prisma.passwordResetToken.create({
-    data: {
-      userId: user.id,
-      token,
-      expiresAt
-    }
-  });
-
-  // AUTH-009: send reset link via email (mocked)
-  console.log(`Password reset for ${email}: /reset-password?token=${token}`);
-
-  return { success: "Reset link sent." };
+  return { success: result.success };
 }
 
 export async function resetPasswordAction(formData: FormData) {
@@ -230,27 +217,7 @@ export async function resetPasswordAction(formData: FormData) {
   }
 
   const { token, password } = parsed.data;
-
-  const record = await prisma.passwordResetToken.findUnique({ where: { token } });
-  // AUTH-010: single-use reset tokens
-  if (!record || record.usedAt || record.expiresAt < new Date()) {
-    return { error: "Token invalid or expired." };
-  }
-
-  const passwordHash = await hashPassword(password);
-
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { passwordHash }
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() }
-    })
-  ]);
-
-  return { success: "Password reset. Please log in." };
+  return performPasswordReset({ token, password });
 }
 
 export async function registerFormAction(
