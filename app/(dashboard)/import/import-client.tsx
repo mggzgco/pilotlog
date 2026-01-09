@@ -40,7 +40,11 @@ interface SearchResponse {
   flights: FlightCandidateResponse[];
 }
 
-export function ImportClient() {
+interface ImportClientProps {
+  flightId?: string | null;
+}
+
+export function ImportClient({ flightId }: ImportClientProps) {
   const [tailNumber, setTailNumber] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -51,6 +55,7 @@ export function ImportClient() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { addToast } = useToast();
+  const isAttachMode = Boolean(flightId);
 
   const selectedFlight = useMemo(
     () => flights.find((flight) => flight.providerFlightId === selectedId) ?? null,
@@ -64,15 +69,20 @@ export function ImportClient() {
     setSelectedId(null);
 
     try {
-      const response = await fetch("/api/import/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tailNumber: tailNumber.trim(),
-          start: startTime,
-          end: endTime
-        })
-      });
+      const response = await fetch(
+        isAttachMode ? `/api/flights/${flightId}/auto-import/search` : "/api/import/search",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: isAttachMode
+            ? JSON.stringify({})
+            : JSON.stringify({
+                tailNumber: tailNumber.trim(),
+                start: startTime,
+                end: endTime
+              })
+        }
+      );
 
       if (!response.ok) {
         const payload = await response.json();
@@ -106,22 +116,29 @@ export function ImportClient() {
     setMessage(null);
 
     try {
-      const response = await fetch("/api/import/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider,
-          candidate: selectedFlight
-        })
-      });
+      const response = await fetch(
+        isAttachMode ? `/api/flights/${flightId}/auto-import/attach` : "/api/import/save",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            isAttachMode
+              ? { provider, providerFlightId: selectedFlight.providerFlightId }
+              : { provider, candidate: selectedFlight }
+          )
+        }
+      );
 
       if (!response.ok) {
         const payload = await response.json();
         throw new Error(payload.error ?? "Unable to import flight.");
       }
 
-      setMessage("Flight imported successfully.");
-      addToast("Flight imported successfully.", "success");
+      const successMessage = isAttachMode
+        ? "Flight attached successfully."
+        : "Flight imported successfully.";
+      setMessage(successMessage);
+      addToast(successMessage, "success");
     } catch (error) {
       const nextMessage =
         error instanceof Error ? error.message : "Unable to import flight.";
@@ -137,7 +154,9 @@ export function ImportClient() {
       <div>
         <h2 className="text-2xl font-semibold">ADS-B Import</h2>
         <p className="text-sm text-slate-400">
-          Pull flights by tail number and time window.
+          {isAttachMode
+            ? "Search ADS-B flights to attach to this planned flight."
+            : "Pull flights by tail number and time window."}
         </p>
       </div>
 
@@ -147,27 +166,35 @@ export function ImportClient() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSearch} className="grid gap-3 md:grid-cols-3">
-            <Input
-              name="tailNumber"
-              placeholder="Tail # (e.g. N12345)"
-              value={tailNumber}
-              onChange={(event) => setTailNumber(event.target.value)}
-              required
-            />
-            <Input
-              name="start"
-              type="datetime-local"
-              value={startTime}
-              onChange={(event) => setStartTime(event.target.value)}
-              required
-            />
-            <Input
-              name="end"
-              type="datetime-local"
-              value={endTime}
-              onChange={(event) => setEndTime(event.target.value)}
-              required
-            />
+            {isAttachMode ? (
+              <div className="md:col-span-3 text-sm text-slate-400">
+                Tail number and time window are derived from the planned flight details.
+              </div>
+            ) : (
+              <>
+                <Input
+                  name="tailNumber"
+                  placeholder="Tail # (e.g. N12345)"
+                  value={tailNumber}
+                  onChange={(event) => setTailNumber(event.target.value)}
+                  required
+                />
+                <Input
+                  name="start"
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(event) => setStartTime(event.target.value)}
+                  required
+                />
+                <Input
+                  name="end"
+                  type="datetime-local"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
+                  required
+                />
+              </>
+            )}
             <div className="md:col-span-3">
               <Button type="submit" disabled={isSearching}>
                 {isSearching ? (
@@ -289,7 +316,7 @@ export function ImportClient() {
                     Saving...
                   </>
                 ) : (
-                  "Save flight"
+                  isAttachMode ? "Attach flight" : "Save flight"
                 )}
               </Button>
             </>
