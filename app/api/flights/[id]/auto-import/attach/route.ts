@@ -4,9 +4,9 @@ import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { prisma } from "@/app/lib/db";
 import { defaultProviderName, getAdsbProvider } from "@/app/lib/adsb";
-import { computeDistanceNm, computeDurationMinutes } from "@/app/lib/flights/compute";
 import { dedupeImportCandidates } from "@/app/lib/flights/imports";
-import { deriveAutoImportWindow } from "@/app/lib/flights/auto-import";
+import { attachAdsbCandidateToFlight, deriveAutoImportWindow } from "@/app/lib/flights/auto-import";
+import { recordAuditEvent } from "@/app/lib/audit";
 import { handleApiError } from "@/src/lib/security/errors";
 
 const attachSchema = z.object({
@@ -93,84 +93,22 @@ export async function POST(
       );
     }
 
-    const trackPoints = match.track
-      .map((point) => ({
-        recordedAt: point.recordedAt,
-        latitude: point.latitude,
-        longitude: point.longitude,
-        altitudeFeet: point.altitudeFeet ?? null,
-        groundspeedKt: point.groundspeedKt ?? null,
-        headingDeg: point.headingDeg ?? null
-      }))
-      .sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime());
-
-    const durationMinutes =
-      match.durationMinutes ??
-      computeDurationMinutes(match.startTime, match.endTime, trackPoints);
-    const distanceNm = match.distanceNm ?? computeDistanceNm(trackPoints);
-    const roundedDuration = durationMinutes ? Math.round(durationMinutes) : null;
-    const roundedDistance = distanceNm ? Math.round(distanceNm) : null;
-    const totalTimeHours =
-      durationMinutes !== null && durationMinutes !== undefined
-        ? Math.round((durationMinutes / 60) * 100) / 100
-        : null;
-
-    const updated = await prisma.$transaction(async (tx) => {
-      await tx.trackPoint.deleteMany({ where: { flightId: flight.id } });
-
-      if (trackPoints.length > 0) {
-        await tx.trackPoint.createMany({
-          data: trackPoints.map((point) => ({
-            flightId: flight.id,
-            recordedAt: point.recordedAt,
-            latitude: point.latitude,
-            longitude: point.longitude,
-            altitudeFeet: point.altitudeFeet,
-            groundspeedKt: point.groundspeedKt,
-            headingDeg: point.headingDeg
-          }))
-        });
-      }
-
-      const updatedFlight = await tx.flight.update({
-        where: { id: flight.id },
-        data: {
-          importedProvider: provider,
-          providerFlightId,
-          startTime: match.startTime,
-          endTime: match.endTime,
-          durationMinutes: roundedDuration,
-          distanceNm: roundedDistance,
-          origin: match.depLabel,
-          destination: match.arrLabel,
-          statsJson: match.stats ?? null,
-          status: "IMPORTED",
-          autoImportStatus: "MATCHED"
-        }
-      });
-
-      const logbookEntry = await tx.logbookEntry.findFirst({
-        where: { flightId: flight.id }
-      });
-
-      if (!logbookEntry) {
-        await tx.logbookEntry.create({
-          data: {
-            userId: user.id,
-            flightId: flight.id,
-            date: match.startTime,
-            totalTime: totalTimeHours
-          }
-        });
-      } else if (logbookEntry.totalTime === null && totalTimeHours !== null) {
-        await tx.logbookEntry.update({
-          where: { id: logbookEntry.id },
-          data: { totalTime: totalTimeHours }
-        });
-      }
-
-      return updatedFlight;
+    const updated = await attachAdsbCandidateToFlight({
+      flight,
+      userId: user.id,
+      provider,
+      candidate: match
     });
+
+    if (flight.autoImportStatus === "AMBIGUOUS" || flight.autoImportStatus === "RUNNING") {
+      await recordAuditEvent({
+        userId: user.id,
+        action: "adsb_auto_import_matched",
+        entityType: "Flight",
+        entityId: flight.id,
+        metadata: { providerFlightId }
+      });
+    }
 
     return NextResponse.json({ id: updated.id });
   } catch (error) {

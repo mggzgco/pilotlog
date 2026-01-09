@@ -108,9 +108,26 @@ export async function POST(
     entityId: flight.id
   });
 
-  await triggerAutoImportForFlight(flight.id);
+  const autoImportResult = await triggerAutoImportForFlight({
+    flightId: flight.id,
+    userId: user.id
+  });
 
-  redirectUrl.searchParams.set("toast", "Post-flight checklist signed.");
-  redirectUrl.searchParams.set("toastType", "success");
+  if (autoImportResult.status === "AMBIGUOUS") {
+    return NextResponse.redirect(new URL(`/flights/${flight.id}/match`, request.url));
+  }
+
+  if (autoImportResult.status === "MATCHED") {
+    redirectUrl.searchParams.set("adsbImport", "matched");
+  }
+
+  if (autoImportResult.status === "FAILED") {
+    redirectUrl.searchParams.set("toast", "Post-flight checklist signed, but ADS-B import failed.");
+    redirectUrl.searchParams.set("toastType", "error");
+  } else {
+    redirectUrl.searchParams.set("toast", "Post-flight checklist signed.");
+    redirectUrl.searchParams.set("toastType", "success");
+  }
+
   return NextResponse.redirect(redirectUrl);
 }
