@@ -1,11 +1,11 @@
-import { getCurrentSession } from "@/app/lib/session";
+import { getCurrentUser } from "@/app/lib/auth/session";
 import { updateProfileAction } from "@/app/lib/actions/profile-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 
 export default async function ProfilePage() {
-  const { user } = await getCurrentSession();
+  const { user } = await getCurrentUser();
   if (!user) {
     return null;
   }
@@ -40,7 +40,12 @@ export default async function ProfilePage() {
           </form>
           <p className="mt-4 text-xs text-slate-500">
             {/* PROF-004: surface account approval status */}
-            Account status: {user.approved ? "Approved" : "Pending approval"}
+            Account status:{" "}
+            {user.status === "ACTIVE"
+              ? "Active"
+              : user.status === "PENDING"
+                ? "Pending approval"
+                : "Disabled"}
           </p>
         </CardContent>
       </Card>

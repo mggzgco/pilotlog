@@ -4,6 +4,7 @@ import { z } from "zod";
 export const registerSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
+  phone: z.string().min(7),
   // AUTH-012: enforce minimum password length
   password: z.string().min(10)
 });

@@ -32,7 +32,7 @@ async function main() {
     data: {
       email: normalizedEmail,
       passwordHash,
-      approved: true,
+      status: "ACTIVE",
       role: UserRole.ADMIN,
       name: "Seed Admin"
     }

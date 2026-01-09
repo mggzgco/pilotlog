@@ -1,11 +1,21 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import crypto from "crypto";
-import { lucia } from "@/app/lib/auth";
+import { lucia } from "@/app/lib/auth/lucia";
 import { prisma } from "@/app/lib/db";
 import { hashPassword, verifyPassword } from "@/app/lib/password";
+import { recordAuditEvent } from "@/app/lib/audit";
+import { validateCsrf } from "@/app/lib/auth/csrf";
+import { createApprovalToken, hashApprovalToken, approvalTokenExpiry } from "@/app/lib/auth/approvals";
+import { sendApprovalEmail } from "@/app/lib/auth/email";
+import { getCurrentUser } from "@/app/lib/auth/session";
+import {
+  consumeLoginAttempt,
+  formatRateLimitError,
+  resetLoginAttempts
+} from "@/app/lib/auth/rate-limit";
 import {
   registerSchema,
   loginSchema,
@@ -15,16 +25,30 @@ import {
 
 export type AuthFormState = { error?: string; success?: string };
 
+function getClientIp() {
+  const forwarded = headers().get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim();
+  }
+  return headers().get("x-real-ip") ?? "unknown";
+}
+
 export async function registerAction(formData: FormData) {
+  const csrf = validateCsrf();
+  if (!csrf.ok) {
+    return { error: csrf.error };
+  }
+
   const raw = Object.fromEntries(formData.entries());
   const parsed = registerSchema.safeParse(raw);
   if (!parsed.success) {
     return { error: "Invalid registration data." };
   }
 
-  const { email, name, password } = parsed.data;
+  const { email, name, password, phone } = parsed.data;
+  const normalizedEmail = email.toLowerCase();
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     return { error: "Account already exists." };
   }
@@ -32,23 +56,71 @@ export async function registerAction(formData: FormData) {
   // AUTH-001: never store plaintext passwords
   const passwordHash = await hashPassword(password);
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
-      email,
+      email: normalizedEmail,
       name,
+      phone,
       passwordHash,
-      approved: false
+      status: "PENDING"
     }
   });
 
   // AUTH-006: notify approver about new account registration
   const approverEmail = process.env.APPROVER_EMAIL || "groendykm@icloud.com";
-  console.log(`Approval required for ${email}. Notify ${approverEmail}.`);
+  const token = createApprovalToken();
+  const tokenHash = hashApprovalToken(token);
+  const expiresAt = approvalTokenExpiry();
+
+  await prisma.accountApprovalToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt
+    }
+  });
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    "http://localhost:3000";
+  const approveUrl = new URL(`/api/admin/approve?token=${token}`, baseUrl).toString();
+  const rejectUrl = new URL(`/api/admin/reject?token=${token}`, baseUrl).toString();
+
+  try {
+    await sendApprovalEmail({
+      approverEmail,
+      applicantName: user.name,
+      applicantEmail: user.email,
+      applicantPhone: user.phone,
+      approveUrl,
+      rejectUrl
+    });
+  } catch (error) {
+    console.error("Failed to send approval email", error);
+    return { error: "Unable to send approval email. Please contact support." };
+  }
+
+  await recordAuditEvent({
+    userId: user.id,
+    action: "auth.registered",
+    entityType: "User",
+    entityId: user.id,
+    metadata: {
+      email: user.email,
+      approverEmail
+    }
+  });
 
   redirect("/login?registered=1");
 }
 
 export async function loginAction(formData: FormData) {
+  const csrf = validateCsrf();
+  if (!csrf.ok) {
+    return { error: csrf.error };
+  }
+
   const raw = Object.fromEntries(formData.entries());
   const parsed = loginSchema.safeParse(raw);
   if (!parsed.success) {
@@ -56,14 +128,25 @@ export async function loginAction(formData: FormData) {
   }
 
   const { email, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const normalizedEmail = email.toLowerCase();
+  const limiterKey = `${getClientIp()}:${normalizedEmail}`;
+  const limiter = consumeLoginAttempt(limiterKey);
+  if (!limiter.allowed) {
+    return { error: formatRateLimitError(limiter.resetAt) };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user) {
     return { error: "Invalid credentials." };
   }
 
   // AUTH-004: pending accounts cannot sign in until approved
-  if (!user.approved) {
-    return { error: "Account pending approval." };
+  if (user.status === "PENDING") {
+    return { error: "Account pending approval. Please wait for an admin to approve." };
+  }
+
+  if (user.status === "DISABLED") {
+    return { error: "Account disabled. Contact support for help." };
   }
 
   const valid = await verifyPassword(user.passwordHash, password);
@@ -76,10 +159,24 @@ export async function loginAction(formData: FormData) {
   const sessionCookie = lucia.createSessionCookie(session.id);
   cookies().set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 
+  resetLoginAttempts(limiterKey);
+  await recordAuditEvent({
+    userId: user.id,
+    action: "auth.login",
+    entityType: "User",
+    entityId: user.id
+  });
+
   redirect("/dashboard");
 }
 
 export async function logoutAction() {
+  const csrf = validateCsrf();
+  if (!csrf.ok) {
+    return { error: csrf.error };
+  }
+
+  const { user } = await getCurrentUser();
   const sessionId = cookies().get(lucia.sessionCookieName)?.value;
   if (sessionId) {
     await lucia.invalidateSession(sessionId);
@@ -87,6 +184,10 @@ export async function logoutAction() {
   const sessionCookie = lucia.createBlankSessionCookie();
   cookies().set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
   // AUTH-007: logout clears session cookie
+  await recordAuditEvent({
+    userId: user?.id ?? null,
+    action: "auth.logout"
+  });
   redirect("/login");
 }
 
