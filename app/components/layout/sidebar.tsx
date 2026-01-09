@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plane, ClipboardList, Receipt, Radar, User2, ShieldCheck } from "lucide-react";
+import { Plane, ClipboardList, Receipt, Radar, User2, ShieldCheck, BarChart3 } from "lucide-react";
 
 interface SidebarProps {
   user: {
@@ -16,6 +16,7 @@ const navItems = [
   { href: "/logbook", label: "Logbook", icon: ClipboardList },
   { href: "/costs", label: "Costs", icon: Receipt },
   { href: "/aircraft", label: "Aircraft", icon: Plane },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/profile", label: "Profile", icon: User2 }
 ];
 
