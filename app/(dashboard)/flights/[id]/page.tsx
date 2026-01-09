@@ -15,7 +15,8 @@ export default async function FlightDetailPage({
   }
 
   const flight = await prisma.flight.findFirst({
-    where: { id: params.id, userId: user.id }
+    where: { id: params.id, userId: user.id },
+    include: { trackPoints: { orderBy: { recordedAt: "asc" } } }
   });
 
   if (!flight) {
@@ -37,7 +38,10 @@ export default async function FlightDetailPage({
         </CardHeader>
         <CardContent>
           <div className="h-80">
-            <FlightMap polyline={flight.routePolyline} />
+            <FlightMap
+              polyline={flight.routePolyline}
+              track={flight.trackPoints ?? undefined}
+            />
           </div>
         </CardContent>
       </Card>

@@ -20,7 +20,8 @@ export default async function DashboardPage() {
     }),
     prisma.flight.findFirst({
       where: { userId: user.id },
-      orderBy: { startTime: "desc" }
+      orderBy: { startTime: "desc" },
+      include: { trackPoints: { orderBy: { recordedAt: "asc" } } }
     }),
     prisma.flight.findMany({
       where: { userId: user.id },
@@ -90,7 +91,10 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="h-72">
-            <FlightMap polyline={latestFlight?.routePolyline} />
+            <FlightMap
+              polyline={latestFlight?.routePolyline}
+              track={latestFlight?.trackPoints ?? undefined}
+            />
           </div>
         </CardContent>
       </Card>

@@ -3,8 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
-import { flightSchema, importSchema } from "@/app/lib/validation";
-import { importAdsbFlights } from "@/app/lib/adsb";
+import { flightSchema } from "@/app/lib/validation";
 
 export async function createFlightAction(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
@@ -33,26 +32,6 @@ export async function createFlightAction(formData: FormData) {
       durationMinutes: durationMinutes ?? null
     }
   });
-
-  redirect("/flights");
-}
-
-export async function importFlightsAction(formData: FormData) {
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = importSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { error: "Invalid import request." };
-  }
-
-  const user = await requireUser();
-
-  // IMPORT-001: import ADS-B flights by tail number and date/time window
-  await importAdsbFlights(
-    user.id,
-    parsed.data.tailNumber,
-    new Date(parsed.data.start),
-    new Date(parsed.data.end)
-  );
 
   redirect("/flights");
 }
