@@ -55,6 +55,10 @@ export function RegisterForm() {
         <Input name="email" type="email" required placeholder="you@example.com" />
       </div>
       <div>
+        <label className="text-sm text-slate-300">Phone</label>
+        <Input name="phone" type="tel" required placeholder="+1 (555) 555-5555" />
+      </div>
+      <div>
         <label className="text-sm text-slate-300">Password</label>
         <Input name="password" type="password" required minLength={10} />
       </div>

@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
-import { redirect } from "next/navigation";
-import { getCurrentSession } from "@/app/lib/session";
+import { requireUser } from "@/app/lib/auth/session";
 import { Sidebar } from "@/app/components/layout/sidebar";
 import { Topbar } from "@/app/components/layout/topbar";
 
@@ -9,10 +8,7 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  const { user } = await getCurrentSession();
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   // UX-004: split layout with left nav + right reading pane
   return (

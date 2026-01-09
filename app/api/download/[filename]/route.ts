@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import path from "path";
 import { promises as fs } from "fs";
 import { prisma } from "@/app/lib/db";
-import { getCurrentSession } from "@/app/lib/session";
+import { getCurrentUser } from "@/app/lib/auth/session";
 
 export async function GET(
   _request: Request,
   { params }: { params: { filename: string } }
 ) {
-  const { user } = await getCurrentSession();
-  if (!user) {
+  const { user } = await getCurrentUser();
+  if (!user || user.status !== "ACTIVE") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
