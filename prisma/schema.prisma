@@ -111,6 +111,7 @@ model Flight {
   costItems           CostItem[]
   trackPoints         TrackPoint[]
   checklistRuns       FlightChecklistRun[]
+  receiptDocuments    ReceiptDocument[]
 
   @@unique([userId, importedProvider, providerFlightId])
 }
@@ -145,11 +146,11 @@ model CostItem {
   id          String   @id @default(cuid())
   userId      String
   flightId    String?
-  amount      Decimal  @db.Decimal(10, 2)
-  currency    String   @default("USD")
-  description String?
+  category    String
+  amountCents Int
+  vendor      String?
+  notes       String?
   date        DateTime
-  receiptPath String?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   flight      Flight?  @relation(fields: [flightId], references: [id], onDelete: SetNull)
   receipts    ReceiptDocument[]
@@ -160,6 +161,7 @@ model CostItem {
 model ReceiptDocument {
   id               String     @id @default(cuid())
   userId           String
+  flightId         String
   costItemId       String?
   originalFilename String
   storagePath      String
@@ -167,6 +169,7 @@ model ReceiptDocument {
   sizeBytes        Int?
   createdAt        DateTime   @default(now())
   user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight           Flight     @relation(fields: [flightId], references: [id], onDelete: Cascade)
   costItem         CostItem?  @relation(fields: [costItemId], references: [id], onDelete: SetNull)
 }
 

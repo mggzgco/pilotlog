@@ -63,9 +63,10 @@ export const flightSchema = z.object({
 });
 
 export const costSchema = z.object({
+  category: z.string().min(1),
   amount: z.string().min(1),
-  currency: z.string().min(3).default("USD"),
-  description: z.string().optional(),
+  vendor: z.string().optional(),
+  notes: z.string().optional(),
   date: z.string().min(1)
 });
 
