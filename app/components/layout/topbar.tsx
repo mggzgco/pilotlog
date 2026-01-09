@@ -4,6 +4,8 @@ import { logoutAction } from "@/app/lib/actions/auth-actions";
 interface TopbarProps {
   user: {
     name: string | null;
+    firstName: string | null;
+    lastName: string | null;
     email: string;
   };
 }
@@ -16,7 +18,13 @@ export function Topbar({ user }: TopbarProps) {
         <h1 className="text-lg font-semibold">Flight Training Super App</h1>
         <p className="text-sm text-slate-400">Plan, import, and log every flight.</p>
       </div>
-      <UserMenu name={user.name} email={user.email} onLogout={logoutAction} />
+      <UserMenu
+        name={user.name}
+        firstName={user.firstName}
+        lastName={user.lastName}
+        email={user.email}
+        onLogout={logoutAction}
+      />
     </header>
   );
 }
