@@ -52,7 +52,8 @@ export async function POST(
     date
   };
 
-  if (parsed.data.costItemId) {
+  const isUpdate = Boolean(parsed.data.costItemId);
+  if (isUpdate) {
     const existing = await prisma.costItem.findFirst({
       where: {
         id: parsed.data.costItemId,
@@ -80,5 +81,11 @@ export async function POST(
     });
   }
 
-  return NextResponse.redirect(new URL(`/flights/${flight.id}`, request.url));
+  const redirectUrl = new URL(`/flights/${flight.id}`, request.url);
+  redirectUrl.searchParams.set(
+    "toast",
+    isUpdate ? "Cost item updated." : "Cost item added."
+  );
+  redirectUrl.searchParams.set("toastType", "success");
+  return NextResponse.redirect(redirectUrl);
 }

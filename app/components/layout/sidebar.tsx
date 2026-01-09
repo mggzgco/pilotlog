@@ -9,7 +9,7 @@ interface SidebarProps {
   };
 }
 
-const navItems = [
+export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Plane },
   { href: "/flights", label: "Flights", icon: Radar },
   { href: "/import", label: "ADS-B Import", icon: ClipboardList },

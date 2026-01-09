@@ -33,5 +33,7 @@ export async function createFlightAction(formData: FormData) {
     }
   });
 
-  redirect("/flights");
+  redirect(
+    `/flights?toast=${encodeURIComponent("Flight saved.")}&toastType=success`
+  );
 }

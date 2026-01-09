@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { FlightMap } from "@/app/components/maps/flight-map";
 import { getLatestFlightWithTrackPoints, getRecentFlights } from "@/app/lib/flights/queries";
+import { EmptyState } from "@/app/components/ui/empty-state";
+import { Radar } from "lucide-react";
 
 function formatDuration(durationMinutes: number | null) {
   if (!durationMinutes) {
@@ -44,16 +46,22 @@ export default async function DashboardPage() {
         </div>
 
         <Card>
-          <CardContent className="flex flex-col items-start gap-4 py-12">
-            <div>
-              <h3 className="text-lg font-semibold">No flights yet</h3>
-              <p className="text-sm text-slate-400">
-                Import a flight to see your latest route and keep track of recent activity.
-              </p>
-            </div>
-            <Button asChild>
-              <Link href="/import">Import your first flight</Link>
-            </Button>
+          <CardContent className="py-10">
+            <EmptyState
+              icon={<Radar className="h-6 w-6" />}
+              title="No flights yet"
+              description="Import a flight to see your latest route and keep track of recent activity."
+              action={
+                <Button asChild>
+                  <Link href="/import">Import your first flight</Link>
+                </Button>
+              }
+              secondaryAction={
+                <Button variant="outline" asChild>
+                  <Link href="/flights">Add a manual flight</Link>
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       </div>
