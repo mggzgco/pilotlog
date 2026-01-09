@@ -1,17 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/app/lib/db";
-import { getCurrentSession } from "@/app/lib/session";
+import { requireUser } from "@/app/lib/auth/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { FlightMap } from "@/app/components/maps/flight-map";
 
 export default async function DashboardPage() {
-  const { user } = await getCurrentSession();
-  if (!user) {
-    return null;
-  }
+  const user = await requireUser();
 
-  const [flightCount, costTotal, logbookTotal, latestFlight] = await Promise.all([
+  const [flightCount, costTotal, logbookTotal, latestFlight, recentFlights] = await Promise.all([
     prisma.flight.count({ where: { userId: user.id } }),
     prisma.costItem.aggregate({
       where: { userId: user.id },
@@ -24,6 +21,11 @@ export default async function DashboardPage() {
     prisma.flight.findFirst({
       where: { userId: user.id },
       orderBy: { startTime: "desc" }
+    }),
+    prisma.flight.findMany({
+      where: { userId: user.id },
+      orderBy: { startTime: "desc" },
+      take: 3
     })
   ]);
 
@@ -89,6 +91,46 @@ export default async function DashboardPage() {
         <CardContent>
           <div className="h-72">
             <FlightMap polyline={latestFlight?.routePolyline} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-slate-400">Recent flights</p>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-hidden rounded-lg border border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Tail</th>
+                  <th className="px-4 py-3 text-left font-medium">Route</th>
+                  <th className="px-4 py-3 text-left font-medium">Start</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {recentFlights.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={3}>
+                      No flights logged yet.
+                    </td>
+                  </tr>
+                ) : (
+                  recentFlights.map((flight) => (
+                    <tr key={flight.id} className="text-slate-200">
+                      <td className="px-4 py-3">{flight.tailNumber}</td>
+                      <td className="px-4 py-3">
+                        {flight.origin} → {flight.destination ?? "TBD"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {flight.startTime.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

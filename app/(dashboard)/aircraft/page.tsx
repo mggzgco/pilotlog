@@ -1,15 +1,12 @@
 import { prisma } from "@/app/lib/db";
-import { getCurrentSession } from "@/app/lib/session";
+import { requireUser } from "@/app/lib/auth/session";
 import { createAircraftAction } from "@/app/lib/actions/aircraft-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 
 export default async function AircraftPage() {
-  const { user } = await getCurrentSession();
-  if (!user) {
-    return null;
-  }
+  const user = await requireUser();
 
   const aircraft = await prisma.aircraft.findMany({
     where: { userId: user.id },
@@ -43,21 +40,35 @@ export default async function AircraftPage() {
           <p className="text-sm text-slate-400">Fleet</p>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {aircraft.length === 0 && (
-              <p className="text-sm text-slate-500">No aircraft listed.</p>
-            )}
-            {aircraft.map((plane) => (
-              <div
-                key={plane.id}
-                className="flex items-center justify-between rounded-lg border border-slate-800 p-4"
-              >
-                <div>
-                  <p className="text-lg font-semibold">{plane.tailNumber}</p>
-                  <p className="text-xs text-slate-400">{plane.model ?? "—"}</p>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-hidden rounded-lg border border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Tail</th>
+                  <th className="px-4 py-3 text-left font-medium">Model</th>
+                  <th className="px-4 py-3 text-left font-medium">Added</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {aircraft.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={3}>
+                      No aircraft listed.
+                    </td>
+                  </tr>
+                ) : (
+                  aircraft.map((plane) => (
+                    <tr key={plane.id} className="text-slate-200">
+                      <td className="px-4 py-3">{plane.tailNumber}</td>
+                      <td className="px-4 py-3">{plane.model ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {plane.createdAt.toDateString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

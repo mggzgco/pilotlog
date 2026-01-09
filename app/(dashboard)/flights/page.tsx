@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/app/lib/db";
-import { getCurrentSession } from "@/app/lib/session";
+import { requireUser } from "@/app/lib/auth/session";
 import { createFlightAction } from "@/app/lib/actions/flight-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 
 export default async function FlightsPage() {
-  const { user } = await getCurrentSession();
-  if (!user) {
-    return null;
-  }
+  const user = await requireUser();
 
   const flights = await prisma.flight.findMany({
     where: { userId: user.id },
@@ -53,29 +50,43 @@ export default async function FlightsPage() {
           <p className="text-sm text-slate-400">Recent flights</p>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {flights.length === 0 && (
-              <p className="text-sm text-slate-500">No flights yet.</p>
-            )}
-            {flights.map((flight) => (
-              <div
-                key={flight.id}
-                className="flex items-center justify-between rounded-lg border border-slate-800 p-4"
-              >
-                <div>
-                  <p className="text-sm text-slate-400">{flight.tailNumber}</p>
-                  <p className="text-lg font-semibold">
-                    {flight.origin} → {flight.destination ?? "TBD"}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {flight.startTime.toLocaleString()}
-                  </p>
-                </div>
-                <Button variant="outline" asChild>
-                  <Link href={`/flights/${flight.id}`}>Details</Link>
-                </Button>
-              </div>
-            ))}
+          <div className="overflow-hidden rounded-lg border border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Tail</th>
+                  <th className="px-4 py-3 text-left font-medium">Route</th>
+                  <th className="px-4 py-3 text-left font-medium">Start</th>
+                  <th className="px-4 py-3 text-right font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {flights.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={4}>
+                      No flights yet.
+                    </td>
+                  </tr>
+                ) : (
+                  flights.map((flight) => (
+                    <tr key={flight.id} className="text-slate-200">
+                      <td className="px-4 py-3">{flight.tailNumber}</td>
+                      <td className="px-4 py-3">
+                        {flight.origin} → {flight.destination ?? "TBD"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {flight.startTime.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/flights/${flight.id}`}>Details</Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

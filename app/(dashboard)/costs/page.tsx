@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/app/lib/db";
-import { getCurrentSession } from "@/app/lib/session";
+import { requireUser } from "@/app/lib/auth/session";
 import { createCostAction } from "@/app/lib/actions/cost-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 
 export default async function CostsPage() {
-  const { user } = await getCurrentSession();
-  if (!user) {
-    return null;
-  }
+  const user = await requireUser();
 
   const costs = await prisma.costItem.findMany({
     where: { userId: user.id },
@@ -48,32 +45,48 @@ export default async function CostsPage() {
           <p className="text-sm text-slate-400">Recent expenses</p>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {/* COST-005: list recent expenses */}
-            {costs.length === 0 && (
-              <p className="text-sm text-slate-500">No expenses logged.</p>
-            )}
-            {costs.map((cost) => (
-              <div
-                key={cost.id}
-                className="flex items-center justify-between rounded-lg border border-slate-800 p-4"
-              >
-                <div>
-                  <p className="text-lg font-semibold">
-                    {cost.currency} {Number(cost.amount).toFixed(2)}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {cost.date.toDateString()} · {cost.description ?? "No description"}
-                  </p>
-                </div>
-                {cost.receiptPath && (
-                  /* COST-006: secure receipt downloads */
-                  <Button variant="outline" asChild>
-                    <Link href={`/api/download/${cost.receiptPath}`}>Receipt</Link>
-                  </Button>
+          <div className="overflow-hidden rounded-lg border border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Date</th>
+                  <th className="px-4 py-3 text-left font-medium">Description</th>
+                  <th className="px-4 py-3 text-left font-medium">Amount</th>
+                  <th className="px-4 py-3 text-right font-medium">Receipt</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {costs.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={4}>
+                      No expenses logged.
+                    </td>
+                  </tr>
+                ) : (
+                  costs.map((cost) => (
+                    <tr key={cost.id} className="text-slate-200">
+                      <td className="px-4 py-3 text-slate-400">
+                        {cost.date.toDateString()}
+                      </td>
+                      <td className="px-4 py-3">{cost.description ?? "No description"}</td>
+                      <td className="px-4 py-3">
+                        {cost.currency} {Number(cost.amount).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {cost.receiptPath ? (
+                          /* COST-006: secure receipt downloads */
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href={`/api/download/${cost.receiptPath}`}>Receipt</Link>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-slate-500">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
                 )}
-              </div>
-            ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
