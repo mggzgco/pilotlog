@@ -30,5 +30,8 @@ export async function POST(
     // Ignore missing file cleanup errors.
   }
 
-  return NextResponse.redirect(new URL(`/flights/${receipt.flightId}`, request.url));
+  const redirectUrl = new URL(`/flights/${receipt.flightId}`, request.url);
+  redirectUrl.searchParams.set("toast", "Receipt deleted.");
+  redirectUrl.searchParams.set("toastType", "success");
+  return NextResponse.redirect(redirectUrl);
 }

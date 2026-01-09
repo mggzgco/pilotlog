@@ -6,6 +6,10 @@ import { createFlightAction } from "@/app/lib/actions/flight-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
+import { EmptyState } from "@/app/components/ui/empty-state";
+import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { FlightsTable } from "@/app/components/flights/flights-table";
+import { Plane } from "lucide-react";
 
 type FlightsSearchParams = {
   tailNumber?: string;
@@ -121,9 +125,22 @@ export default async function FlightsPage({
           );
         });
 
-  const currencyFormatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD"
+  const flightRows = filteredFlights.map((flight) => {
+    const costTotalCents = flight.costItems.reduce(
+      (total, item) => total + item.amountCents,
+      0
+    );
+
+    return {
+      id: flight.id,
+      startTime: flight.startTime.toISOString(),
+      tailNumber: flight.tailNumber,
+      origin: flight.origin,
+      destination: flight.destination,
+      durationMinutes: flight.durationMinutes,
+      distanceNm: flight.distanceNm,
+      costTotalCents
+    };
   });
 
   return (
@@ -176,7 +193,7 @@ export default async function FlightsPage({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="add-manual">
         <CardHeader>
           <p className="text-sm text-slate-400">Add manual flight</p>
         </CardHeader>
@@ -189,7 +206,9 @@ export default async function FlightsPage({
             <Input name="endTime" type="datetime-local" />
             <Input name="durationMinutes" type="number" placeholder="Duration (mins)" />
             <div className="md:col-span-3">
-              <Button type="submit">Save flight</Button>
+              <FormSubmitButton type="submit" pendingText="Saving flight...">
+                Save flight
+              </FormSubmitButton>
             </div>
           </form>
         </CardContent>
@@ -200,72 +219,45 @@ export default async function FlightsPage({
           <p className="text-sm text-slate-400">Recent flights</p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-lg border border-slate-800">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Date</th>
-                  <th className="px-4 py-3 text-left font-medium">Tail</th>
-                  <th className="px-4 py-3 text-left font-medium">Route</th>
-                  <th className="px-4 py-3 text-right font-medium">
-                    Duration
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium">
-                    Distance
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium">Cost</th>
-                  <th className="px-4 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {filteredFlights.length === 0 ? (
-                  <tr>
-                    <td
-                      className="px-4 py-4 text-sm text-slate-500"
-                      colSpan={7}
-                    >
-                      No flights yet.
-                    </td>
-                  </tr>
+          {flightRows.length === 0 ? (
+            <EmptyState
+              icon={<Plane className="h-6 w-6" />}
+              title={
+                flights.length === 0
+                  ? "No flights yet"
+                  : "No flights match your filters"
+              }
+              description={
+                flights.length === 0
+                  ? "Import ADS-B data or add a manual flight to start building your log."
+                  : "Try adjusting your filters or reset the search to see your full log."
+              }
+              action={
+                flights.length === 0 ? (
+                  <Button asChild>
+                    <Link href="/import">Import ADS-B</Link>
+                  </Button>
                 ) : (
-                  filteredFlights.map((flight) => {
-                    const costTotalCents = flight.costItems.reduce(
-                      (total, item) => total + item.amountCents,
-                      0
-                    );
-
-                    return (
-                      <tr key={flight.id} className="text-slate-200">
-                        <td className="px-4 py-3 text-slate-400">
-                          {flight.startTime.toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3">{flight.tailNumber}</td>
-                        <td className="px-4 py-3">
-                          {flight.origin} → {flight.destination ?? "TBD"}
-                        </td>
-                        <td className="px-4 py-3 text-right text-slate-400">
-                          {flight.durationMinutes ?? "--"} mins
-                        </td>
-                        <td className="px-4 py-3 text-right text-slate-400">
-                          {flight.distanceNm ?? "--"} nm
-                        </td>
-                        <td className="px-4 py-3 text-right text-slate-400">
-                          {costTotalCents > 0
-                            ? currencyFormatter.format(costTotalCents / 100)
-                            : "--"}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/flights/${flight.id}`}>Details</Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  <Button variant="outline" asChild>
+                    <Link href="/flights">Reset filters</Link>
+                  </Button>
+                )
+              }
+              secondaryAction={
+                flights.length === 0 ? (
+                  <Button variant="outline" asChild>
+                    <Link href="#add-manual">Add a manual flight</Link>
+                  </Button>
+                ) : (
+                  <Button asChild>
+                    <Link href="/import">Import ADS-B</Link>
+                  </Button>
+                )
+              }
+            />
+          ) : (
+            <FlightsTable flights={flightRows} />
+          )}
         </CardContent>
       </Card>
     </div>

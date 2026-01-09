@@ -7,6 +7,9 @@ import { FlightMap } from "@/app/components/maps/flight-map";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { AltitudeChart } from "@/app/components/charts/AltitudeChart";
+import { EmptyState } from "@/app/components/ui/empty-state";
+import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { Receipt } from "lucide-react";
 
 export default async function FlightDetailPage({
   params
@@ -204,7 +207,9 @@ export default async function FlightDetailPage({
               />
             </div>
             <div className="md:col-span-3">
-              <Button type="submit">Save logbook</Button>
+              <FormSubmitButton type="submit" pendingText="Saving logbook...">
+                Save logbook
+              </FormSubmitButton>
             </div>
           </form>
         </CardContent>
@@ -216,7 +221,7 @@ export default async function FlightDetailPage({
         </CardHeader>
         <CardContent>
           <div className="grid gap-6">
-            <div>
+            <div id="add-costs">
               <p className="text-xs uppercase text-slate-400">Add cost item</p>
               <form
                 action={`/api/flights/${flight.id}/cost-items/create`}
@@ -244,7 +249,9 @@ export default async function FlightDetailPage({
                   className="md:col-span-2"
                 />
                 <div className="md:col-span-3">
-                  <Button type="submit">Save cost item</Button>
+                  <FormSubmitButton type="submit" pendingText="Saving cost item...">
+                    Save cost item
+                  </FormSubmitButton>
                 </div>
               </form>
             </div>
@@ -284,9 +291,14 @@ export default async function FlightDetailPage({
                             method="post"
                           >
                             <input type="hidden" name="costItemId" value={item.id} />
-                            <Button type="submit" size="sm" variant="outline">
+                            <FormSubmitButton
+                              type="submit"
+                              size="sm"
+                              variant="outline"
+                              pendingText="Deleting..."
+                            >
                               Delete
-                            </Button>
+                            </FormSubmitButton>
                           </form>
                         </div>
                       </div>
@@ -332,9 +344,13 @@ export default async function FlightDetailPage({
                             defaultValue={item.notes ?? ""}
                           />
                           <div className="md:col-span-3">
-                            <Button type="submit" size="sm">
+                            <FormSubmitButton
+                              type="submit"
+                              size="sm"
+                              pendingText="Updating..."
+                            >
                               Update cost item
-                            </Button>
+                            </FormSubmitButton>
                           </div>
                         </form>
                       </details>
@@ -353,6 +369,7 @@ export default async function FlightDetailPage({
                 className="mt-3 grid gap-3 md:grid-cols-3"
               >
                 <Input
+                  id="receipt-upload"
                   name="receipts"
                   type="file"
                   accept=".pdf,image/png,image/jpeg"
@@ -361,30 +378,43 @@ export default async function FlightDetailPage({
                   className="md:col-span-2"
                 />
                 <div className="md:col-span-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                  <Button type="submit">Upload receipts</Button>
+                  <FormSubmitButton type="submit" pendingText="Uploading...">
+                    Upload receipts
+                  </FormSubmitButton>
                   <span>PDF, JPG, PNG up to 10MB each.</span>
                 </div>
               </form>
 
-              <div className="mt-4 overflow-hidden rounded-lg border border-slate-800">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-900 text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-medium">Filename</th>
-                      <th className="px-4 py-3 text-left font-medium">Uploaded</th>
-                      <th className="px-4 py-3 text-left font-medium">Size</th>
-                      <th className="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {flight.receiptDocuments.length === 0 ? (
+              {flight.receiptDocuments.length === 0 ? (
+                <EmptyState
+                  icon={<Receipt className="h-6 w-6" />}
+                  title="No receipts uploaded"
+                  description="Upload receipts to keep every expense attached to this flight."
+                  action={
+                    <Button asChild>
+                      <label htmlFor="receipt-upload">Upload receipts</label>
+                    </Button>
+                  }
+                  secondaryAction={
+                    <Button variant="outline" asChild>
+                      <Link href="#add-costs">Add a cost item</Link>
+                    </Button>
+                  }
+                  className="mt-4"
+                />
+              ) : (
+                <div className="mt-4 overflow-hidden rounded-lg border border-slate-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-900 text-xs uppercase text-slate-500">
                       <tr>
-                        <td className="px-4 py-4 text-sm text-slate-500" colSpan={4}>
-                          No receipts uploaded.
-                        </td>
+                        <th className="px-4 py-3 text-left font-medium">Filename</th>
+                        <th className="px-4 py-3 text-left font-medium">Uploaded</th>
+                        <th className="px-4 py-3 text-left font-medium">Size</th>
+                        <th className="px-4 py-3 text-right font-medium">Actions</th>
                       </tr>
-                    ) : (
-                      flight.receiptDocuments.map((receipt) => (
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {flight.receiptDocuments.map((receipt) => (
                         <tr key={receipt.id} className="text-slate-200">
                           <td className="px-4 py-3">{receipt.originalFilename}</td>
                           <td className="px-4 py-3 text-slate-400">
@@ -401,18 +431,23 @@ export default async function FlightDetailPage({
                                 </Link>
                               </Button>
                               <form action={`/api/receipts/${receipt.id}/delete`} method="post">
-                                <Button size="sm" variant="outline" type="submit">
+                                <FormSubmitButton
+                                  size="sm"
+                                  variant="outline"
+                                  type="submit"
+                                  pendingText="Deleting..."
+                                >
                                   Delete
-                                </Button>
+                                </FormSubmitButton>
                               </form>
                             </div>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

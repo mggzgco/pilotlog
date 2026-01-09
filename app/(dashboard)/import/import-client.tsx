@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FlightMap } from "@/app/components/maps/flight-map";
+import { useToast } from "@/app/components/ui/toast-provider";
 
 interface FlightTrackPointResponse {
   recordedAt: string;
@@ -48,6 +50,7 @@ export function ImportClient() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   const selectedFlight = useMemo(
     () => flights.find((flight) => flight.providerFlightId === selectedId) ?? null,
@@ -81,9 +84,15 @@ export function ImportClient() {
       setProvider(payload.provider);
       if (payload.flights.length === 0) {
         setMessage("No flights found for that tail number and time window.");
+        addToast("No flights found for that tail number and time window.", "info");
+      } else {
+        addToast(`Loaded ${payload.flights.length} flights.`, "success");
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to search flights.");
+      const nextMessage =
+        error instanceof Error ? error.message : "Unable to search flights.";
+      setMessage(nextMessage);
+      addToast(nextMessage, "error");
     } finally {
       setIsSearching(false);
     }
@@ -112,8 +121,12 @@ export function ImportClient() {
       }
 
       setMessage("Flight imported successfully.");
+      addToast("Flight imported successfully.", "success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to import flight.");
+      const nextMessage =
+        error instanceof Error ? error.message : "Unable to import flight.";
+      setMessage(nextMessage);
+      addToast(nextMessage, "error");
     } finally {
       setIsSaving(false);
     }
@@ -157,7 +170,14 @@ export function ImportClient() {
             />
             <div className="md:col-span-3">
               <Button type="submit" disabled={isSearching}>
-                {isSearching ? "Searching..." : "Search flights"}
+                {isSearching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  "Search flights"
+                )}
               </Button>
             </div>
           </form>
@@ -263,7 +283,14 @@ export function ImportClient() {
                 <FlightMap track={selectedFlight.track} />
               </div>
               <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save flight"}
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save flight"
+                )}
               </Button>
             </>
           ) : (
