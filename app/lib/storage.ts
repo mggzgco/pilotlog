@@ -4,12 +4,40 @@ import crypto from "crypto";
 
 const uploadDir = path.join(process.cwd(), "uploads");
 
-export async function storeUpload(file: File) {
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const ALLOWED_RECEIPT_MIME_TYPES: Record<string, string> = {
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/png": ".png"
+};
+
+const safeExtensionPattern = /^[a-z0-9.]+$/i;
+
+export function getReceiptExtension(contentType: string | null | undefined) {
+  if (!contentType) {
+    return null;
+  }
+  return ALLOWED_RECEIPT_MIME_TYPES[contentType] ?? null;
+}
+
+export function isSafeStorageName(name: string) {
+  return path.basename(name) === name && !name.includes("..");
+}
+
+export function getUploadPath(storageName: string) {
+  if (!isSafeStorageName(storageName)) {
+    return null;
+  }
+  return path.join(uploadDir, storageName);
+}
+
+export async function storeUpload(buffer: Buffer, extension: string) {
   await fs.mkdir(uploadDir, { recursive: true });
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const ext = path.extname(file.name) || ".bin";
-  const name = `${crypto.randomBytes(16).toString("hex")}${ext}`;
+  const normalizedExtension =
+    extension.startsWith(".") && safeExtensionPattern.test(extension)
+      ? extension
+      : ".bin";
+  const name = `${crypto.randomBytes(16).toString("hex")}${normalizedExtension}`;
   const fullPath = path.join(uploadDir, name);
   await fs.writeFile(fullPath, buffer);
   return name;

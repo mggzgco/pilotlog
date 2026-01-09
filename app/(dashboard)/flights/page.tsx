@@ -95,7 +95,7 @@ export default async function FlightsPage({
     },
     orderBy: { startTime: "desc" },
     include: {
-      costItems: { select: { amount: true } },
+      costItems: { select: { amountCents: true } },
       logbookEntries: { select: { remarks: true } }
     }
   });
@@ -229,8 +229,8 @@ export default async function FlightsPage({
                   </tr>
                 ) : (
                   filteredFlights.map((flight) => {
-                    const costTotal = flight.costItems.reduce(
-                      (total, item) => total + Number(item.amount),
+                    const costTotalCents = flight.costItems.reduce(
+                      (total, item) => total + item.amountCents,
                       0
                     );
 
@@ -250,8 +250,8 @@ export default async function FlightsPage({
                           {flight.distanceNm ?? "--"} nm
                         </td>
                         <td className="px-4 py-3 text-right text-slate-400">
-                          {costTotal > 0
-                            ? currencyFormatter.format(costTotal)
+                          {costTotalCents > 0
+                            ? currencyFormatter.format(costTotalCents / 100)
                             : "--"}
                         </td>
                         <td className="px-4 py-3 text-right">

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { costSchema } from "@/app/lib/validation";
-import { storeUpload } from "@/app/lib/storage";
+import { parseAmountToCents } from "@/app/lib/costs/utils";
 
 export async function createCostAction(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
@@ -13,23 +13,21 @@ export async function createCostAction(formData: FormData) {
     return { error: "Invalid cost data." };
   }
 
-  const user = await requireUser();
-  const receipt = formData.get("receipt");
-  let receiptPath: string | null = null;
-
-  if (receipt instanceof File && receipt.size > 0) {
-    // COST-003: store receipt securely in private uploads
-    receiptPath = await storeUpload(receipt);
+  const amountCents = parseAmountToCents(parsed.data.amount);
+  if (amountCents === null) {
+    return { error: "Invalid cost amount." };
   }
+
+  const user = await requireUser();
 
   await prisma.costItem.create({
     data: {
       userId: user.id,
-      amount: Number(parsed.data.amount),
-      currency: parsed.data.currency,
-      description: parsed.data.description ?? null,
-      date: new Date(parsed.data.date),
-      receiptPath
+      category: parsed.data.category,
+      amountCents,
+      vendor: parsed.data.vendor ?? null,
+      notes: parsed.data.notes ?? null,
+      date: new Date(parsed.data.date)
     }
   });
 

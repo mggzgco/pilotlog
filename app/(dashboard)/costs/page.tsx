@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
 import { createCostAction } from "@/app/lib/actions/cost-actions";
@@ -12,6 +11,10 @@ export default async function CostsPage() {
   const costs = await prisma.costItem.findMany({
     where: { userId: user.id },
     orderBy: { date: "desc" }
+  });
+  const currencyFormatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD"
   });
 
   return (
@@ -28,11 +31,11 @@ export default async function CostsPage() {
         <CardContent>
           {/* COST-004: capture cost details and receipt */}
           <form action={createCostAction} className="grid gap-3 md:grid-cols-3">
-            <Input name="amount" placeholder="Amount" required />
-            <Input name="currency" placeholder="Currency" defaultValue="USD" />
+            <Input name="category" placeholder="Category" required />
+            <Input name="amount" placeholder="Amount" type="number" step="0.01" required />
             <Input name="date" type="date" required />
-            <Input name="description" placeholder="Description" className="md:col-span-2" />
-            <Input name="receipt" type="file" className="md:col-span-2" />
+            <Input name="vendor" placeholder="Vendor" />
+            <Input name="notes" placeholder="Notes" className="md:col-span-2" />
             <div className="md:col-span-3">
               <Button type="submit">Save expense</Button>
             </div>
@@ -50,15 +53,16 @@ export default async function CostsPage() {
               <thead className="bg-slate-900 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Date</th>
-                  <th className="px-4 py-3 text-left font-medium">Description</th>
+                  <th className="px-4 py-3 text-left font-medium">Category</th>
+                  <th className="px-4 py-3 text-left font-medium">Vendor</th>
+                  <th className="px-4 py-3 text-left font-medium">Notes</th>
                   <th className="px-4 py-3 text-left font-medium">Amount</th>
-                  <th className="px-4 py-3 text-right font-medium">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {costs.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={4}>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={5}>
                       No expenses logged.
                     </td>
                   </tr>
@@ -68,19 +72,11 @@ export default async function CostsPage() {
                       <td className="px-4 py-3 text-slate-400">
                         {cost.date.toDateString()}
                       </td>
-                      <td className="px-4 py-3">{cost.description ?? "No description"}</td>
+                      <td className="px-4 py-3">{cost.category}</td>
+                      <td className="px-4 py-3">{cost.vendor ?? "—"}</td>
+                      <td className="px-4 py-3">{cost.notes ?? "—"}</td>
                       <td className="px-4 py-3">
-                        {cost.currency} {Number(cost.amount).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {cost.receiptPath ? (
-                          /* COST-006: secure receipt downloads */
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/api/download/${cost.receiptPath}`}>Receipt</Link>
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-slate-500">—</span>
-                        )}
+                        {currencyFormatter.format(cost.amountCents / 100)}
                       </td>
                     </tr>
                   ))
