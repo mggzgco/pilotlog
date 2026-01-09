@@ -50,11 +50,17 @@ function decodePolyline(encoded: string): [number, number][] {
 
 interface FlightMapProps {
   polyline?: string | null;
+  track?: Array<{ latitude: number; longitude: number }> | null;
 }
 
-export function FlightMap({ polyline }: FlightMapProps) {
+export function FlightMap({ polyline, track }: FlightMapProps) {
   // FLIGHT-002: render flight track polyline on map
-  const coordinates = polyline ? decodePolyline(polyline) : [];
+  const coordinates =
+    track && track.length > 0
+      ? track.map((point) => [point.latitude, point.longitude] as [number, number])
+      : polyline
+        ? decodePolyline(polyline)
+        : [];
   const center = coordinates[0] ?? [47.4502, -122.3088];
 
   return (
