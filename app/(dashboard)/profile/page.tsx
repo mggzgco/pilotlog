@@ -1,14 +1,31 @@
-import { getCurrentUser } from "@/app/lib/auth/session";
-import { updateProfileAction } from "@/app/lib/actions/profile-actions";
+import { requireUser } from "@/app/lib/auth/session";
+import { prisma } from "@/app/lib/db";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 
 export default async function ProfilePage() {
-  const { user } = await getCurrentUser();
+  const sessionUser = await requireUser();
+  const user = await prisma.user.findUnique({
+    where: { id: sessionUser.id },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      name: true,
+      phone: true,
+      status: true
+    }
+  });
+
   if (!user) {
     return null;
   }
+
+  const derivedFirstName = user.firstName ?? user.name?.split(" ")[0] ?? "";
+  const derivedLastName =
+    user.lastName ?? user.name?.split(" ").slice(1).join(" ") ?? "";
 
   // PROF-001: allow pilots to manage their profile details
   return (
@@ -24,14 +41,22 @@ export default async function ProfilePage() {
         </CardHeader>
         <CardContent>
           {/* PROF-002: allow pilots to update display name */}
-          <form action={updateProfileAction} className="grid gap-3 md:grid-cols-2">
+          <form action="/api/profile/update" method="post" className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="text-sm text-slate-300">Name</label>
-              <Input name="name" defaultValue={user.name ?? ""} />
+              <label className="text-sm text-slate-300">First name</label>
+              <Input name="firstName" defaultValue={derivedFirstName} />
+            </div>
+            <div>
+              <label className="text-sm text-slate-300">Last name</label>
+              <Input name="lastName" defaultValue={derivedLastName} />
             </div>
             <div>
               <label className="text-sm text-slate-300">Email</label>
               <Input value={user.email} disabled />
+            </div>
+            <div>
+              <label className="text-sm text-slate-300">Phone</label>
+              <Input name="phone" defaultValue={user.phone ?? ""} />
             </div>
             <div className="md:col-span-2">
               {/* PROF-003: save profile changes */}
@@ -47,6 +72,42 @@ export default async function ProfilePage() {
                 ? "Pending approval"
                 : "Disabled"}
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-slate-400">Change password</p>
+        </CardHeader>
+        <CardContent>
+          <form
+            action="/api/profile/change-password"
+            method="post"
+            className="grid gap-3 md:grid-cols-2"
+          >
+            <div>
+              <label className="text-sm text-slate-300">Current password</label>
+              <Input name="currentPassword" type="password" autoComplete="current-password" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-300">New password</label>
+              <Input name="newPassword" type="password" autoComplete="new-password" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-300">Confirm new password</label>
+              <Input
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Button type="submit">Update password</Button>
+              <p className="mt-2 text-xs text-slate-500">
+                Changing your password will log you out of all sessions.
+              </p>
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>

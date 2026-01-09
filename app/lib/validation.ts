@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(10)
   .regex(/[a-z]/, "Password must include a lowercase letter.")
@@ -35,6 +35,23 @@ export const resetPasswordSchema = z
     message: "Passwords do not match.",
     path: ["confirmPassword"]
   });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1)
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"]
+  });
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  phone: z.string().optional()
+});
 
 export const flightSchema = z.object({
   tailNumber: z.string().min(3),

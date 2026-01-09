@@ -57,6 +57,8 @@ enum ChecklistRunStatus {
 model User {
   id                 String                 @id @default(cuid())
   email              String                 @unique
+  firstName          String?
+  lastName           String?
   name               String?
   phone              String?
   passwordHash       String

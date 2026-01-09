@@ -1,17 +1,22 @@
 "use client";
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, User } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
 interface UserMenuProps {
+  firstName: string | null;
+  lastName: string | null;
   name: string | null;
   email: string;
   onLogout: () => void;
 }
 
-export function UserMenu({ name, email, onLogout }: UserMenuProps) {
-  const initials = (name || email)
+export function UserMenu({ firstName, lastName, name, email, onLogout }: UserMenuProps) {
+  const displayName = [firstName, lastName].filter(Boolean).join(" ") || name || "Pilot";
+  const initialsSource = [firstName, lastName].filter(Boolean).join(" ") || name || email;
+  const initials = initialsSource
     .split(" ")
     .map((part) => part[0])
     .join("")
@@ -30,10 +35,19 @@ export function UserMenu({ name, email, onLogout }: UserMenuProps) {
         align="end"
       >
         <div className="px-2 pb-3">
-          <p className="text-sm font-medium">{name ?? "Pilot"}</p>
+          <p className="text-sm font-medium">{displayName}</p>
           <p className="text-xs text-slate-400">{email}</p>
         </div>
         <DropdownMenu.Separator className="my-2 h-px bg-slate-800" />
+        <DropdownMenu.Item asChild>
+          <Link
+            href="/profile"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-200 outline-none transition hover:bg-slate-800 hover:text-white"
+          >
+            <User className="h-4 w-4" />
+            Profile
+          </Link>
+        </DropdownMenu.Item>
         <DropdownMenu.Item asChild>
           <Button
             variant="ghost"
@@ -41,7 +55,7 @@ export function UserMenu({ name, email, onLogout }: UserMenuProps) {
             onClick={onLogout}
           >
             <LogOut className="mr-2 h-4 w-4" />
-            Sign out
+            Logout
           </Button>
         </DropdownMenu.Item>
       </DropdownMenu.Content>
