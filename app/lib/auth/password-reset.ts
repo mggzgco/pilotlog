@@ -2,10 +2,12 @@ import crypto from "crypto";
 import { prisma } from "@/app/lib/db";
 import { hashPassword } from "@/app/lib/password";
 import { sendPasswordResetEmail } from "@/app/lib/auth/email";
+import { recordAuditEvent } from "@/app/lib/audit";
+import { handleActionError } from "@/src/lib/security/errors";
 import {
   consumePasswordResetAttempt,
   formatPasswordResetRateLimitError
-} from "@/app/lib/auth/rate-limit";
+} from "@/src/lib/security/ratelimit";
 
 const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -30,43 +32,67 @@ export async function requestPasswordReset({
   email: string;
   ipAddress: string;
 }) {
-  const normalizedEmail = email.toLowerCase();
-  const limiter = consumePasswordResetAttempt({ ipAddress, email: normalizedEmail });
-  if (!limiter.allowed) {
-    return { error: formatPasswordResetRateLimitError(limiter.resetAt) };
-  }
-
-  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (!user || user.status !== "ACTIVE") {
-    return { success: "If the email exists, a reset link will be sent." };
-  }
-
-  const { token, tokenHash, expiresAt } = createResetToken();
-  await prisma.passwordResetToken.create({
-    data: {
-      userId: user.id,
-      tokenHash,
-      expiresAt
-    }
-  });
-
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    "http://localhost:3000";
-  const resetUrl = new URL(`/reset-password?token=${token}`, baseUrl).toString();
-
   try {
-    await sendPasswordResetEmail({
-      recipientEmail: user.email,
-      recipientName: user.name,
-      resetUrl
+    const normalizedEmail = email.toLowerCase();
+    const limiter = consumePasswordResetAttempt({
+      ipAddress,
+      email: normalizedEmail
     });
-  } catch (error) {
-    console.error("Failed to send password reset email", error);
-  }
+    if (!limiter.allowed) {
+      return { error: formatPasswordResetRateLimitError(limiter.resetAt) };
+    }
 
-  return { success: "If the email exists, a reset link will be sent." };
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    await recordAuditEvent({
+      userId: user?.id ?? null,
+      action: "auth.password_reset.requested",
+      entityType: user?.id ? "User" : null,
+      entityId: user?.id ?? null,
+      metadata: {
+        email: normalizedEmail,
+        ipAddress,
+        status: user?.status ?? "UNKNOWN"
+      }
+    });
+
+    if (!user || user.status !== "ACTIVE") {
+      return { success: "If the email exists, a reset link will be sent." };
+    }
+
+    const { token, tokenHash, expiresAt } = createResetToken();
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt
+      }
+    });
+
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.APP_URL ||
+      "http://localhost:3000";
+    const resetUrl = new URL(`/reset-password?token=${token}`, baseUrl).toString();
+
+    try {
+      await sendPasswordResetEmail({
+        recipientEmail: user.email,
+        recipientName: user.name,
+        resetUrl
+      });
+    } catch (error) {
+      console.error("Failed to send password reset email", error);
+    }
+
+    return { success: "If the email exists, a reset link will be sent." };
+  } catch (error) {
+    return handleActionError(
+      error,
+      "auth.password-reset.request",
+      "Unable to process password reset request."
+    );
+  }
 }
 
 export async function validatePasswordResetToken(token: string) {
@@ -94,26 +120,34 @@ export async function resetPassword({
   token: string;
   password: string;
 }) {
-  const validation = await validatePasswordResetToken(token);
-  if (!validation.valid || !validation.record) {
-    return { error: "Token invalid or expired." };
+  try {
+    const validation = await validatePasswordResetToken(token);
+    if (!validation.valid || !validation.record) {
+      return { error: "Token invalid or expired." };
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: validation.record.userId },
+        data: { passwordHash }
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: validation.record.id },
+        data: { usedAt: new Date() }
+      }),
+      prisma.session.deleteMany({
+        where: { userId: validation.record.userId }
+      })
+    ]);
+
+    return { success: "Password reset. Please log in." };
+  } catch (error) {
+    return handleActionError(
+      error,
+      "auth.password-reset.complete",
+      "Unable to reset password."
+    );
   }
-
-  const passwordHash = await hashPassword(password);
-
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: validation.record.userId },
-      data: { passwordHash }
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: validation.record.id },
-      data: { usedAt: new Date() }
-    }),
-    prisma.session.deleteMany({
-      where: { userId: validation.record.userId }
-    })
-  ]);
-
-  return { success: "Password reset. Please log in." };
 }
