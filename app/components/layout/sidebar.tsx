@@ -12,6 +12,7 @@ interface SidebarProps {
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Plane },
   { href: "/flights", label: "Flights", icon: Radar },
+  { href: "/flights/new", label: "Plan Flight", icon: Plane },
   { href: "/import", label: "ADS-B Import", icon: ClipboardList },
   { href: "/logbook", label: "Logbook", icon: ClipboardList },
   { href: "/costs", label: "Costs", icon: Receipt },
