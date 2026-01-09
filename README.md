@@ -8,6 +8,13 @@ A production-minded MVP for flight tracking, logbook management, and training co
 - Cost + receipt tracking with secure downloads.
 - ADS-B import via provider interface (mock provider for `N12345`).
 - Lucia authentication with Argon2id password hashing and approval gating.
+- Planned flight lifecycle tracking with checklist sign-offs.
+- Preflight/postflight checklist templates and per-flight checklist runs.
+
+## Data model highlights
+- Flights track planned times, actual times, import metadata, and lifecycle status.
+- Checklist templates (system or user) with ordered items for preflight/postflight.
+- Per-flight checklist runs snapshot template items and record sign-offs.
 
 ## Local development
 
@@ -32,6 +39,7 @@ npx prisma generate
 ```bash
 SEED_ADMIN_EMAIL=admin@example.com SEED_ADMIN_PASSWORD=change-me-please npx prisma db seed
 ```
+Seeding also creates system default preflight and postflight checklist templates.
 
 ### 5) Start the dev server
 ```bash

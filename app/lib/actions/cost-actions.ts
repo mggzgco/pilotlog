@@ -22,7 +22,7 @@ export async function createCostAction(formData: FormData) {
     receiptPath = await storeUpload(receipt);
   }
 
-  await prisma.cost.create({
+  await prisma.costItem.create({
     data: {
       userId: user.id,
       amount: Number(parsed.data.amount),

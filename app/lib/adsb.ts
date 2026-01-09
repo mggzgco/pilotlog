@@ -4,9 +4,9 @@ export interface AdsbFlight {
   tailNumber: string;
   origin: string;
   destination: string;
-  departAt: Date;
-  arriveAt: Date;
-  durationMins: number;
+  startTime: Date;
+  endTime: Date;
+  durationMinutes: number;
   distanceNm: number;
   routePolyline: string;
 }
@@ -28,9 +28,9 @@ export class MockAdsbProvider implements AdsbProvider {
         tailNumber,
         origin: "KPAE",
         destination: "KSEA",
-        departAt: new Date(start.getTime() + 45 * 60 * 1000),
-        arriveAt: new Date(start.getTime() + 85 * 60 * 1000),
-        durationMins: 40,
+        startTime: new Date(start.getTime() + 45 * 60 * 1000),
+        endTime: new Date(start.getTime() + 85 * 60 * 1000),
+        durationMinutes: 40,
         distanceNm: 26,
         routePolyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
       },
@@ -38,9 +38,9 @@ export class MockAdsbProvider implements AdsbProvider {
         tailNumber,
         origin: "KSEA",
         destination: "KBFI",
-        departAt: new Date(start.getTime() + 4 * 60 * 60 * 1000),
-        arriveAt: new Date(start.getTime() + 4 * 60 * 60 * 1000 + 38 * 60 * 1000),
-        durationMins: 38,
+        startTime: new Date(start.getTime() + 4 * 60 * 60 * 1000),
+        endTime: new Date(start.getTime() + 4 * 60 * 60 * 1000 + 38 * 60 * 1000),
+        durationMinutes: 38,
         distanceNm: 18,
         routePolyline: "y`kiF~hkbVx}@y|Bq}@o}@e}@c}@"
       }
@@ -76,9 +76,9 @@ export async function importAdsbFlights(
           tailNumber: flight.tailNumber,
           origin: flight.origin,
           destination: flight.destination,
-          departAt: flight.departAt,
-          arriveAt: flight.arriveAt,
-          durationMins: flight.durationMins,
+          startTime: flight.startTime,
+          endTime: flight.endTime,
+          durationMinutes: flight.durationMinutes,
           distanceNm: flight.distanceNm,
           routePolyline: flight.routePolyline
         }

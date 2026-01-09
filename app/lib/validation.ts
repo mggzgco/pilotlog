@@ -26,9 +26,9 @@ export const flightSchema = z.object({
   tailNumber: z.string().min(3),
   origin: z.string().min(3),
   destination: z.string().min(3).optional(),
-  departAt: z.string().min(1),
-  arriveAt: z.string().optional(),
-  durationMins: z.number().int().positive().optional()
+  startTime: z.string().min(1),
+  endTime: z.string().optional(),
+  durationMinutes: z.number().int().positive().optional()
 });
 
 export const costSchema = z.object({

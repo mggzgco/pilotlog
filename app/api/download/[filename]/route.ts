@@ -14,7 +14,7 @@ export async function GET(
   }
 
   // NFR-SEC-003: enforce per-user authorization on file downloads
-  const cost = await prisma.cost.findFirst({
+  const cost = await prisma.costItem.findFirst({
     where: {
       userId: user.id,
       receiptPath: params.filename

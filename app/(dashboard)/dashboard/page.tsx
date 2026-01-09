@@ -13,7 +13,7 @@ export default async function DashboardPage() {
 
   const [flightCount, costTotal, logbookTotal, latestFlight] = await Promise.all([
     prisma.flight.count({ where: { userId: user.id } }),
-    prisma.cost.aggregate({
+    prisma.costItem.aggregate({
       where: { userId: user.id },
       _sum: { amount: true }
     }),
@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     }),
     prisma.flight.findFirst({
       where: { userId: user.id },
-      orderBy: { departAt: "desc" }
+      orderBy: { startTime: "desc" }
     })
   ]);
 
