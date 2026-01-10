@@ -308,7 +308,7 @@ export default async function LogbookPage({
             }
             triggerLabel="Add entry"
           />
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline">
             <Link href="/logbook/sync/logten">Sync with LogTen</Link>
           </Button>
         </div>
