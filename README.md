@@ -18,6 +18,15 @@ A production-minded MVP for flight tracking, logbook management, and training co
 
 ## Local development
 
+### Quick start (local terminal)
+```bash
+npm install
+cp .env.example .env
+npm run db:migrate
+npm run db:generate
+npm run dev
+```
+
 ### 1) Install dependencies
 ```bash
 npm install
@@ -31,8 +40,8 @@ Update `DATABASE_URL` for your PostgreSQL instance.
 
 ### 3) Run Prisma migrations + generate client
 ```bash
-npx prisma migrate dev
-npx prisma generate
+npm run db:migrate
+npm run db:generate
 ```
 
 ### 4) (Optional) Seed an admin user
@@ -50,7 +59,9 @@ npm run dev
 - `npm run dev` — run Next.js in development
 - `npm run build` — build for production
 - `npm run start` — run production build
-- `npm run test` — run Vitest
+- `npm run test` — run Vitest in CI-style mode
+- `npm run test:watch` — run Vitest in watch mode
+- `npm run test:coverage` — run tests with line-by-line coverage output
 
 ## Security notes
 - Session cookies are HttpOnly and SameSite=Lax, secure in production.
