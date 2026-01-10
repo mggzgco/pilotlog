@@ -508,20 +508,49 @@ export default async function LogbookPage({
                       flight?.aircraft?.tailNumber ||
                       flight?.tailNumber ||
                       "—";
+                    const entryHref = `/logbook/${entry.id}`;
                     return (
                       <tr key={entry.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
                         <td className="px-4 py-3">
-                          {entry.date.toLocaleDateString()}
+                          <Link href={entryHref} className="block">
+                            {entry.date.toLocaleDateString()}
+                          </Link>
                         </td>
-                        <td className="px-4 py-3">{tailNumber}</td>
                         <td className="px-4 py-3">
-                          {formatRoute(flight?.origin, flight?.destination)}
+                          <Link href={entryHref} className="block">
+                            {tailNumber}
+                          </Link>
                         </td>
-                        <td className="px-4 py-3">{formatHours(entry.totalTime)}</td>
-                        <td className="px-4 py-3">{formatHours(entry.picTime)}</td>
-                        <td className="px-4 py-3">{formatHours(entry.sicTime)}</td>
-                        <td className="px-4 py-3">{formatHours(entry.nightTime)}</td>
-                        <td className="px-4 py-3">{formatHours(entry.instrumentTime)}</td>
+                        <td className="px-4 py-3">
+                          <Link href={entryHref} className="block">
+                            {formatRoute(flight?.origin, flight?.destination)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={entryHref} className="block">
+                            {formatHours(entry.totalTime)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={entryHref} className="block">
+                            {formatHours(entry.picTime)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={entryHref} className="block">
+                            {formatHours(entry.sicTime)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={entryHref} className="block">
+                            {formatHours(entry.nightTime)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={entryHref} className="block">
+                            {formatHours(entry.instrumentTime)}
+                          </Link>
+                        </td>
                         <td className="px-4 py-3">
                           {flight ? (
                             <div className="flex flex-col gap-1">

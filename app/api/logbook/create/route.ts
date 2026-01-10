@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       return redirectWithToast("Invalid logbook data.", "error");
     }
 
+    const entryId = parsed.data.id?.trim() || "";
     const flightId = parsed.data.flightId?.trim() || "";
     const flight = flightId
       ? await prisma.flight.findFirst({
@@ -105,7 +106,28 @@ export async function POST(request: Request) {
     };
 
     let savedId: string | null = null;
-    if (linkedFlightId) {
+    if (entryId) {
+      const existingById = await prisma.logbookEntry.findFirst({
+        where: { id: entryId, userId: user.id }
+      });
+      if (!existingById) {
+        return redirectWithToast("Logbook entry not found.", "error");
+      }
+      if (linkedFlightId) {
+        const otherEntryForFlight = await prisma.logbookEntry.findFirst({
+          where: { userId: user.id, flightId: linkedFlightId, NOT: { id: entryId } },
+          select: { id: true }
+        });
+        if (otherEntryForFlight) {
+          return redirectWithToast(
+            "That flight already has a different logbook entry. Unlink it first.",
+            "error"
+          );
+        }
+      }
+      const updated = await prisma.logbookEntry.update({ where: { id: entryId }, data });
+      savedId = updated.id;
+    } else if (linkedFlightId) {
       const existingEntry = await prisma.logbookEntry.findFirst({
         where: { userId: user.id, flightId: linkedFlightId }
       });
