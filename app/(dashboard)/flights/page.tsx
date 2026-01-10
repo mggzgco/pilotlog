@@ -1,53 +1,21 @@
 import Link from "next/link";
-import { Prisma } from "@prisma/client";
+import { FlightStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
-import { createFlightAction } from "@/app/lib/actions/flight-actions";
-import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { EmptyState } from "@/app/components/ui/empty-state";
-import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { FlightsTable } from "@/app/components/flights/flights-table";
 import { Plane } from "lucide-react";
 
 type FlightsSearchParams = {
-  tailNumber?: string;
+  search?: string;
   startDate?: string;
   endDate?: string;
-  tags?: string;
+  status?: string;
+  aircraftId?: string;
+  sort?: string;
 };
-
-function parseTags(value?: string) {
-  if (!value) {
-    return [];
-  }
-
-  return value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
-}
-
-function getStatsTags(statsJson: Prisma.JsonValue | null): string[] {
-  if (!statsJson || typeof statsJson !== "object" || Array.isArray(statsJson)) {
-    return [];
-  }
-
-  const tags = (statsJson as Record<string, unknown>).tags;
-  if (Array.isArray(tags)) {
-    return tags.filter((tag): tag is string => typeof tag === "string");
-  }
-
-  if (typeof tags === "string") {
-    return tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-}
 
 function getSearchParam(
   value?: string | string[]
@@ -65,10 +33,12 @@ export default async function FlightsPage({
   searchParams?: FlightsSearchParams & { [key: string]: string | string[] };
 }) {
   const user = await requireUser();
-  const tailNumber = getSearchParam(searchParams?.tailNumber).trim();
+  const search = getSearchParam(searchParams?.search).trim();
   const startDate = getSearchParam(searchParams?.startDate).trim();
   const endDate = getSearchParam(searchParams?.endDate).trim();
-  const tags = parseTags(getSearchParam(searchParams?.tags));
+  const status = getSearchParam(searchParams?.status).trim();
+  const aircraftId = getSearchParam(searchParams?.aircraftId).trim();
+  const sort = getSearchParam(searchParams?.sort).trim() || "date_desc";
   const parsedStartDate = startDate ? new Date(startDate) : null;
   const parsedEndDate = endDate ? new Date(`${endDate}T23:59:59.999Z`) : null;
   const startDateValue =
@@ -79,247 +49,305 @@ export default async function FlightsPage({
     parsedEndDate && !Number.isNaN(parsedEndDate.getTime())
       ? parsedEndDate
       : null;
-  const dateRange =
-    startDateValue || endDateValue
-      ? {
-          startTime: {
-            ...(startDateValue ? { gte: startDateValue } : {}),
-            ...(endDateValue ? { lte: endDateValue } : {})
+
+  const statusOptions: FlightStatus[] = [
+    "PLANNED",
+    "PREFLIGHT_SIGNED",
+    "POSTFLIGHT_IN_PROGRESS",
+    "POSTFLIGHT_SIGNED",
+    "IMPORTED",
+    "COMPLETED"
+  ];
+  const statusFilter = statusOptions.includes(status as FlightStatus)
+    ? (status as FlightStatus)
+    : "";
+
+  const searchFilters: Prisma.FlightWhereInput[] = [];
+  if (search) {
+    searchFilters.push({
+      OR: [
+        { tailNumber: { contains: search, mode: "insensitive" } },
+        { tailNumberSnapshot: { contains: search, mode: "insensitive" } },
+        { origin: { contains: search, mode: "insensitive" } },
+        { destination: { contains: search, mode: "insensitive" } },
+        {
+          participants: {
+            some: {
+              user: {
+                OR: [
+                  { firstName: { contains: search, mode: "insensitive" } },
+                  { lastName: { contains: search, mode: "insensitive" } },
+                  { name: { contains: search, mode: "insensitive" } },
+                  { email: { contains: search, mode: "insensitive" } }
+                ]
+              }
+            }
           }
         }
-      : {};
+      ]
+    });
+  }
 
-  const flights = await prisma.flight.findMany({
-    where: {
-      userId: user.id,
-      ...(tailNumber
-        ? { tailNumber: { contains: tailNumber, mode: "insensitive" } }
-        : {}),
-      ...dateRange
-    },
-    orderBy: { startTime: "desc" },
-    include: {
-      costItems: { select: { amountCents: true } },
-      logbookEntries: { select: { remarks: true } }
+  if (startDateValue || endDateValue) {
+    const range = {
+      ...(startDateValue ? { gte: startDateValue } : {}),
+      ...(endDateValue ? { lte: endDateValue } : {})
+    };
+    searchFilters.push({
+      OR: [{ plannedStartTime: range }, { startTime: range }]
+    });
+  }
+
+  const orderBy = (() => {
+    switch (sort) {
+      case "date_asc":
+        return [{ plannedStartTime: "asc" }, { startTime: "asc" }] as const;
+      case "tail_asc":
+        return [{ tailNumber: "asc" }] as const;
+      case "tail_desc":
+        return [{ tailNumber: "desc" }] as const;
+      case "status_asc":
+        return [{ status: "asc" }] as const;
+      case "status_desc":
+        return [{ status: "desc" }] as const;
+      case "date_desc":
+      default:
+        return [{ plannedStartTime: "desc" }, { startTime: "desc" }] as const;
     }
-  });
-  const users = await prisma.user.findMany({
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    select: { id: true, firstName: true, lastName: true, name: true, email: true }
-  });
-  const participantOptions = users.map((entry) => ({
-    id: entry.id,
-    label:
-      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
-      entry.name ||
-      entry.email
-  }));
-  const roleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
+  })();
 
-  const normalizedTags = tags.map((tag) => tag.toLowerCase());
-  const filteredFlights =
-    normalizedTags.length === 0
-      ? flights
-      : flights.filter((flight) => {
-          const statsTags = getStatsTags(flight.statsJson).map((tag) =>
-            tag.toLowerCase()
-          );
-          const remarkTags = flight.logbookEntries
-            .flatMap((entry) =>
-              entry.remarks ? entry.remarks.split(/[,#]/) : []
-            )
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-            .map((tag) => tag.toLowerCase());
-          const tagPool = new Set([...statsTags, ...remarkTags]);
-          return normalizedTags.every((tag) =>
-            Array.from(tagPool).some((value) => value.includes(tag))
-          );
-        });
+  const [flights, aircraft] = await Promise.all([
+    prisma.flight.findMany({
+      where: {
+        userId: user.id,
+        ...(statusFilter ? { status: statusFilter } : {}),
+        ...(aircraftId ? { aircraftId } : {}),
+        ...(searchFilters.length > 0 ? { AND: searchFilters } : {})
+      },
+      orderBy,
+      include: {
+        costItems: { select: { id: true } },
+        logbookEntries: { select: { id: true } },
+        checklistRuns: {
+          select: {
+            phase: true,
+            status: true,
+            items: { select: { required: true, inputType: true, valueYesNo: true } }
+          }
+        }
+      }
+    }),
+    prisma.aircraft.findMany({
+      where: { userId: user.id },
+      orderBy: { tailNumber: "asc" },
+      select: { id: true, tailNumber: true }
+    })
+  ]);
 
-  const flightRows = filteredFlights.map((flight) => {
-    const costTotalCents = flight.costItems.reduce(
-      (total, item) => total + item.amountCents,
-      0
+  const decisionLabel = (
+    run: (typeof flights)[number]["checklistRuns"][number] | undefined
+  ) => {
+    if (!run || run.status !== "SIGNED") {
+      return "—";
+    }
+    const hasRejected = run.items.some(
+      (item) =>
+        item.required && item.inputType === "YES_NO" && item.valueYesNo === false
     );
+    return hasRejected ? "Rejected" : "Accepted";
+  };
+
+  const flightRows = flights.map((flight) => {
+    const displayTime = flight.plannedStartTime ?? flight.startTime;
+    const preflightRun = flight.checklistRuns.find(
+      (run) => run.phase === "PREFLIGHT"
+    );
+    const postflightRun = flight.checklistRuns.find(
+      (run) => run.phase === "POSTFLIGHT"
+    );
+    const preflightDecision = decisionLabel(preflightRun);
+    const postflightDecision = decisionLabel(postflightRun);
+    const isImported = Boolean(
+      flight.importedProvider ||
+        flight.providerFlightId ||
+        ["IMPORTED", "COMPLETED"].includes(flight.status)
+    );
+    const hasLogbookEntry = flight.logbookEntries.length > 0;
+    const hasCosts = flight.costItems.length > 0;
+    const checklistAvailable =
+      preflightRun && preflightRun.status !== "NOT_AVAILABLE";
+
+    const nextAction =
+      flight.status === "PLANNED" && checklistAvailable && preflightDecision === "—"
+        ? { type: "link", label: "Start Preflight", href: `/flights/${flight.id}` }
+        : preflightDecision === "Accepted" && postflightDecision === "—"
+          ? {
+              type: "form",
+              label: "Start Postflight",
+              action: `/api/flights/${flight.id}/checklists/start-postflight`
+            }
+          : postflightDecision === "Accepted" && !isImported
+            ? { type: "link", label: "Import ADS-B", href: `/flights/${flight.id}/match` }
+            : isImported && !hasLogbookEntry
+              ? { type: "link", label: "Log Hours", href: `/flights/${flight.id}` }
+              : !hasCosts
+                ? { type: "link", label: "Add Costs", href: `/flights/${flight.id}` }
+                : { type: "link", label: "Open", href: `/flights/${flight.id}` };
 
     return {
       id: flight.id,
-      sortTime: (flight.plannedStartTime ?? flight.startTime).toISOString(),
-      displayTime: (flight.plannedStartTime ?? flight.startTime).toISOString(),
+      displayTime: displayTime.toISOString(),
       tailNumber: flight.tailNumber,
       tailNumberSnapshot: flight.tailNumberSnapshot,
       origin: flight.origin,
       destination: flight.destination,
-      durationMinutes: flight.durationMinutes,
-      distanceNm: flight.distanceNm,
-      costTotalCents,
       status: flight.status,
-      isImported: Boolean(
-        flight.importedProvider ||
-          flight.providerFlightId ||
-          ["IMPORTED", "COMPLETED"].includes(flight.status)
-      )
+      preflightDecision,
+      postflightDecision,
+      adsbStatus: isImported ? "Imported" : "—",
+      nextAction,
+      menuItems: [
+        { label: "Open", href: `/flights/${flight.id}` },
+        { label: "Match ADS-B", href: `/flights/${flight.id}/match` }
+      ]
     };
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold">Flights</h2>
-          <p className="text-sm text-slate-400">Track route, time, and status.</p>
+          <p className="text-sm text-slate-400">
+            All flights, ready for the next action.
+          </p>
         </div>
         <Button asChild>
-          <Link href="/import">Import ADS-B</Link>
+          <Link href="/flights/new">Create Flight</Link>
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <p className="text-sm text-slate-400">Search flights</p>
-        </CardHeader>
-        <CardContent>
-          <form method="get" className="grid gap-3 lg:grid-cols-4">
+      <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+        <form
+          method="get"
+          className="grid gap-3 md:grid-cols-2 lg:grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr] lg:items-end"
+        >
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase text-slate-500">
+              Search
+            </label>
             <Input
-              name="tailNumber"
-              placeholder="Tail number"
-              defaultValue={tailNumber}
+              name="search"
+              placeholder="Route, tail number, or person"
+              defaultValue={search}
             />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase text-slate-500">
+              Start date
+            </label>
             <Input
               name="startDate"
               type="date"
               placeholder="Start date"
               defaultValue={startDate}
             />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase text-slate-500">
+              End date
+            </label>
             <Input
               name="endDate"
               type="date"
               placeholder="End date"
               defaultValue={endDate}
             />
-            <Input
-              name="tags"
-              placeholder="Tags (comma separated)"
-              defaultValue={getSearchParam(searchParams?.tags)}
-            />
-            <div className="flex flex-wrap gap-2 lg:col-span-4">
-              <Button type="submit">Search</Button>
-              <Button variant="outline" asChild>
-                <Link href="/flights">Reset</Link>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase text-slate-500">
+              Status
+            </label>
+            <select
+              name="status"
+              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              defaultValue={status}
+            >
+              <option value="">All statuses</option>
+              {statusOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option.replace(/_/g, " ").toLowerCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase text-slate-500">
+              Aircraft
+            </label>
+            <select
+              name="aircraftId"
+              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              defaultValue={aircraftId}
+            >
+              <option value="">All aircraft</option>
+              {aircraft.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.tailNumber}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase text-slate-500">
+              Sort
+            </label>
+            <select
+              name="sort"
+              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              defaultValue={sort}
+            >
+              <option value="date_desc">Date desc</option>
+              <option value="date_asc">Date asc</option>
+              <option value="tail_asc">Tail number A-Z</option>
+              <option value="tail_desc">Tail number Z-A</option>
+              <option value="status_asc">Status A-Z</option>
+              <option value="status_desc">Status Z-A</option>
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2 md:col-span-2 lg:col-span-6">
+            <Button type="submit">Apply filters</Button>
+            <Button variant="outline" asChild>
+              <Link href="/flights">Reset</Link>
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      {flightRows.length === 0 ? (
+        <EmptyState
+          icon={<Plane className="h-6 w-6" />}
+          title={flights.length === 0 ? "No flights yet" : "No flights match your filters"}
+          description={
+            flights.length === 0
+              ? "Create your first flight to start tracking checklists, imports, and costs."
+              : "Try adjusting your filters or reset the search to see more flights."
+          }
+          action={
+            flights.length === 0 ? (
+              <Button asChild>
+                <Link href="/flights/new">Create Flight</Link>
               </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card id="add-manual">
-        <CardHeader>
-          <p className="text-sm text-slate-400">Add manual flight</p>
-        </CardHeader>
-        <CardContent>
-          <form action={createFlightAction} className="grid gap-3 lg:grid-cols-3">
-            <Input name="tailNumber" placeholder="Tail #" required />
-            <Input name="origin" placeholder="Origin (ICAO)" required />
-            <Input name="destination" placeholder="Destination (ICAO)" />
-            <Input name="startTime" type="datetime-local" required />
-            <Input name="endTime" type="datetime-local" />
-            <Input name="durationMinutes" type="number" placeholder="Duration (mins)" />
-            <div className="lg:col-span-3 space-y-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">
-                Participants
-              </p>
-              <div className="grid gap-3 lg:grid-cols-2">
-                {[0, 1].map((slot) => (
-                  <div
-                    key={slot}
-                    className="grid gap-2 rounded-md border border-slate-800 p-3"
-                  >
-                    <label className="text-xs font-semibold uppercase text-slate-400">
-                      Additional participant {slot + 1}
-                    </label>
-                    <select
-                      name="participantUserId"
-                      className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
-                      defaultValue=""
-                    >
-                      <option value="">Select a user</option>
-                      {participantOptions.map((participant) => (
-                        <option key={participant.id} value={participant.id}>
-                          {participant.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      name="participantRole"
-                      className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
-                      defaultValue="SIC"
-                    >
-                      {roleOptions.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="lg:col-span-3">
-              <FormSubmitButton type="submit" pendingText="Saving flight...">
-                Save flight
-              </FormSubmitButton>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <p className="text-sm text-slate-400">Recent flights</p>
-        </CardHeader>
-        <CardContent>
-          {flightRows.length === 0 ? (
-            <EmptyState
-              icon={<Plane className="h-6 w-6" />}
-              title={
-                flights.length === 0
-                  ? "No flights yet"
-                  : "No flights match your filters"
-              }
-              description={
-                flights.length === 0
-                  ? "Import ADS-B data or add a manual flight to start building your log."
-                  : "Try adjusting your filters or reset the search to see your full log."
-              }
-              action={
-                flights.length === 0 ? (
-                  <Button asChild>
-                    <Link href="/import">Import ADS-B</Link>
-                  </Button>
-                ) : (
-                  <Button variant="outline" asChild>
-                    <Link href="/flights">Reset filters</Link>
-                  </Button>
-                )
-              }
-              secondaryAction={
-                flights.length === 0 ? (
-                  <Button variant="outline" asChild>
-                    <Link href="#add-manual">Add a manual flight</Link>
-                  </Button>
-                ) : (
-                  <Button asChild>
-                    <Link href="/import">Import ADS-B</Link>
-                  </Button>
-                )
-              }
-            />
-          ) : (
-            <FlightsTable flights={flightRows} />
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <Button variant="outline" asChild>
+                <Link href="/flights">Reset filters</Link>
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <FlightsTable flights={flightRows} />
+      )}
     </div>
   );
 }
