@@ -75,6 +75,7 @@ export async function POST(request: Request) {
         userId: user.id,
         flightId: null,
         date,
+        status: "OPEN",
         tailNumberSnapshot: row.tailNumberSnapshot,
         origin: row.origin,
         destination: row.destination || null,

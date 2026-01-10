@@ -5,7 +5,20 @@ import { requireUser } from "@/app/lib/session";
 
 const aircraftSchema = z.object({
   tailNumber: z.string().min(1),
+  manufacturer: z.string().optional(),
   model: z.string().optional(),
+  category: z
+    .enum([
+      "SINGLE_ENGINE_PISTON",
+      "MULTI_ENGINE_PISTON",
+      "SINGLE_ENGINE_TURBINE",
+      "MULTI_ENGINE_TURBINE",
+      "JET",
+      "GLIDER",
+      "HELICOPTER",
+      "OTHER"
+    ])
+    .optional(),
   aircraftTypeId: z.string().optional()
 });
 
@@ -34,7 +47,9 @@ export async function POST(request: Request) {
     data: {
       userId: user.id,
       tailNumber: parsed.data.tailNumber.trim(),
+      manufacturer: parsed.data.manufacturer?.trim() || null,
       model: parsed.data.model?.trim() || null,
+      category: parsed.data.category ?? "OTHER",
       aircraftTypeId
     },
     select: { id: true, tailNumber: true, model: true }

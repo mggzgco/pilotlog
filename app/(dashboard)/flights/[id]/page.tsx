@@ -11,6 +11,17 @@ import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge"
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { Input } from "@/app/components/ui/input";
 
+const formatPersonName = (person: {
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+}) =>
+  person.name ||
+  [person.firstName, person.lastName].filter(Boolean).join(" ") ||
+  person.email ||
+  "—";
+
 export default async function FlightDetailPage({
   params,
 }: {
@@ -28,6 +39,14 @@ export default async function FlightDetailPage({
         }
       },
       costItems: { select: { id: true, amountCents: true } },
+      participants: {
+        include: { user: true },
+        orderBy: { createdAt: "asc" }
+      },
+      peopleParticipants: {
+        include: { person: true },
+        orderBy: { createdAt: "asc" }
+      },
       receiptDocuments: {
         where: { storagePath: { startsWith: "photo_" } },
         orderBy: { createdAt: "desc" },
@@ -122,13 +141,17 @@ export default async function FlightDetailPage({
       flight.providerFlightId ||
       ["IMPORTED", "COMPLETED"].includes(flight.status)
   );
-  const [logbookEntryCount, receiptCount] = await Promise.all([
-    prisma.logbookEntry.count({ where: { flightId: flight.id } }),
+  const [logbookEntries, receiptCount] = await Promise.all([
+    prisma.logbookEntry.findMany({
+      where: { flightId: flight.id },
+      select: { id: true, status: true }
+    }),
     prisma.receiptDocument.count({
       where: { flightId: flight.id, userId: user.id, NOT: { storagePath: { startsWith: "photo_" } } }
     })
   ]);
 
+  const logbookEntryCount = logbookEntries.length;
   const hasAnyLogbookEntry = logbookEntryCount > 0;
   const hasCosts = flight.costItems.length > 0;
   const hasReceipts = receiptCount > 0;
@@ -154,6 +177,25 @@ export default async function FlightDetailPage({
       ? String((flight.statsJson as Record<string, unknown>).userNotes)
       : "";
 
+  const flightPeople = [
+    ...flight.participants.map((participant) => ({
+      id: participant.id,
+      name: formatPersonName(participant.user),
+      role: participant.role
+    })),
+    ...flight.peopleParticipants.map((participant) => ({
+      id: participant.id,
+      name: participant.person.name,
+      role: participant.role
+    }))
+  ];
+
+  const logbookStatusLabel = !hasAnyLogbookEntry
+    ? "Not started"
+    : logbookEntries.some((entry) => entry.status === "OPEN")
+      ? "Open"
+      : "Closed";
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -167,6 +209,11 @@ export default async function FlightDetailPage({
               {flight.tailNumberSnapshot ?? flight.tailNumber} · {flight.origin} →{" "}
               {flight.destination ?? "TBD"}
             </p>
+            {flightPeople.length > 0 ? (
+              <p className="text-xs text-slate-500">
+                People: {flightPeople.map((person) => `${person.name} (${person.role})`).join(", ")}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -517,7 +564,7 @@ export default async function FlightDetailPage({
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Status</p>
-                <p className="text-lg font-semibold">{hasAnyLogbookEntry ? "Started" : "Not started"}</p>
+                <p className="text-lg font-semibold">{logbookStatusLabel}</p>
               </div>
             </div>
             {!hasAnyLogbookEntry ? (

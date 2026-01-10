@@ -136,6 +136,14 @@ export default async function LogbookEntryDetailPage({
         <CardContent>
           <form action="/api/logbook/create" method="post" className="grid gap-3 lg:grid-cols-3">
             <input type="hidden" name="id" value={entry.id} />
+            <select
+              name="status"
+              defaultValue={entry.status}
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
+            >
+              <option value="OPEN">Open</option>
+              <option value="CLOSED">Closed</option>
+            </select>
 
             <select
               name="flightId"

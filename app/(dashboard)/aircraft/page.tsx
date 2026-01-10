@@ -30,6 +30,27 @@ export default async function AircraftPage() {
     })
   ]);
 
+  const categoryLabel = (value: string | null | undefined) => {
+    switch (value) {
+      case "SINGLE_ENGINE_PISTON":
+        return "Single-engine piston";
+      case "MULTI_ENGINE_PISTON":
+        return "Multi-engine piston";
+      case "SINGLE_ENGINE_TURBINE":
+        return "Single-engine turbine";
+      case "MULTI_ENGINE_TURBINE":
+        return "Multi-engine turbine";
+      case "JET":
+        return "Jet";
+      case "GLIDER":
+        return "Glider";
+      case "HELICOPTER":
+        return "Helicopter";
+      default:
+        return "Other";
+    }
+  };
+
   const readinessFor = (plane: (typeof aircraft)[number]) => {
     const preflight =
       plane.preflightChecklistTemplate ?? plane.aircraftType?.defaultPreflightTemplate;
@@ -69,24 +90,44 @@ export default async function AircraftPage() {
         <CardContent>
           <form action={createAircraftAction} className="grid gap-3 lg:grid-cols-3">
             <Input name="tailNumber" placeholder="Tail number" required />
+            <Input name="manufacturer" placeholder="Manufacturer" />
             <Input name="model" placeholder="Model" />
-            <label className="text-sm text-slate-300 lg:col-span-1">
-              <span className="mb-1 block text-xs uppercase text-slate-500">
-                Aircraft type (optional)
-              </span>
+            <label className="text-sm text-slate-300 lg:col-span-3">
+              <span className="mb-1 block text-xs uppercase text-slate-500">Type</span>
               <select
-                name="aircraftTypeId"
+                name="category"
                 className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
-                defaultValue=""
+                defaultValue="SINGLE_ENGINE_PISTON"
               >
-                <option value="">No type selected</option>
-                {aircraftTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
+                <option value="SINGLE_ENGINE_PISTON">Single-engine piston</option>
+                <option value="MULTI_ENGINE_PISTON">Multi-engine piston</option>
+                <option value="SINGLE_ENGINE_TURBINE">Single-engine turbine</option>
+                <option value="MULTI_ENGINE_TURBINE">Multi-engine turbine</option>
+                <option value="JET">Jet</option>
+                <option value="HELICOPTER">Helicopter</option>
+                <option value="GLIDER">Glider</option>
+                <option value="OTHER">Other</option>
               </select>
             </label>
+            {aircraftTypes.length > 0 ? (
+              <label className="text-sm text-slate-300 lg:col-span-3">
+                <span className="mb-1 block text-xs uppercase text-slate-500">
+                  Checklist profile (optional)
+                </span>
+                <select
+                  name="aircraftTypeId"
+                  className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
+                  defaultValue=""
+                >
+                  <option value="">No profile selected</option>
+                  {aircraftTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <div className="lg:col-span-3">
               <Button type="submit">Save aircraft</Button>
             </div>
@@ -104,43 +145,58 @@ export default async function AircraftPage() {
               <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Tail</th>
+                  <th className="px-4 py-3 text-left font-medium">Manufacturer</th>
+                  <th className="px-4 py-3 text-left font-medium">Model</th>
                   <th className="px-4 py-3 text-left font-medium">Type</th>
                   <th className="px-4 py-3 text-left font-medium">Checklist readiness</th>
                   <th className="px-4 py-3 text-left font-medium">Added</th>
-                  <th className="px-4 py-3 text-left font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {aircraft.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={5}>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={6}>
                       No aircraft listed.
                     </td>
                   </tr>
                 ) : (
                   aircraft.map((plane) => {
                     const readiness = readinessFor(plane);
+                    const href = `/aircraft/${plane.id}`;
                     return (
                       <tr
                         key={plane.id}
                         className="text-slate-900 transition hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-900/40"
                       >
                         <td className="px-4 py-3">
-                          <Link href={`/aircraft/${plane.id}`} className="font-semibold">
+                          <Link href={href} className="block font-semibold">
                             {plane.tailNumber}
                           </Link>
                         </td>
-                        <td className="px-4 py-3">{plane.aircraftType?.name ?? "—"}</td>
-                        <td className={`px-4 py-3 ${readiness.tone}`}>
-                          {readiness.label}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                          {plane.createdAt.toDateString()}
+                        <td className="px-4 py-3">
+                          <Link href={href} className="block">
+                            {plane.manufacturer ?? "—"}
+                          </Link>
                         </td>
                         <td className="px-4 py-3">
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/aircraft/${plane.id}`}>Manage</Link>
-                          </Button>
+                          <Link href={href} className="block">
+                            {plane.model ?? "—"}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={href} className="block">
+                            {categoryLabel(plane.category)}
+                          </Link>
+                        </td>
+                        <td className={`px-4 py-3 ${readiness.tone}`}>
+                          <Link href={href} className="block">
+                            {readiness.label}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          <Link href={href} className="block">
+                            {plane.createdAt.toDateString()}
+                          </Link>
                         </td>
                       </tr>
                     );

@@ -74,6 +74,7 @@ export const costSchema = z.object({
 
 export const logbookSchema = z.object({
   id: z.string().optional(),
+  status: z.enum(["OPEN", "CLOSED"]).optional(),
   date: z.string().min(1),
   flightId: z.string().optional(),
   picTime: z.string().optional(),

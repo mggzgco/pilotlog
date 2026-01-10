@@ -66,6 +66,22 @@ enum FlightParticipantRole {
   SIC
 }
 
+enum LogbookEntryStatus {
+  OPEN
+  CLOSED
+}
+
+enum AircraftCategory {
+  SINGLE_ENGINE_PISTON
+  MULTI_ENGINE_PISTON
+  SINGLE_ENGINE_TURBINE
+  MULTI_ENGINE_TURBINE
+  JET
+  GLIDER
+  HELICOPTER
+  OTHER
+}
+
 model User {
   id                 String                 @id @default(cuid())
   email              String                 @unique
@@ -182,7 +198,9 @@ model Aircraft {
   userId                        String
   aircraftTypeId                String?
   tailNumber                    String
+  manufacturer                  String?
   model                         String?
+  category                      AircraftCategory   @default(OTHER)
   photoStoragePath              String?
   photoOriginalFilename         String?
   photoContentType              String?
@@ -225,6 +243,7 @@ model LogbookEntry {
   userId         String
   flightId       String?
   date           DateTime
+  status         LogbookEntryStatus @default(OPEN)
   tailNumberSnapshot String?
   origin         String?
   destination    String?

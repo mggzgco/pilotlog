@@ -97,6 +97,7 @@ export default async function FlightLogbookPage({
   const logbookDefaultNightTakeoffs = (logbookEntry as any)?.nightTakeoffs?.toString?.() ?? "";
   const logbookDefaultNightLandings = (logbookEntry as any)?.nightLandings?.toString?.() ?? "";
   const logbookDefaultRemarks = logbookEntry?.remarks ?? "";
+  const logbookDefaultStatus = logbookEntry?.status === "CLOSED" ? "CLOSED" : "OPEN";
 
   return (
     <div className="space-y-6">
@@ -165,6 +166,7 @@ export default async function FlightLogbookPage({
           <LogbookEntryForm
             flightId={flight.id}
             participantId={selectedParticipant?.id ?? null}
+            defaultStatus={logbookDefaultStatus}
             defaultDate={logbookDefaultDate}
             defaultPicTime={prefillPicTime}
             defaultSicTime={prefillSicTime}

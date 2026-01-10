@@ -397,6 +397,14 @@ export default async function LogbookPage({
         <CardContent>
           <form action="/api/logbook/create" method="post" className="grid gap-3 lg:grid-cols-3">
             <select
+              name="status"
+              defaultValue="OPEN"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
+            >
+              <option value="OPEN">Open</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+            <select
               name="flightId"
               defaultValue={selectedFlight?.id ?? ""}
               className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
@@ -490,6 +498,7 @@ export default async function LogbookPage({
                 <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                   <tr>
                     <th className="px-4 py-2">Date</th>
+                    <th className="px-4 py-2">Status</th>
                     <th className="px-4 py-2">Aircraft</th>
                     <th className="px-4 py-2">Route</th>
                     <th className="px-4 py-2">Total</th>
@@ -514,6 +523,11 @@ export default async function LogbookPage({
                         <td className="px-4 py-3">
                           <Link href={entryHref} className="block">
                             {entry.date.toLocaleDateString()}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={entryHref} className="block">
+                            {entry.status === "CLOSED" ? "Closed" : "Open"}
                           </Link>
                         </td>
                         <td className="px-4 py-3">

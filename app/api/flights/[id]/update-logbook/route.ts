@@ -11,6 +11,7 @@ const emptyToNull = (value: unknown) =>
 
 const logbookSchema = z.object({
   date: z.coerce.date(),
+  status: z.enum(["OPEN", "CLOSED"]).default("OPEN"),
   picTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   sicTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   dualReceivedTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
@@ -80,6 +81,7 @@ export async function POST(
       value === "" || value === undefined ? undefined : Number(value);
     const parsed = logbookSchema.safeParse({
       ...raw,
+      status: raw.status ?? "OPEN",
       picTime: toNumber(raw.picTime as FormDataEntryValue | undefined),
       sicTime: toNumber(raw.sicTime as FormDataEntryValue | undefined),
       dualReceivedTime: toNumber(raw.dualReceivedTime as FormDataEntryValue | undefined),
@@ -111,6 +113,7 @@ export async function POST(
 
     const data = {
       date: parsed.data.date,
+      status: parsed.data.status,
       picTime: parsed.data.picTime,
       sicTime: parsed.data.sicTime,
       dualReceivedTime: parsed.data.dualReceivedTime,

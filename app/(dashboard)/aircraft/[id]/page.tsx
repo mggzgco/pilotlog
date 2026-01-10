@@ -5,6 +5,7 @@ import { requireUser } from "@/app/lib/auth/session";
 import {
   assignAircraftChecklistAction,
   createChecklistFromAircraftAction,
+  updateAircraftDetailsAction,
   updateAircraftTypeAction
 } from "@/app/lib/actions/aircraft-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
@@ -15,6 +16,17 @@ import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 const phases = [
   { value: "PREFLIGHT", label: "Pre-flight" },
   { value: "POSTFLIGHT", label: "Post-flight" }
+] as const;
+
+const categoryOptions = [
+  { value: "SINGLE_ENGINE_PISTON", label: "Single-engine piston" },
+  { value: "MULTI_ENGINE_PISTON", label: "Multi-engine piston" },
+  { value: "SINGLE_ENGINE_TURBINE", label: "Single-engine turbine" },
+  { value: "MULTI_ENGINE_TURBINE", label: "Multi-engine turbine" },
+  { value: "JET", label: "Jet" },
+  { value: "HELICOPTER", label: "Helicopter" },
+  { value: "GLIDER", label: "Glider" },
+  { value: "OTHER", label: "Other" }
 ] as const;
 
 export default async function AircraftDetailPage({
@@ -66,8 +78,10 @@ export default async function AircraftDetailPage({
         <div>
           <h2 className="text-2xl font-semibold">{aircraft.tailNumber}</h2>
           <p className="text-sm text-slate-400">
-            {aircraft.model ? `${aircraft.model} · ` : ""}Manage checklist defaults and
-            overrides for this tail number.
+            {[aircraft.manufacturer, aircraft.model].filter(Boolean).join(" ") || "—"} ·{" "}
+            {aircraft.category
+              ? categoryOptions.find((opt) => opt.value === aircraft.category)?.label ?? "Other"
+              : "Other"}
           </p>
         </div>
       </div>
@@ -77,18 +91,48 @@ export default async function AircraftDetailPage({
           <p className="text-sm text-slate-400">Aircraft details</p>
         </CardHeader>
         <CardContent className="space-y-4">
+          <form action={updateAircraftDetailsAction} className="grid gap-4 lg:grid-cols-3">
+            <input type="hidden" name="aircraftId" value={aircraft.id} />
+            <Input name="tailNumber" placeholder="Tail number" required defaultValue={aircraft.tailNumber} />
+            <Input
+              name="manufacturer"
+              placeholder="Manufacturer"
+              defaultValue={aircraft.manufacturer ?? ""}
+            />
+            <Input name="model" placeholder="Model" defaultValue={aircraft.model ?? ""} />
+            <label className="text-sm text-slate-300 lg:col-span-3">
+              <span className="mb-1 block text-xs uppercase text-slate-500">Type</span>
+              <select
+                name="category"
+                className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
+                defaultValue={aircraft.category ?? "OTHER"}
+              >
+                {categoryOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="lg:col-span-3">
+              <Button type="submit">Save details</Button>
+            </div>
+          </form>
+
+          <div className="border-t border-slate-800 pt-4" />
+
           <form action={updateAircraftTypeAction} className="grid gap-4 lg:grid-cols-2">
             <input type="hidden" name="aircraftId" value={aircraft.id} />
             <label className="text-sm text-slate-300">
               <span className="mb-1 block text-xs uppercase text-slate-500">
-                Aircraft type
+                Checklist profile
               </span>
               <select
                 name="aircraftTypeId"
                 className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
                 defaultValue={aircraft.aircraftTypeId ?? ""}
               >
-                <option value="">No type selected</option>
+                <option value="">No profile selected</option>
                 {aircraftTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.name}
@@ -103,12 +147,12 @@ export default async function AircraftDetailPage({
               </span>
               <Input
                 name="newTypeName"
-                placeholder="e.g., C172S"
+                placeholder="e.g., SR20 G7"
                 autoComplete="off"
               />
             </label>
             <div className="lg:col-span-2">
-              <Button type="submit">Update type</Button>
+              <Button type="submit">Update checklist profile</Button>
             </div>
           </form>
         </CardContent>
