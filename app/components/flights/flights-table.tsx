@@ -64,35 +64,72 @@ export function FlightsTable({ flights }: FlightsTableProps) {
           {flights.map((flight) => (
             <tr key={flight.id} className="text-slate-200 hover:bg-slate-900/60">
               <td className="px-4 py-3 text-slate-400">
-                {new Date(flight.displayTime).toLocaleString()}
+                <Link
+                  href={`/flights/${flight.id}`}
+                  className="block -mx-4 -my-3 px-4 py-3"
+                >
+                  {new Date(flight.displayTime).toLocaleString()}
+                </Link>
               </td>
               <td className="px-4 py-3">
-                {flight.tailNumberSnapshot ?? flight.tailNumber}
+                <Link
+                  href={`/flights/${flight.id}`}
+                  className="block -mx-4 -my-3 px-4 py-3"
+                >
+                  {flight.tailNumberSnapshot ?? flight.tailNumber}
+                </Link>
               </td>
               <td className="px-4 py-3">
-                {flight.destination ? (
-                  <>
-                    {flight.origin} → {flight.destination}
-                  </>
-                ) : (
-                  <span className="text-slate-400">
-                    {flight.origin} → —
-                  </span>
-                )}
+                <Link
+                  href={`/flights/${flight.id}`}
+                  className="block -mx-4 -my-3 px-4 py-3"
+                >
+                  {flight.destination ? (
+                    <>
+                      {flight.origin} → {flight.destination}
+                    </>
+                  ) : (
+                    <span className="text-slate-400">{flight.origin} → —</span>
+                  )}
+                </Link>
               </td>
               <td className="px-4 py-3">
-                <FlightStatusBadge status={flight.status} />
+                <Link
+                  href={`/flights/${flight.id}`}
+                  className="block -mx-4 -my-3 px-4 py-3"
+                >
+                  <FlightStatusBadge status={flight.status} />
+                </Link>
               </td>
-              <td className="px-4 py-3">{decisionBadge(flight.preflightDecision)}</td>
-              <td className="px-4 py-3">{decisionBadge(flight.postflightDecision)}</td>
               <td className="px-4 py-3">
-                {flight.adsbStatus === "Imported" ? (
-                  <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-200">
-                    Imported
-                  </span>
-                ) : (
-                  <span className="text-xs uppercase tracking-wide text-slate-500">—</span>
-                )}
+                <Link
+                  href={`/flights/${flight.id}`}
+                  className="block -mx-4 -my-3 px-4 py-3"
+                >
+                  {decisionBadge(flight.preflightDecision)}
+                </Link>
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  href={`/flights/${flight.id}`}
+                  className="block -mx-4 -my-3 px-4 py-3"
+                >
+                  {decisionBadge(flight.postflightDecision)}
+                </Link>
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  href={`/flights/${flight.id}`}
+                  className="block -mx-4 -my-3 px-4 py-3"
+                >
+                  {flight.adsbStatus === "Imported" ? (
+                    <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-200">
+                      Imported
+                    </span>
+                  ) : (
+                    <span className="text-xs uppercase tracking-wide text-slate-500">—</span>
+                  )}
+                </Link>
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-2">
@@ -121,6 +158,18 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                           {item.label}
                         </Link>
                       ))}
+                      <div className="my-1 border-t border-slate-800" />
+                      <form
+                        action={`/api/flights/${flight.id}/delete`}
+                        method="post"
+                      >
+                        <button
+                          type="submit"
+                          className="block w-full px-3 py-2 text-left text-rose-200 transition hover:bg-rose-500/10"
+                        >
+                          Delete flight
+                        </button>
+                      </form>
                     </div>
                   </details>
                 </div>
