@@ -8,7 +8,7 @@ const contentSecurityPolicy = `
   frame-ancestors 'none';
   script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"};
   style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob:;
+  img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com;
   font-src 'self' data:;
   connect-src 'self';
   object-src 'none';
