@@ -203,20 +203,20 @@ export function CreateFlightModal({
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-y-auto border-l border-slate-800 bg-slate-950 p-6 shadow-xl">
+        <Dialog.Content className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <Dialog.Title className="text-lg font-semibold text-slate-100">
+              <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Plan a flight
               </Dialog.Title>
-              <Dialog.Description className="text-sm text-slate-400">
+              <Dialog.Description className="text-sm text-slate-600 dark:text-slate-400">
                 Schedule a planned flight and add participants without leaving this page.
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="rounded-md border border-slate-800 p-2 text-slate-400 transition hover:text-slate-100"
+                className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:text-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
                 aria-label="Close create flight dialog"
               >
                 <X className="h-4 w-4" />
@@ -227,13 +227,13 @@ export function CreateFlightModal({
           <form onSubmit={handleSubmit} className="mt-6 space-y-6">
             <section className="space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-400">
+                <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                   Flight plan
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                     Scheduled start
                   </label>
                   <Input
@@ -245,7 +245,7 @@ export function CreateFlightModal({
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                     Scheduled end
                   </label>
                   <Input
@@ -257,24 +257,24 @@ export function CreateFlightModal({
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                     From
                   </label>
                   <Input name="origin" placeholder="Origin airport" required />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                     To
                   </label>
                   <Input name="destination" placeholder="Destination airport" required />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                  <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                     Aircraft
                   </label>
                   <select
                     name="aircraftId"
-                    className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                    className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                     required
                     value={selectedAircraftId}
                     onChange={(event) => {
@@ -301,14 +301,14 @@ export function CreateFlightModal({
 
             <section className="space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-400">
+                <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                   People
                 </p>
               </div>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-semibold text-slate-200">App users</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">App users</p>
                     <Button
                       type="button"
                       variant="outline"
@@ -328,7 +328,7 @@ export function CreateFlightModal({
                     >
                       <select
                         name="participantUserId"
-                        className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                        className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         value={participant.id}
                         onChange={(event) =>
                           setUserParticipants((prev) =>
@@ -349,7 +349,7 @@ export function CreateFlightModal({
                       </select>
                       <select
                         name="participantUserRole"
-                        className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                        className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         value={participant.role}
                         onChange={(event) =>
                           setUserParticipants((prev) =>
@@ -371,7 +371,7 @@ export function CreateFlightModal({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="self-center text-slate-400 hover:text-slate-100"
+                        className="self-center text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                         onClick={() =>
                           setUserParticipants((prev) =>
                             prev.length === 1
@@ -390,7 +390,7 @@ export function CreateFlightModal({
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-semibold text-slate-200">People</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">People</p>
                     <Button
                       type="button"
                       variant="outline"
@@ -410,7 +410,7 @@ export function CreateFlightModal({
                     >
                       <select
                         name="participantPersonId"
-                        className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                        className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         value={participant.id}
                         onChange={(event) => {
                           if (event.target.value === newOptionValue) {
@@ -442,7 +442,7 @@ export function CreateFlightModal({
                       </select>
                       <select
                         name="participantPersonRole"
-                        className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                        className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         value={participant.role}
                         onChange={(event) =>
                           setPeopleParticipants((prev) =>
@@ -464,7 +464,7 @@ export function CreateFlightModal({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="self-center text-slate-400 hover:text-slate-100"
+                        className="self-center text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                         onClick={() =>
                           setPeopleParticipants((prev) =>
                             prev.length === 1
@@ -506,16 +506,16 @@ export function CreateFlightModal({
           <Dialog.Root open={aircraftDialogOpen} onOpenChange={setAircraftDialogOpen}>
             <Dialog.Portal>
               <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm" />
-              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-800 bg-slate-950 p-6 shadow-xl">
-                <Dialog.Title className="text-lg font-semibold text-slate-100">
+              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+                <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Create new aircraft
                 </Dialog.Title>
-                <Dialog.Description className="text-sm text-slate-400">
+                <Dialog.Description className="text-sm text-slate-600 dark:text-slate-400">
                   Add a new aircraft and return to your flight plan.
                 </Dialog.Description>
                 <div className="mt-4 space-y-4">
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                       Tail number
                     </label>
                     <Input
@@ -525,7 +525,7 @@ export function CreateFlightModal({
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                       Model
                     </label>
                     <Input
@@ -552,16 +552,16 @@ export function CreateFlightModal({
           <Dialog.Root open={personDialogOpen} onOpenChange={setPersonDialogOpen}>
             <Dialog.Portal>
               <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm" />
-              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-800 bg-slate-950 p-6 shadow-xl">
-                <Dialog.Title className="text-lg font-semibold text-slate-100">
+              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+                <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Create new person
                 </Dialog.Title>
-                <Dialog.Description className="text-sm text-slate-400">
+                <Dialog.Description className="text-sm text-slate-600 dark:text-slate-400">
                   Add a new contact and return to your flight plan.
                 </Dialog.Description>
                 <div className="mt-4 space-y-4">
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                       Name
                     </label>
                     <Input
@@ -571,7 +571,7 @@ export function CreateFlightModal({
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                    <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                       Email
                     </label>
                     <Input

@@ -90,20 +90,20 @@ export function CreateAircraftModal({
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-slate-800 bg-slate-950 p-6 shadow-xl">
+        <Dialog.Content className="fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <Dialog.Title className="text-lg font-semibold text-slate-100">
+              <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Create aircraft
               </Dialog.Title>
-              <Dialog.Description className="text-sm text-slate-400">
+              <Dialog.Description className="text-sm text-slate-600 dark:text-slate-400">
                 Add tail number, aircraft details, and an optional checklist profile.
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="rounded-md border border-slate-800 p-2 text-slate-400 transition hover:text-slate-100"
+                className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:text-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
                 aria-label="Close create aircraft dialog"
               >
                 <X className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function CreateAircraftModal({
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                   Tail number
                 </label>
                 <Input
@@ -125,7 +125,7 @@ export function CreateAircraftModal({
                 />
               </div>
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                   Manufacturer
                 </label>
                 <Input
@@ -135,17 +135,17 @@ export function CreateAircraftModal({
                 />
               </div>
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                   Model
                 </label>
                 <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="SR20" />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                   Type
                 </label>
                 <select
-                  className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                  className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 >
@@ -160,11 +160,11 @@ export function CreateAircraftModal({
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+                <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                   Checklist profile (optional)
                 </label>
                 <select
-                  className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                  className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                   value={aircraftTypeId}
                   onChange={(e) => setAircraftTypeId(e.target.value)}
                 >
