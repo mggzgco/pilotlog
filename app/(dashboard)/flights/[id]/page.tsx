@@ -345,15 +345,17 @@ export default async function FlightDetailPage({
 
       <Card id="stats">
         <CardHeader>
-          <p className="text-sm text-slate-400">Stats</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Stats</p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 lg:grid-cols-6 lg:grid-rows-2">
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 lg:col-span-2 lg:row-span-2">
-              <p className="text-xs font-semibold uppercase text-slate-400">Aircraft</p>
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40 lg:col-span-2 lg:row-span-2">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
+                Aircraft
+              </p>
               <div className="mt-3 flex items-start gap-5">
                 {flight.aircraft?.photoStoragePath ? (
-                  <div className="h-48 w-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40">
+                  <div className="h-48 w-48 overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-900/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`/api/aircraft/${flight.aircraft.id}/photo`}
@@ -362,16 +364,16 @@ export default async function FlightDetailPage({
                     />
                   </div>
                 ) : (
-                  <div className="h-48 w-48 rounded-xl border border-slate-800 bg-slate-950/40" />
+                  <div className="h-48 w-48 rounded-xl bg-slate-50 dark:bg-slate-900/30" />
                 )}
                 <div className="min-w-0">
-                  <p className="text-2xl font-semibold leading-tight">
+                  <p className="text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-100">
                     {flight.tailNumberSnapshot ?? flight.tailNumber}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-slate-200">
+                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">
                     {aircraftMakeModelLabel}
                   </p>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                     {aircraftCategoryLabel}
                     {aircraftProfileLabel ? ` · ${aircraftProfileLabel}` : ""}
                   </p>
@@ -379,26 +381,26 @@ export default async function FlightDetailPage({
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Planned</p>
-              <p className="text-sm font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Planned</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {flight.plannedStartTime
                   ? flight.plannedStartTime.toLocaleString()
                   : "—"}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 {flight.plannedEndTime
                   ? `End ${flight.plannedEndTime.toLocaleString()}`
                   : "No planned end time"}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Imported</p>
-              <p className="text-sm font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Imported</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {isImported ? flight.startTime.toLocaleString() : "—"}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 {isImported
                   ? flight.endTime
                     ? `End ${flight.endTime.toLocaleString()}`
@@ -407,48 +409,48 @@ export default async function FlightDetailPage({
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Duration</p>
-              <p className="text-lg font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Duration</p>
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {isImported && flight.durationMinutes !== null
                   ? `${flight.durationMinutes} mins`
                   : "—"}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Distance</p>
-              <p className="text-lg font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Distance</p>
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {isImported && flight.distanceNm !== null
                   ? `${flight.distanceNm} nm`
                   : "—"}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Max altitude</p>
-              <p className="text-lg font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Max altitude</p>
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {maxAltitude ? `${maxAltitude.toLocaleString()} ft` : "—"}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Min speed</p>
-              <p className="text-lg font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Min speed</p>
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {minSpeedKt !== null ? `${Math.round(minSpeedKt)} kt` : "—"}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Avg speed</p>
-              <p className="text-lg font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Avg speed</p>
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {avgSpeedKt !== null ? `${avgSpeedKt} kt` : "—"}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Max speed</p>
-              <p className="text-lg font-semibold text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Max speed</p>
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {maxSpeedKt !== null ? `${Math.round(maxSpeedKt)} kt` : "—"}
               </p>
             </div>
