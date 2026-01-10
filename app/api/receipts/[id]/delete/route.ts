@@ -1,14 +1,17 @@
 import { promises as fs } from "fs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/db";
-import { requireUser } from "@/app/lib/session";
+import { getCurrentUser } from "@/app/lib/auth/session";
 import { getUploadPath } from "@/app/lib/storage";
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireUser();
+  const { user, session } = await getCurrentUser();
+  if (!user || !session || user.status !== "ACTIVE") {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   const receipt = await prisma.receiptDocument.findFirst({
     where: { id: params.id, userId: user.id }
   });
@@ -30,7 +33,15 @@ export async function POST(
     // Ignore missing file cleanup errors.
   }
 
-  const redirectUrl = new URL(`/flights/${receipt.flightId}`, request.url);
+  const origin = new URL(request.url).origin;
+  const referer = request.headers.get("referer");
+  const refererUrl = referer ? new URL(referer) : null;
+  const isPhoto = receipt.storagePath.startsWith("photo_");
+  const fallbackPath = isPhoto ? `/flights/${receipt.flightId}` : `/flights/${receipt.flightId}/costs`;
+  const redirectUrl =
+    refererUrl && refererUrl.origin === origin
+      ? refererUrl
+      : new URL(fallbackPath, request.url);
   redirectUrl.searchParams.set("toast", "Receipt deleted.");
   redirectUrl.searchParams.set("toastType", "success");
   return NextResponse.redirect(redirectUrl);

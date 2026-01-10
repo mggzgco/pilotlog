@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { getUploadPath } from "@/app/lib/storage";
-import { recordAuditEvent } from "@/app/lib/audit";
 import { handleApiError } from "@/src/lib/security/errors";
 
 export async function GET(
@@ -16,6 +15,7 @@ export async function GET(
     if (!user || !session || user.status !== "ACTIVE") {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
+
     const receipt = await prisma.receiptDocument.findFirst({
       where: { id: params.id, userId: user.id }
     });
@@ -36,18 +36,6 @@ export async function GET(
       return NextResponse.json({ error: "File missing." }, { status: 404 });
     }
 
-    await recordAuditEvent({
-      userId: user.id,
-      action: "receipt.downloaded",
-      entityType: "ReceiptDocument",
-      entityId: receipt.id,
-      metadata: {
-        flightId: receipt.flightId,
-        originalFilename: receipt.originalFilename,
-        sizeBytes: receipt.sizeBytes ?? null
-      }
-    });
-
     const safeFilename = receipt.originalFilename.replace(/["\\]/g, "");
     const stream = createReadStream(filePath);
 
@@ -55,10 +43,11 @@ export async function GET(
       headers: {
         "Content-Type": receipt.contentType ?? "application/octet-stream",
         "Content-Length": stats.size.toString(),
-        "Content-Disposition": `attachment; filename="${safeFilename}"`
+        "Content-Disposition": `inline; filename="${safeFilename}"`
       }
     });
   } catch (error) {
-    return handleApiError(error, "receipt.download");
+    return handleApiError(error, "receipt.preview");
   }
 }
+

@@ -71,7 +71,11 @@ export default async function FlightCostsPage({
 
   const receiptFilter = searchParams?.receiptCostItemId ?? "all";
 
-  const receiptDocuments = flight.receiptDocuments.filter((receipt) => {
+  const receiptsOnly = flight.receiptDocuments.filter(
+    (receipt) => !receipt.storagePath.startsWith("photo_")
+  );
+
+  const receiptDocuments = receiptsOnly.filter((receipt) => {
     if (receiptFilter === "all") {
       return true;
     }
@@ -126,7 +130,7 @@ export default async function FlightCostsPage({
             </div>
             <div>
               <p className="text-xs uppercase text-slate-400">Receipts</p>
-              <p className="text-lg font-semibold">{flight.receiptDocuments.length}</p>
+              <p className="text-lg font-semibold">{receiptsOnly.length}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-slate-400">Total</p>
@@ -280,6 +284,7 @@ export default async function FlightCostsPage({
             encType="multipart/form-data"
             className="mt-4 grid gap-3 lg:grid-cols-3"
           >
+            <input type="hidden" name="kind" value="receipt" />
             <select
               name="costItemId"
               defaultValue={receiptUploadDefaultCostItemId}

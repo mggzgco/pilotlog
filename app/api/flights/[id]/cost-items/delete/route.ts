@@ -33,7 +33,13 @@ export async function POST(
 
   await prisma.costItem.delete({ where: { id: costItem.id } });
 
-  const redirectUrl = new URL(`/flights/${flight.id}`, request.url);
+  const origin = new URL(request.url).origin;
+  const referer = request.headers.get("referer");
+  const refererUrl = referer ? new URL(referer) : null;
+  const redirectUrl =
+    refererUrl && refererUrl.origin === origin
+      ? refererUrl
+      : new URL(`/flights/${flight.id}/costs`, request.url);
   redirectUrl.searchParams.set("toast", "Cost item deleted.");
   redirectUrl.searchParams.set("toastType", "success");
   return NextResponse.redirect(redirectUrl);

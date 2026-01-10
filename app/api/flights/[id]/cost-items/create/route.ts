@@ -152,7 +152,13 @@ export async function POST(
     });
   }
 
-  const redirectUrl = new URL(`/flights/${flight.id}`, request.url);
+  const origin = new URL(request.url).origin;
+  const referer = request.headers.get("referer");
+  const refererUrl = referer ? new URL(referer) : null;
+  const redirectUrl =
+    refererUrl && refererUrl.origin === origin
+      ? refererUrl
+      : new URL(`/flights/${flight.id}/costs`, request.url);
   redirectUrl.searchParams.set(
     "toast",
     isUpdate ? "Cost item updated." : "Cost item added."

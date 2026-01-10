@@ -31,13 +31,19 @@ export function getUploadPath(storageName: string) {
   return path.join(uploadDir, storageName);
 }
 
-export async function storeUpload(buffer: Buffer, extension: string) {
+export async function storeUpload(
+  buffer: Buffer,
+  extension: string,
+  options?: { prefix?: string }
+) {
   await fs.mkdir(uploadDir, { recursive: true });
   const normalizedExtension =
     extension.startsWith(".") && safeExtensionPattern.test(extension)
       ? extension
       : ".bin";
-  const name = `${crypto.randomBytes(16).toString("hex")}${normalizedExtension}`;
+  const rawPrefix = options?.prefix ?? "";
+  const safePrefix = safeExtensionPattern.test(rawPrefix) ? rawPrefix : "";
+  const name = `${safePrefix}${crypto.randomBytes(16).toString("hex")}${normalizedExtension}`;
   const fullPath = path.join(uploadDir, name);
   await fs.writeFile(fullPath, buffer);
   return name;

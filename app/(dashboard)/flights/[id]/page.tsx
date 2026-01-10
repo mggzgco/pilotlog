@@ -8,6 +8,8 @@ import { Button } from "@/app/components/ui/button";
 import { AltitudeChart } from "@/app/components/charts/AltitudeChart";
 import { EmptyState } from "@/app/components/ui/empty-state";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
+import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { Input } from "@/app/components/ui/input";
 
 export default async function FlightDetailPage({
   params,
@@ -21,9 +23,18 @@ export default async function FlightDetailPage({
     include: {
       trackPoints: { orderBy: { recordedAt: "asc" } },
       costItems: { select: { id: true, amountCents: true } },
-      logbookEntries: { select: { id: true } },
-      receiptDocuments: { select: { id: true } },
-      participants: { select: { id: true }, orderBy: { createdAt: "asc" } },
+      receiptDocuments: {
+        where: { storagePath: { startsWith: "photo_" } },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          originalFilename: true,
+          contentType: true,
+          createdAt: true,
+          sizeBytes: true,
+          storagePath: true
+        }
+      },
       checklistRuns: { select: { id: true, phase: true, status: true, decision: true } }
     }
   });
@@ -60,9 +71,16 @@ export default async function FlightDetailPage({
       flight.providerFlightId ||
       ["IMPORTED", "COMPLETED"].includes(flight.status)
   );
-  const hasAnyLogbookEntry = flight.logbookEntries.length > 0;
+  const [logbookEntryCount, receiptCount] = await Promise.all([
+    prisma.logbookEntry.count({ where: { flightId: flight.id } }),
+    prisma.receiptDocument.count({
+      where: { flightId: flight.id, userId: user.id, NOT: { storagePath: { startsWith: "photo_" } } }
+    })
+  ]);
+
+  const hasAnyLogbookEntry = logbookEntryCount > 0;
   const hasCosts = flight.costItems.length > 0;
-  const hasReceipts = flight.receiptDocuments.length > 0;
+  const hasReceipts = receiptCount > 0;
   const needsAdsB = !isImported;
   const needsLogbook = !hasAnyLogbookEntry;
   const needsCosts = !hasCosts;
@@ -77,6 +95,14 @@ export default async function FlightDetailPage({
     { PREFLIGHT: "NOT_AVAILABLE", POSTFLIGHT: "NOT_AVAILABLE" }
   );
 
+  const flightNotes =
+    flight.statsJson &&
+    typeof flight.statsJson === "object" &&
+    !Array.isArray(flight.statsJson) &&
+    typeof (flight.statsJson as Record<string, unknown>).userNotes === "string"
+      ? String((flight.statsJson as Record<string, unknown>).userNotes)
+      : "";
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -90,9 +116,45 @@ export default async function FlightDetailPage({
         </p>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Route map</p>
+          </CardHeader>
+          <CardContent>
+            {flight.trackPoints.length > 1 ? (
+              <div className="h-96">
+                <FlightMap track={flight.trackPoints ?? undefined} />
+              </div>
+            ) : (
+              <EmptyState
+                title="No track data yet"
+                description="Import ADS-B data to view the flight track."
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Altitude profile</p>
+          </CardHeader>
+          <CardContent>
+            {altitudePoints.length > 1 ? (
+              <AltitudeChart points={altitudePoints} />
+            ) : (
+              <EmptyState
+                title="No altitude profile yet"
+                description="Import ADS-B data to see the altitude profile."
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Summary</p>
+          <p className="text-sm text-slate-400">Stats</p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 lg:grid-cols-3">
@@ -154,6 +216,51 @@ export default async function FlightDetailPage({
         </CardContent>
       </Card>
 
+      <div className="grid gap-3">
+      {showAutoImportRunning ? (
+        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-sky-300" />
+            Importing ADS-B…
+          </div>
+        </div>
+      ) : null}
+
+      {showAutoImportSuccess ? (
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+            ADS-B data imported.
+        </div>
+      ) : null}
+
+      {showAutoImportNotFound ? (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
+            <span>No ADS-B match found. Manually import and attach.</span>
+            <Button size="sm" variant="outline" asChild>
+                <Link href={`/import?flightId=${flight.id}`}>Manually import and attach</Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {showAutoImportMatchCta ? (
+        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
+            <span>Multiple ADS-B matches found. Choose the best one to attach.</span>
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/flights/${flight.id}/match`}>Select match</Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {showAutoImportFailed ? (
+        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          ADS-B import failed. Please try again or manually attach a flight.
+        </div>
+      ) : null}
+            </div>
+
       <Card>
         <CardHeader>
           <p className="text-sm text-slate-400">Quick actions</p>
@@ -175,7 +282,7 @@ export default async function FlightDetailPage({
             <Button variant="outline" asChild>
               <Link href={`/flights/${flight.id}/logbook`}>Logbook</Link>
             </Button>
-          </div>
+            </div>
           <div className="mt-4 grid gap-3 text-sm text-slate-300 lg:grid-cols-2">
             <div className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
               <p className="text-xs font-semibold uppercase text-slate-400">Checklists</p>
@@ -192,7 +299,7 @@ export default async function FlightDetailPage({
                 <span className="text-slate-100">
                   {costTotalCents > 0 ? currencyFormatter.format(costTotalCents / 100) : "—"}
                 </span>{" "}
-                · Receipts: <span className="text-slate-100">{flight.receiptDocuments.length}</span>
+                · Receipts: <span className="text-slate-100">{receiptCount}</span>
               </p>
             </div>
           </div>
@@ -211,8 +318,8 @@ export default async function FlightDetailPage({
                   <span>Attach ADS-B track data (optional, but unlocks stats/map).</span>
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/match`}>Find match</Link>
-                  </Button>
-                </div>
+                    </Button>
+                  </div>
               ) : null}
               {needsLogbook ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
@@ -236,86 +343,169 @@ export default async function FlightDetailPage({
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/costs`}>Upload receipts</Link>
                   </Button>
-                </div>
+                    </div>
               ) : null}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {showAutoImportRunning ? (
-        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-sky-300" />
-            Importing ADS-B…
-          </div>
-        </div>
-      ) : null}
-
-      {showAutoImportSuccess ? (
-        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          ADS-B data imported.
-        </div>
-      ) : null}
-
-      {showAutoImportNotFound ? (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
-            <span>No ADS-B match found. Manually import and attach.</span>
-            <Button size="sm" variant="outline" asChild>
-              <Link href={`/import?flightId=${flight.id}`}>
-                Manually import and attach
-              </Link>
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {showAutoImportMatchCta ? (
-        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-          <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
-            <span>Multiple ADS-B matches found. Choose the best one to attach.</span>
-            <Button size="sm" variant="outline" asChild>
-              <Link href={`/flights/${flight.id}/match`}>Select match</Link>
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {showAutoImportFailed ? (
-        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          ADS-B import failed. Please try again or manually attach a flight.
-        </div>
-      ) : null}
-
+      <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Route map</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-400">Costs</p>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/flights/${flight.id}/costs`}>Open costs</Link>
+              </Button>
+            </div>
         </CardHeader>
         <CardContent>
-          {flight.trackPoints.length > 1 ? (
-            <div className="h-80">
-              <FlightMap track={flight.trackPoints ?? undefined} />
+            <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                <p className="text-xs uppercase text-slate-400">Total</p>
+                <p className="text-lg font-semibold">
+                  {costTotalCents > 0 ? currencyFormatter.format(costTotalCents / 100) : "—"}
+                </p>
+                    </div>
+              <div>
+                <p className="text-xs uppercase text-slate-400">Receipts</p>
+                <p className="text-lg font-semibold">{receiptCount}</p>
+                </div>
             </div>
-          ) : (
-            <EmptyState
-              title="No track data yet"
-              description="Import ADS-B data to view the flight track."
-            />
-          )}
+            {!hasCosts ? (
+              <div className="mt-4 rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
+                No costs yet — add fuel, rental, instruction, etc.
+              </div>
+            ) : null}
         </CardContent>
       </Card>
 
-      {altitudePoints.length > 1 ? (
-        <Card>
-          <CardHeader>
-            <p className="text-sm text-slate-400">Altitude profile</p>
-          </CardHeader>
-          <CardContent>
-            <AltitudeChart points={altitudePoints} />
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-400">Logbook</p>
+            <Button asChild variant="outline" size="sm">
+                <Link href={`/flights/${flight.id}/logbook`}>Open logbook</Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-xs uppercase text-slate-400">Entries</p>
+                <p className="text-lg font-semibold">{logbookEntryCount}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-slate-400">Status</p>
+                <p className="text-lg font-semibold">{hasAnyLogbookEntry ? "Started" : "Not started"}</p>
+              </div>
+            </div>
+            {!hasAnyLogbookEntry ? (
+              <div className="mt-4 rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
+                No logbook entry yet — add hours and remarks.
+            </div>
+          ) : null}
           </CardContent>
         </Card>
-      ) : null}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Flight notes</p>
+          </CardHeader>
+          <CardContent>
+            <form action={`/api/flights/${flight.id}/notes`} method="post" className="grid gap-3">
+              <textarea
+                name="notes"
+                className="min-h-[160px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                placeholder="Notes about this flight (training focus, weather, debrief, squawks, learnings)"
+                defaultValue={flightNotes}
+              />
+              <div className="flex flex-wrap gap-3">
+                <FormSubmitButton type="submit" pendingText="Saving notes...">
+                  Save notes
+                </FormSubmitButton>
+                <Button variant="outline" asChild>
+                  <Link href={`/flights/${flight.id}/checklists`}>Go to checklists</Link>
+                </Button>
+              </div>
+            </form>
+        </CardContent>
+      </Card>
+
+        <Card>
+        <CardHeader>
+            <p className="text-sm text-slate-400">Flight photos</p>
+        </CardHeader>
+        <CardContent>
+            <form
+              action={`/api/flights/${flight.id}/receipts/upload`}
+              method="post"
+              encType="multipart/form-data"
+              className="grid gap-3"
+            >
+              <input type="hidden" name="kind" value="photo" />
+              <Input
+                name="receipts"
+                type="file"
+                accept="image/png,image/jpeg"
+                multiple
+                required
+              />
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                <FormSubmitButton type="submit" pendingText="Uploading photos...">
+                  Upload photos
+                </FormSubmitButton>
+                <span>JPG/PNG up to 10MB each.</span>
+            </div>
+            </form>
+
+            {flight.receiptDocuments.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
+                No photos uploaded yet.
+                  </div>
+                ) : (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {flight.receiptDocuments.map((photo) => (
+                  <div key={photo.id} className="rounded-lg border border-slate-800 bg-slate-950/30 p-2">
+                    {photo.contentType?.startsWith("image/") ? (
+                      <Link href={`/api/receipts/${photo.id}/download`} className="block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/api/receipts/${photo.id}/preview`}
+                          alt={photo.originalFilename}
+                          className="h-32 w-full rounded-md object-cover"
+                        />
+                      </Link>
+                    ) : (
+                      <div className="h-32 rounded-md border border-dashed border-slate-800 p-3 text-xs text-slate-400">
+                        Preview not available.
+                        </div>
+                    )}
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="truncate text-xs text-slate-300" title={photo.originalFilename}>
+                        {photo.originalFilename}
+                      </p>
+                      <form action={`/api/receipts/${photo.id}/delete`} method="post">
+                            <FormSubmitButton
+                              type="submit"
+                              size="sm"
+                              variant="outline"
+                              pendingText="Deleting..."
+                            >
+                              Delete
+                            </FormSubmitButton>
+                          </form>
+                        </div>
+                      </div>
+                ))}
+                </div>
+              )}
+        </CardContent>
+      </Card>
+      </div>
     </div>
   );
 }
