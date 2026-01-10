@@ -22,6 +22,19 @@ type AeroApiFlightResponse = {
   flights?: AeroApiFlightSummary[] | null;
 };
 
+type AeroApiSearchFlight = {
+  fa_flight_id?: string | null;
+  ident?: string | null;
+  origin?: string | null;
+  destination?: string | null;
+  departuretime?: number | null;
+  arrivaltime?: number | null;
+};
+
+type AeroApiSearchResponse = {
+  flights?: AeroApiSearchFlight[] | null;
+};
+
 type AeroApiTrackPosition = {
   timestamp?: number | null;
   latitude?: number | null;
@@ -187,25 +200,55 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
 export class AeroApiAdsbProvider implements AdsbProvider {
   async searchFlights(tailNumber: string, start: Date, end: Date): Promise<FlightCandidate[]> {
     const normalizedTailNumber = normalizeTailNumber(tailNumber);
-    let flightsResponse: AeroApiFlightResponse;
+    const epochStart = Math.floor(start.getTime() / 1000);
+    const epochEnd = Math.floor(end.getTime() / 1000);
+
+    // 1) Primary: /flights/{ident}
+    let flights: AeroApiFlightSummary[] = [];
     try {
-      flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
+      const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
         `/flights/${encodeURIComponent(normalizedTailNumber)}`,
         {
-          start: Math.floor(start.getTime() / 1000),
-          end: Math.floor(end.getTime() / 1000)
+          start: epochStart,
+          end: epochEnd,
+          max_pages: 5
         }
       );
+      flights = flightsResponse.flights ?? [];
     } catch (error) {
-      // If AeroAPI returns 404 for the query window/tail, treat it as "no results"
-      // instead of surfacing a hard error to the UI.
-      if (error instanceof AdsbProviderError && error.status === 404) {
-        return [];
+      if (!(error instanceof AdsbProviderError && error.status === 404)) {
+        throw error;
       }
-      throw error;
     }
 
-    const flights = flightsResponse.flights ?? [];
+    // 2) Fallback: /search/flights with ident filter if primary returned none
+    if (flights.length === 0) {
+      try {
+        const queryParts = [
+          `-idents ${normalizedTailNumber}`,
+          `-begin ${epochStart}`,
+          `-end ${epochEnd}`
+        ];
+        const searchResponse = await fetchAeroApi<AeroApiSearchResponse>("/search/flights", {
+          query: queryParts.join(" "),
+          max_pages: 5
+        });
+        const searchFlights = searchResponse.flights ?? [];
+        flights = searchFlights.map((flight) => ({
+          fa_flight_id: flight.fa_flight_id,
+          ident: flight.ident,
+          origin: flight.origin ? { code: flight.origin } : undefined,
+          destination: flight.destination ? { code: flight.destination } : undefined,
+          departuretime: flight.departuretime,
+          arrivaltime: flight.arrivaltime
+        }));
+      } catch (error) {
+        if (!(error instanceof AdsbProviderError && error.status === 404)) {
+          throw error;
+        }
+      }
+    }
+
     const candidates = await Promise.all(
       flights.map(async (flight) => {
         const faFlightId = flight.fa_flight_id ?? null;
