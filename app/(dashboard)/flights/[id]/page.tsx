@@ -54,9 +54,24 @@ export default async function FlightDetailPage({
       recordedAt: point.recordedAt.toISOString(),
       altitudeFeet: point.altitudeFeet as number
     }));
-  const maxAltitude =
+  const maxAltitudeRaw =
     altitudePoints.length > 0
       ? Math.max(...altitudePoints.map((point) => point.altitudeFeet))
+      : null;
+  // Backward-compatible display fix: some imported tracks store altitude as
+  // "hundreds of feet" (e.g. 34 => 3,400 ft). Detect and scale for display.
+  const altitudeDisplayScale =
+    maxAltitudeRaw !== null && maxAltitudeRaw > 0 && maxAltitudeRaw <= 250 ? 100 : 1;
+  const altitudePointsDisplay =
+    altitudeDisplayScale === 1
+      ? altitudePoints
+      : altitudePoints.map((point) => ({
+          ...point,
+          altitudeFeet: Math.round(point.altitudeFeet * altitudeDisplayScale)
+        }));
+  const maxAltitude =
+    altitudePointsDisplay.length > 0
+      ? Math.max(...altitudePointsDisplay.map((point) => point.altitudeFeet))
       : null;
   const aircraftTypeLabel =
     flight.aircraft?.aircraftType?.name ?? flight.aircraft?.model ?? "—";
@@ -206,8 +221,8 @@ export default async function FlightDetailPage({
             <p className="text-sm text-slate-400">Altitude profile</p>
           </CardHeader>
           <CardContent>
-            {altitudePoints.length > 1 ? (
-              <AltitudeChart points={altitudePoints} />
+            {altitudePointsDisplay.length > 1 ? (
+              <AltitudeChart points={altitudePointsDisplay} />
             ) : (
               <EmptyState
                 title="No altitude profile yet"

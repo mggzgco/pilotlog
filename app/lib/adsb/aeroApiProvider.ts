@@ -211,7 +211,7 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
     return [];
   }
 
-  return track.positions
+  const rawPoints = track.positions
     .map((position) => {
       if (!position || typeof position !== "object") {
         return null;
@@ -236,6 +236,29 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
       } satisfies FlightTrackPoint;
     })
     .filter((point): point is FlightTrackPoint => point !== null);
+
+  // AeroAPI altitude units can vary by endpoint/account. We normalize by detecting
+  // "hundreds of feet" style values (e.g. 34 => 3,400 ft) based on max altitude.
+  const maxRawAltitude = rawPoints.reduce<number>((max, point) => {
+    const value = point.altitudeFeet;
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return max;
+    }
+    return Math.max(max, value);
+  }, 0);
+  const altitudeScale = maxRawAltitude > 0 && maxRawAltitude <= 700 ? 100 : 1;
+
+  if (altitudeScale === 1) {
+    return rawPoints;
+  }
+
+  return rawPoints.map((point) => ({
+    ...point,
+    altitudeFeet:
+      typeof point.altitudeFeet === "number"
+        ? Math.round(point.altitudeFeet * altitudeScale)
+        : null
+  }));
 }
 
 export class AeroApiAdsbProvider implements AdsbProvider {
