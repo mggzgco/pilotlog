@@ -6,21 +6,28 @@ import { logbookSchema } from "@/app/lib/validation";
 import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
 
 export async function POST(request: Request) {
+  const redirectWithToast = (message: string, toastType: "success" | "error") => {
+    const redirectUrl = new URL("/logbook", request.url);
+    redirectUrl.searchParams.set("toast", message);
+    redirectUrl.searchParams.set("toastType", toastType);
+    return NextResponse.redirect(redirectUrl);
+  };
+
   const csrf = validateRequestCsrf(request);
   if (!csrf.ok) {
-    return NextResponse.json({ error: csrf.error }, { status: 403 });
+    return redirectWithToast(csrf.error, "error");
   }
 
   const { user, session } = await getCurrentUser();
   if (!user || !session || user.status !== "ACTIVE") {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return redirectWithToast("Unauthorized.", "error");
   }
 
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
   const parsed = logbookSchema.safeParse(raw);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid logbook data." }, { status: 400 });
+    return redirectWithToast("Invalid logbook data.", "error");
   }
 
   const flightId = parsed.data.flightId?.trim() || "";
@@ -31,7 +38,7 @@ export async function POST(request: Request) {
       })
     : null;
   if (flightId && !flight) {
-    return NextResponse.json({ error: "Flight not found." }, { status: 404 });
+    return redirectWithToast("Flight not found.", "error");
   }
   const linkedFlightId = flight?.id ?? null;
 
@@ -102,9 +109,6 @@ export async function POST(request: Request) {
     await prisma.logbookEntry.create({ data });
   }
 
-  const redirectUrl = new URL("/logbook", request.url);
-  redirectUrl.searchParams.set("toast", "Logbook entry saved.");
-  redirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(redirectUrl);
+  return redirectWithToast("Logbook entry saved.", "success");
 }
 
