@@ -57,6 +57,14 @@ export function ImportClient({ flightId }: ImportClientProps) {
   const { addToast } = useToast();
   const isAttachMode = Boolean(flightId);
 
+  const formatDateTime = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toISOString();
+  };
+
   const selectedFlight = useMemo(
     () => flights.find((flight) => flight.providerFlightId === selectedId) ?? null,
     [flights, selectedId]
@@ -76,13 +84,13 @@ export function ImportClient({ flightId }: ImportClientProps) {
           headers: { "Content-Type": "application/json" },
           body: isAttachMode
             ? JSON.stringify({
-                start: startTime,
-                end: endTime
+                start: formatDateTime(startTime),
+                end: formatDateTime(endTime)
               })
             : JSON.stringify({
                 tailNumber: tailNumber.trim(),
-                start: startTime,
-                end: endTime
+                start: formatDateTime(startTime),
+                end: formatDateTime(endTime)
               })
         }
       );
