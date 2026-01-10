@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
 import { createAircraftAction } from "@/app/lib/actions/aircraft-actions";
@@ -15,9 +16,14 @@ export default async function AircraftPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Aircraft</h2>
-        <p className="text-sm text-slate-400">Maintain your fleet list.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold">Aircraft</h2>
+          <p className="text-sm text-slate-400">Maintain your fleet list.</p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/checklists">Manage checklists</Link>
+        </Button>
       </div>
 
       <Card>

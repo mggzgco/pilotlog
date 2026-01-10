@@ -1,31 +1,28 @@
-import Link from "next/link";
-import { Plane, ClipboardList, Receipt, Radar, User2, ShieldCheck, BarChart3 } from "lucide-react";
+"use client";
 
-interface SidebarProps {
-  user: {
-    name: string | null;
-    email: string;
-    role: "USER" | "ADMIN";
-  };
-}
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Plane, ClipboardList, Receipt, Radar, BarChart3 } from "lucide-react";
 
 export const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: Plane },
+  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/flights", label: "Flights", icon: Radar },
-  { href: "/flights/new", label: "Plan Flight", icon: Plane },
-  { href: "/checklists", label: "Checklists", icon: ClipboardList },
-  { href: "/import", label: "ADS-B Import", icon: ClipboardList },
   { href: "/logbook", label: "Logbook", icon: ClipboardList },
   { href: "/costs", label: "Costs", icon: Receipt },
-  { href: "/aircraft", label: "Aircraft", icon: Plane },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/profile", label: "Profile", icon: User2 }
+  { href: "/aircraft", label: "Aircraft", icon: Plane }
 ];
 
-export function Sidebar({ user }: SidebarProps) {
+export function Sidebar() {
   // UX-001: persistent left navigation for core modules
+  const pathname = usePathname();
+  const isChecklistFocus = pathname?.startsWith("/checklists");
+
+  if (isChecklistFocus) {
+    return null;
+  }
+
   return (
-    <aside className="hidden w-64 flex-col border-r border-slate-800 bg-slate-950 p-6 md:flex">
+    <aside className="hidden w-64 flex-col border-r border-slate-800 bg-slate-950 p-6 lg:flex">
       <div className="mb-8">
         <div className="text-sm uppercase tracking-[0.2em] text-slate-400">Flight Training</div>
         <div className="text-2xl font-semibold">Super App</div>
@@ -44,15 +41,6 @@ export function Sidebar({ user }: SidebarProps) {
             </Link>
           );
         })}
-        {user.role === "ADMIN" && (
-          <Link
-            href="/admin/approvals"
-            className="mt-4 flex items-center gap-3 rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            Approvals
-          </Link>
-        )}
       </nav>
       <div className="text-xs text-slate-500">Secure by Lucia sessions</div>
     </aside>
