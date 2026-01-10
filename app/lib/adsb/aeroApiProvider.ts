@@ -219,122 +219,130 @@ export class AeroApiAdsbProvider implements AdsbProvider {
     const isoStart = start.toISOString();
     const isoEnd = end.toISOString();
 
-    // 1) Primary: historical flights by registration (AeroAPI-recommended for past dates)
-    let flights: AeroApiFlightSummary[] = [];
     try {
-      const historyResponse = await fetchAeroApi<AeroApiFlightResponse>(
-        `/history/flights/${encodeURIComponent(normalizedTailNumber)}`,
-        {
-          ident_type: "registration",
-          start: isoStart,
-          end: isoEnd,
-          max_pages: 5
-        }
-      );
-      flights = historyResponse.flights ?? [];
-    } catch (error) {
-      if (!(error instanceof AdsbProviderError && error.status === 404)) {
-        throw error;
-      }
-    }
-
-    // 2) Secondary: live flights by ident if history empty
-    if (flights.length === 0) {
+      // 1) Primary: historical flights by registration (AeroAPI-recommended for past dates)
+      let flights: AeroApiFlightSummary[] = [];
       try {
-        const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
-          `/flights/${encodeURIComponent(normalizedTailNumber)}`,
+        const historyResponse = await fetchAeroApi<AeroApiFlightResponse>(
+          `/history/flights/${encodeURIComponent(normalizedTailNumber)}`,
           {
-            start: epochStart,
-            end: epochEnd,
+            ident_type: "registration",
+            start: isoStart,
+            end: isoEnd,
             max_pages: 5
           }
         );
-        flights = flightsResponse.flights ?? [];
+        flights = historyResponse.flights ?? [];
       } catch (error) {
         if (!(error instanceof AdsbProviderError && error.status === 404)) {
           throw error;
         }
       }
-    }
 
-    // 3) Fallback: /search/flights with ident filter if nothing yet
-    if (flights.length === 0) {
-      try {
-        const queries = buildSearchQueries(normalizedTailNumber, epochStart, epochEnd);
-        for (const query of queries) {
-          const searchResponse = await fetchAeroApi<AeroApiSearchResponse>("/search/flights", {
-            query,
-            max_pages: 5
-          });
-          const searchFlights = searchResponse.flights ?? [];
-          if (searchFlights.length > 0) {
-            flights = searchFlights.map((flight) => ({
-              fa_flight_id: flight.fa_flight_id,
-              ident: flight.ident,
-              origin: flight.origin ? { code: flight.origin } : undefined,
-              destination: flight.destination ? { code: flight.destination } : undefined,
-              departuretime: flight.departuretime,
-              arrivaltime: flight.arrivaltime
-            }));
-            break;
+      // 2) Secondary: live flights by ident if history empty
+      if (flights.length === 0) {
+        try {
+          const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
+            `/flights/${encodeURIComponent(normalizedTailNumber)}`,
+            {
+              start: isoStart,
+              end: isoEnd,
+              max_pages: 5
+            }
+          );
+          flights = flightsResponse.flights ?? [];
+        } catch (error) {
+          if (!(error instanceof AdsbProviderError && error.status === 404)) {
+            throw error;
           }
         }
-      } catch (error) {
-        if (!(error instanceof AdsbProviderError && error.status === 404)) {
-          throw error;
+      }
+
+      // 3) Fallback: /search/flights with ident filter if nothing yet
+      if (flights.length === 0) {
+        try {
+          const queries = buildSearchQueries(normalizedTailNumber, epochStart, epochEnd);
+          for (const query of queries) {
+            const searchResponse = await fetchAeroApi<AeroApiSearchResponse>("/flights/search", {
+              query,
+              max_pages: 5
+            });
+            const searchFlights = searchResponse.flights ?? [];
+            if (searchFlights.length > 0) {
+              flights = searchFlights.map((flight) => ({
+                fa_flight_id: flight.fa_flight_id,
+                ident: flight.ident,
+                origin: flight.origin ? { code: flight.origin } : undefined,
+                destination: flight.destination ? { code: flight.destination } : undefined,
+                departuretime: flight.departuretime,
+                arrivaltime: flight.arrivaltime
+              }));
+              break;
+            }
+          }
+        } catch (error) {
+          if (!(error instanceof AdsbProviderError && error.status === 404)) {
+            throw error;
+          }
         }
       }
+
+      const candidates = await Promise.all(
+        flights.map(async (flight) => {
+          const faFlightId = flight.fa_flight_id ?? null;
+          const departureEpoch = flight.departuretime ?? null;
+          const arrivalEpoch = flight.arrivaltime ?? null;
+
+          if (!faFlightId || !departureEpoch || !arrivalEpoch) {
+            return null;
+          }
+
+          const startTime = new Date(departureEpoch * 1000);
+          const endTime = new Date(arrivalEpoch * 1000);
+          if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+            return null;
+          }
+
+          const trackResponse =
+            (await fetchAeroApi<AeroApiTrackResponse>(
+              `/history/flights/${encodeURIComponent(faFlightId)}/track`,
+              { include_estimated_positions: true }
+            ).catch(() => null)) ??
+            (await fetchAeroApi<AeroApiTrackResponse>(
+              `/flights/${encodeURIComponent(faFlightId)}/track`,
+              { include_estimated_positions: true }
+            ).catch(() => null));
+
+          const trackPoints = buildTrackPoints(trackResponse);
+          const durationMinutes = computeDurationMinutes(startTime, endTime, trackPoints);
+          const distanceNm = computeDistanceNm(trackPoints);
+
+          return {
+            providerFlightId: `${AEROAPI_PROVIDER_NAME}-${faFlightId}`,
+            tailNumber: normalizedTailNumber,
+            startTime,
+            endTime,
+            durationMinutes,
+            distanceNm,
+            depLabel: resolveAirportLabel(flight.origin),
+            arrLabel: resolveAirportLabel(flight.destination),
+            stats: {
+              maxAltitudeFeet: computeMaxAltitude(trackPoints) ?? null,
+              maxGroundspeedKt: computeMaxGroundspeed(trackPoints) ?? null
+            },
+            track: trackPoints
+          } satisfies FlightCandidate;
+        })
+      );
+
+      return candidates.filter((candidate): candidate is FlightCandidate => candidate !== null);
+    } catch (error) {
+      if (error instanceof AdsbProviderError && error.status && error.status >= 500) {
+        // Treat upstream 5xx as "no results" instead of crashing the app.
+        return [];
+      }
+      throw error;
     }
-
-    const candidates = await Promise.all(
-      flights.map(async (flight) => {
-        const faFlightId = flight.fa_flight_id ?? null;
-        const departureEpoch = flight.departuretime ?? null;
-        const arrivalEpoch = flight.arrivaltime ?? null;
-
-        if (!faFlightId || !departureEpoch || !arrivalEpoch) {
-          return null;
-        }
-
-        const startTime = new Date(departureEpoch * 1000);
-        const endTime = new Date(arrivalEpoch * 1000);
-        if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-          return null;
-        }
-
-        const trackResponse =
-          (await fetchAeroApi<AeroApiTrackResponse>(
-            `/history/flights/${encodeURIComponent(faFlightId)}/track`,
-            { include_estimated_positions: true }
-          ).catch(() => null)) ??
-          (await fetchAeroApi<AeroApiTrackResponse>(
-            `/flights/${encodeURIComponent(faFlightId)}/track`,
-            { include_estimated_positions: true }
-          ).catch(() => null));
-
-        const trackPoints = buildTrackPoints(trackResponse);
-        const durationMinutes = computeDurationMinutes(startTime, endTime, trackPoints);
-        const distanceNm = computeDistanceNm(trackPoints);
-
-        return {
-          providerFlightId: `${AEROAPI_PROVIDER_NAME}-${faFlightId}`,
-          tailNumber: normalizedTailNumber,
-          startTime,
-          endTime,
-          durationMinutes,
-          distanceNm,
-          depLabel: resolveAirportLabel(flight.origin),
-          arrLabel: resolveAirportLabel(flight.destination),
-          stats: {
-            maxAltitudeFeet: computeMaxAltitude(trackPoints) ?? null,
-            maxGroundspeedKt: computeMaxGroundspeed(trackPoints) ?? null
-          },
-          track: trackPoints
-        } satisfies FlightCandidate;
-      })
-    );
-
-    return candidates.filter((candidate): candidate is FlightCandidate => candidate !== null);
   }
 }
 
