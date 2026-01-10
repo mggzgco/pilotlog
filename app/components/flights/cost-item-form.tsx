@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import {
+  costCategoryOptions,
+  costCategoryValues,
+  getCostCategoryLabel
+} from "@/app/lib/costs/categories";
 
 interface CostItemFormValues {
   costItemId?: string;
@@ -25,8 +30,6 @@ interface CostItemFormProps {
   submitSize?: "default" | "sm" | "lg" | "icon";
 }
 
-const categorySuggestions = ["Rental", "Instruction", "Fuel", "Parking", "Fees"];
-
 const parseDecimalInput = (value: string) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
@@ -44,7 +47,16 @@ export function CostItemForm({
   defaultValues,
   submitSize = "default"
 }: CostItemFormProps) {
-  const [category, setCategory] = useState(defaultValues?.category ?? "");
+  const defaultCategory = useMemo(() => {
+    const raw = defaultValues?.category ?? "";
+    const normalized = raw.trim().toLowerCase();
+    return costCategoryValues.includes(
+      normalized as (typeof costCategoryValues)[number]
+    )
+      ? normalized
+      : raw;
+  }, [defaultValues?.category]);
+  const [category, setCategory] = useState(defaultCategory);
   const [amount, setAmount] = useState(defaultValues?.amount ?? "");
   const [rate, setRate] = useState(defaultValues?.rate ?? "");
   const [quantityHours, setQuantityHours] = useState(
@@ -55,12 +67,31 @@ export function CostItemForm({
   );
   const [fuelPrice, setFuelPrice] = useState(defaultValues?.fuelPrice ?? "");
 
+  useEffect(() => {
+    setCategory(defaultCategory);
+  }, [defaultCategory]);
+
   const normalizedCategory = useMemo(
     () => category.trim().toLowerCase(),
     [category]
   );
   const showRateFields = ["rental", "instruction"].includes(normalizedCategory);
   const showFuelFields = normalizedCategory === "fuel";
+  const categoryOptions = useMemo(() => {
+    const options = [...costCategoryOptions];
+    if (
+      category.trim() &&
+      !costCategoryValues.includes(
+        category.trim().toLowerCase() as (typeof costCategoryValues)[number]
+      )
+    ) {
+      options.push({
+        value: category,
+        label: getCostCategoryLabel(category)
+      });
+    }
+    return options;
+  }, [category]);
 
   useEffect(() => {
     if (showRateFields) {
@@ -91,14 +122,20 @@ export function CostItemForm({
         <input type="hidden" name="costItemId" value={defaultValues.costItemId} />
       ) : null}
       <div className="lg:col-span-3">
-        <Input
+        <select
           name="category"
-          placeholder="Category"
-          list="cost-category-options"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
+          className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
           required
-        />
+        >
+          <option value="">Select category</option>
+          {categoryOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
       {showRateFields ? (
         <>
@@ -172,11 +209,6 @@ export function CostItemForm({
           {submitLabel}
         </FormSubmitButton>
       </div>
-      <datalist id="cost-category-options">
-        {categorySuggestions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
     </form>
   );
 }

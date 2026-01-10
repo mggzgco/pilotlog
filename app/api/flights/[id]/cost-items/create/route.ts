@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
+import { costCategoryValues } from "@/app/lib/costs/categories";
 import {
   parseAmountToCents,
   parseOptionalAmountToCents,
@@ -40,6 +41,13 @@ export async function POST(
   const parsed = costItemSchema.safeParse(raw);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid cost data." }, { status: 400 });
+  }
+  const normalizedCategory = parsed.data.category.trim().toLowerCase();
+  const isKnownCategory = costCategoryValues.includes(
+    normalizedCategory as (typeof costCategoryValues)[number]
+  );
+  if (!isKnownCategory && !parsed.data.costItemId) {
+    return NextResponse.json({ error: "Invalid cost category." }, { status: 400 });
   }
 
   const rateRaw = parsed.data.rate?.trim() ?? "";
@@ -104,7 +112,7 @@ export async function POST(
   }
 
   const data = {
-    category: parsed.data.category,
+    category: isKnownCategory ? normalizedCategory : parsed.data.category,
     amountCents,
     rateCents,
     quantityHours,
