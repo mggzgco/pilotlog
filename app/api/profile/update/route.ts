@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
-import { getCurrentUser } from "@/app/lib/auth/session";
+import { requireUser } from "@/app/lib/auth/session";
 import { prisma } from "@/app/lib/db";
 import { updateProfileSchema } from "@/app/lib/validation";
 import { recordAuditEvent } from "@/app/lib/audit";
@@ -11,10 +11,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: csrf.error }, { status: 403 });
   }
 
-  const { user } = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
+  const user = await requireUser();
 
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());

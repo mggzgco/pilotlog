@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
-import { getCurrentUser } from "@/app/lib/auth/session";
+import { requireUser } from "@/app/lib/auth/session";
 import { prisma } from "@/app/lib/db";
 import { defaultProviderName, getAdsbProvider } from "@/app/lib/adsb";
 import { dedupeImportCandidates } from "@/app/lib/flights/imports";
@@ -16,10 +16,7 @@ export async function POST(
     return NextResponse.json({ error: csrf.error }, { status: 403 });
   }
 
-  const { user } = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
+  const user = await requireUser();
 
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },

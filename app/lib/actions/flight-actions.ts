@@ -22,6 +22,18 @@ export async function createFlightAction(formData: FormData) {
     user.id,
     parseParticipantFormData(formData)
   );
+  const participantIds = participantInputs.map((participant) => participant.userId);
+  if (participantIds.length > 0) {
+    const validParticipants = await prisma.user.findMany({
+      where: { id: { in: participantIds }, status: "ACTIVE" },
+      select: { id: true }
+    });
+    const validIds = new Set(validParticipants.map((participant) => participant.id));
+    const invalidIds = participantIds.filter((id) => !validIds.has(id));
+    if (invalidIds.length > 0) {
+      return { error: "Invalid participant selection." };
+    }
+  }
   const { tailNumber, origin, destination, startTime, endTime, durationMinutes } =
     parsed.data;
 
