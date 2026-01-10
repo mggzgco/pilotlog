@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { lucia } from "@/app/lib/auth/lucia";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
-import { requireUser } from "@/app/lib/auth/session";
+import { getCurrentUser } from "@/app/lib/auth/session";
 import { prisma } from "@/app/lib/db";
 import { hashPassword, verifyPassword } from "@/app/lib/password";
 import { changePasswordSchema } from "@/app/lib/validation";
@@ -14,7 +14,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: csrf.error }, { status: 403 });
   }
 
-  const user = await requireUser();
+  const { user, session } = await getCurrentUser();
+  if (!user || !session || user.status !== "ACTIVE") {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());

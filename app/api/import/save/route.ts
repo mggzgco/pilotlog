@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
-import { requireUser } from "@/app/lib/auth/session";
+import { getCurrentUser } from "@/app/lib/auth/session";
 import { prisma } from "@/app/lib/db";
 import { computeDistanceNm, computeDurationMinutes } from "@/app/lib/flights/compute";
 import { recordAuditEvent } from "@/app/lib/audit";
@@ -47,7 +47,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: csrf.error }, { status: 403 });
     }
 
-    const user = await requireUser();
+    const { user, session } = await getCurrentUser();
+    if (!user || !session || user.status !== "ACTIVE") {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
 
     const payload = await request.json().catch(() => null);
     const parsed = saveSchema.safeParse(payload);

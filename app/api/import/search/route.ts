@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
-import { requireUser } from "@/app/lib/auth/session";
+import { getCurrentUser } from "@/app/lib/auth/session";
 import { importSchema } from "@/app/lib/validation";
 import { getAdsbProvider, defaultProviderName } from "@/app/lib/adsb";
 import { dedupeImportCandidates } from "@/app/lib/flights/imports";
@@ -16,7 +16,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: csrf.error }, { status: 403 });
   }
 
-  const user = await requireUser();
+  const { user, session } = await getCurrentUser();
+  if (!user || !session || user.status !== "ACTIVE") {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
   const payload = await request.json().catch(() => null);
   const parsed = searchSchema.safeParse(payload);
