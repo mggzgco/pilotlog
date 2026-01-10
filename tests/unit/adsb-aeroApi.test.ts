@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AeroApiAdsbProvider } from "@/app/lib/adsb/aeroApiProvider";
-
+import { join } from "path";
+import { tmpdir } from "os";
+import { writeFile } from "fs/promises";
 const baseDate = new Date(1000 * 1000);
 
 function buildResponse(payload: unknown) {
@@ -13,7 +14,9 @@ function buildResponse(payload: unknown) {
 describe("AeroApiAdsbProvider", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.resetModules();
     process.env.AEROAPI_KEY = "test-key";
+    delete process.env.AEROAPI_KEY_FILE;
   });
 
   it("queries flights and builds flight candidates with tracks", async () => {
@@ -50,6 +53,7 @@ describe("AeroApiAdsbProvider", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
+    const { AeroApiAdsbProvider } = await import("@/app/lib/adsb/aeroApiProvider");
     const provider = new AeroApiAdsbProvider();
     const flights = await provider.searchFlights("N246FB", baseDate, new Date(2000 * 1000));
 
@@ -66,10 +70,38 @@ describe("AeroApiAdsbProvider", () => {
 
   it("throws when the API key is missing", async () => {
     delete process.env.AEROAPI_KEY;
+    const { AeroApiAdsbProvider } = await import("@/app/lib/adsb/aeroApiProvider");
     const provider = new AeroApiAdsbProvider();
 
     await expect(
       provider.searchFlights("N246FB", baseDate, new Date(2000 * 1000))
     ).rejects.toThrow("AeroAPI key is missing");
+  });
+
+  it("reads the API key from a file when configured", async () => {
+    delete process.env.AEROAPI_KEY;
+    const keyPath = join(tmpdir(), `aeroapi-key-${Date.now()}.txt`);
+    await writeFile(keyPath, "file-key");
+    process.env.AEROAPI_KEY_FILE = keyPath;
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      buildResponse({
+        flights: []
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { AeroApiAdsbProvider } = await import("@/app/lib/adsb/aeroApiProvider");
+    const provider = new AeroApiAdsbProvider();
+    await provider.searchFlights("N246FB", baseDate, new Date(2000 * 1000));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "x-apikey": "file-key"
+        })
+      })
+    );
   });
 });
