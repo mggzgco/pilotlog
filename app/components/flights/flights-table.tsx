@@ -1,28 +1,23 @@
-"use client";
-
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
-import { cn } from "@/app/lib/utils";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
-
-type SortKey = "date" | "duration" | "cost";
-type SortDirection = "asc" | "desc";
 
 export interface FlightRow {
   id: string;
-  sortTime: string;
   displayTime: string;
   tailNumber: string;
   tailNumberSnapshot?: string | null;
   origin: string;
   destination: string | null;
-  durationMinutes: number | null;
-  distanceNm: number | null;
-  costTotalCents: number;
   status: string;
-  isImported: boolean;
+  preflightDecision: string;
+  postflightDecision: string;
+  adsbStatus: string;
+  nextAction:
+    | { type: "link"; label: string; href: string }
+    | { type: "form"; label: string; action: string };
+  menuItems: Array<{ label: string; href: string }>;
 }
 
 interface FlightsTableProps {
@@ -30,70 +25,24 @@ interface FlightsTableProps {
 }
 
 export function FlightsTable({ flights }: FlightsTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("date");
-  const [direction, setDirection] = useState<SortDirection>("desc");
-
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD"
-      }),
-    []
-  );
-
-  const sortedFlights = useMemo(() => {
-    const valueFor = (flight: FlightRow) => {
-      if (sortKey === "duration") {
-        return flight.durationMinutes ?? -1;
-      }
-      if (sortKey === "cost") {
-        return flight.costTotalCents ?? -1;
-      }
-      return new Date(flight.sortTime).getTime();
-    };
-
-    return [...flights].sort((a, b) => {
-      const first = valueFor(a);
-      const second = valueFor(b);
-      if (first === second) {
-        return 0;
-      }
-      return direction === "asc" ? first - second : second - first;
-    });
-  }, [direction, flights, sortKey]);
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-      return;
+  const decisionBadge = (decision: string) => {
+    if (decision === "Accepted") {
+      return (
+        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-200">
+          Accepted
+        </span>
+      );
     }
-    setSortKey(key);
-    setDirection("desc");
-  };
-
-  const sortIcon = (key: SortKey) => {
-    if (sortKey !== key) {
-      return <ArrowUpDown className="h-4 w-4" />;
+    if (decision === "Rejected") {
+      return (
+        <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
+          Rejected
+        </span>
+      );
     }
-    return direction === "asc" ? (
-      <ArrowUp className="h-4 w-4" />
-    ) : (
-      <ArrowDown className="h-4 w-4" />
+    return (
+      <span className="text-xs uppercase tracking-wide text-slate-500">—</span>
     );
-  };
-
-  const headerButtonClass = (key: SortKey) =>
-    cn(
-      "flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 transition hover:text-slate-200",
-      sortKey === key && "text-slate-200"
-    );
-
-  const ariaSortValue = (key: SortKey) => {
-    if (sortKey !== key) {
-      return "none" as const;
-    }
-    return direction === "asc" ? "ascending" : "descending";
   };
 
   return (
@@ -101,39 +50,21 @@ export function FlightsTable({ flights }: FlightsTableProps) {
       <table className="w-full text-sm">
         <thead className="bg-slate-900 text-xs uppercase text-slate-500">
           <tr>
-            <th className="px-4 py-3 text-left font-medium" aria-sort={ariaSortValue("date")}>
-              <button type="button" className={headerButtonClass("date")} onClick={() => handleSort("date")}>
-                Date {sortIcon("date")}
-              </button>
-            </th>
-            <th className="px-4 py-3 text-left font-medium">Status</th>
-            <th className="px-4 py-3 text-left font-medium">Tail</th>
+            <th className="px-4 py-3 text-left font-medium">Date/time</th>
+            <th className="px-4 py-3 text-left font-medium">Aircraft</th>
             <th className="px-4 py-3 text-left font-medium">Route</th>
-            <th
-              className="px-4 py-3 text-right font-medium"
-              aria-sort={ariaSortValue("duration")}
-            >
-              <button type="button" className={headerButtonClass("duration")} onClick={() => handleSort("duration")}>
-                Duration {sortIcon("duration")}
-              </button>
-            </th>
-            <th className="px-4 py-3 text-right font-medium">Distance</th>
-            <th className="px-4 py-3 text-right font-medium" aria-sort={ariaSortValue("cost")}>
-              <button type="button" className={headerButtonClass("cost")} onClick={() => handleSort("cost")}>
-                Cost {sortIcon("cost")}
-              </button>
-            </th>
-            <th className="px-4 py-3 text-right font-medium">Action</th>
+            <th className="px-4 py-3 text-left font-medium">Status</th>
+            <th className="px-4 py-3 text-left font-medium">Preflight</th>
+            <th className="px-4 py-3 text-left font-medium">Postflight</th>
+            <th className="px-4 py-3 text-left font-medium">ADS-B</th>
+            <th className="px-4 py-3 text-right font-medium">Next action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
-          {sortedFlights.map((flight) => (
+          {flights.map((flight) => (
             <tr key={flight.id} className="text-slate-200 hover:bg-slate-900/60">
               <td className="px-4 py-3 text-slate-400">
-                {new Date(flight.displayTime).toLocaleDateString()}
-              </td>
-              <td className="px-4 py-3">
-                <FlightStatusBadge status={flight.status} />
+                {new Date(flight.displayTime).toLocaleString()}
               </td>
               <td className="px-4 py-3">
                 {flight.tailNumberSnapshot ?? flight.tailNumber}
@@ -149,25 +80,50 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                   </span>
                 )}
               </td>
-              <td className="px-4 py-3 text-right text-slate-400">
-                {flight.isImported && flight.durationMinutes !== null
-                  ? `${flight.durationMinutes} mins`
-                  : "—"}
+              <td className="px-4 py-3">
+                <FlightStatusBadge status={flight.status} />
               </td>
-              <td className="px-4 py-3 text-right text-slate-400">
-                {flight.isImported && flight.distanceNm !== null
-                  ? `${flight.distanceNm} nm`
-                  : "—"}
+              <td className="px-4 py-3">{decisionBadge(flight.preflightDecision)}</td>
+              <td className="px-4 py-3">{decisionBadge(flight.postflightDecision)}</td>
+              <td className="px-4 py-3">
+                {flight.adsbStatus === "Imported" ? (
+                  <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-200">
+                    Imported
+                  </span>
+                ) : (
+                  <span className="text-xs uppercase tracking-wide text-slate-500">—</span>
+                )}
               </td>
-              <td className="px-4 py-3 text-right text-slate-400">
-                {flight.costTotalCents > 0
-                  ? currencyFormatter.format(flight.costTotalCents / 100)
-                  : "--"}
-              </td>
-              <td className="px-4 py-3 text-right">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`/flights/${flight.id}`}>Details</Link>
-                </Button>
+              <td className="px-4 py-3">
+                <div className="flex items-center justify-end gap-2">
+                  {flight.nextAction.type === "form" ? (
+                    <form action={flight.nextAction.action} method="post">
+                      <Button size="sm" type="submit">
+                        {flight.nextAction.label}
+                      </Button>
+                    </form>
+                  ) : (
+                    <Button size="sm" asChild>
+                      <Link href={flight.nextAction.href}>{flight.nextAction.label}</Link>
+                    </Button>
+                  )}
+                  <details className="relative">
+                    <summary className="list-none rounded-md border border-slate-700 p-2 text-slate-300 transition hover:bg-slate-800">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </summary>
+                    <div className="absolute right-0 z-10 mt-2 w-40 rounded-md border border-slate-800 bg-slate-950 py-2 text-sm text-slate-200 shadow-lg">
+                      {flight.menuItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block px-3 py-2 transition hover:bg-slate-900"
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                </div>
               </td>
             </tr>
           ))}
