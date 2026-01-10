@@ -35,6 +35,16 @@ type AeroApiSearchResponse = {
   flights?: AeroApiSearchFlight[] | null;
 };
 
+function buildSearchQueries(ident: string, epochStart: number, epochEnd: number) {
+  // Try multiple query variants to maximize match likelihood.
+  return [
+    `-idents ${ident} -begin ${epochStart} -end ${epochEnd}`,
+    `-ident ${ident} -begin ${epochStart} -end ${epochEnd}`,
+    `-idents ${ident}`,
+    `-ident ${ident}`
+  ];
+}
+
 type AeroApiTrackPosition = {
   timestamp?: number | null;
   latitude?: number | null;
@@ -224,24 +234,25 @@ export class AeroApiAdsbProvider implements AdsbProvider {
     // 2) Fallback: /search/flights with ident filter if primary returned none
     if (flights.length === 0) {
       try {
-        const queryParts = [
-          `-idents ${normalizedTailNumber}`,
-          `-begin ${epochStart}`,
-          `-end ${epochEnd}`
-        ];
-        const searchResponse = await fetchAeroApi<AeroApiSearchResponse>("/search/flights", {
-          query: queryParts.join(" "),
-          max_pages: 5
-        });
-        const searchFlights = searchResponse.flights ?? [];
-        flights = searchFlights.map((flight) => ({
-          fa_flight_id: flight.fa_flight_id,
-          ident: flight.ident,
-          origin: flight.origin ? { code: flight.origin } : undefined,
-          destination: flight.destination ? { code: flight.destination } : undefined,
-          departuretime: flight.departuretime,
-          arrivaltime: flight.arrivaltime
-        }));
+        const queries = buildSearchQueries(normalizedTailNumber, epochStart, epochEnd);
+        for (const query of queries) {
+          const searchResponse = await fetchAeroApi<AeroApiSearchResponse>("/search/flights", {
+            query,
+            max_pages: 5
+          });
+          const searchFlights = searchResponse.flights ?? [];
+          if (searchFlights.length > 0) {
+            flights = searchFlights.map((flight) => ({
+              fa_flight_id: flight.fa_flight_id,
+              ident: flight.ident,
+              origin: flight.origin ? { code: flight.origin } : undefined,
+              destination: flight.destination ? { code: flight.destination } : undefined,
+              departuretime: flight.departuretime,
+              arrivaltime: flight.arrivaltime
+            }));
+            break;
+          }
+        }
       } catch (error) {
         if (!(error instanceof AdsbProviderError && error.status === 404)) {
           throw error;
