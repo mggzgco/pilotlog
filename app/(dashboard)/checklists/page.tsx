@@ -20,7 +20,7 @@ export default async function ChecklistsPage() {
 
   const templates = await prisma.checklistTemplate.findMany({
     where: { userId: user.id },
-    include: { items: { orderBy: { order: "asc" } } },
+    include: { items: { orderBy: { personalOrder: "asc" } } },
     orderBy: [{ phase: "asc" }, { createdAt: "desc" }]
   });
 

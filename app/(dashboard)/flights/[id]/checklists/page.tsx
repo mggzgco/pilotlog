@@ -24,7 +24,7 @@ export default async function FlightChecklistsPage({
           }
         }
       },
-      checklistRuns: { include: { items: { orderBy: { order: "asc" } } } }
+      checklistRuns: { include: { items: { orderBy: { personalOrder: "asc" } } } }
     }
   });
 
@@ -49,6 +49,10 @@ export default async function FlightChecklistsPage({
     items: run.items.map((item) => ({
       id: item.id,
       order: item.order,
+      kind: item.kind,
+      parentId: item.parentId,
+      officialOrder: item.officialOrder,
+      personalOrder: item.personalOrder,
       title: item.title,
       details: item.details,
       required: item.required,

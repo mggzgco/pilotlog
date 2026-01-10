@@ -22,7 +22,7 @@ export async function selectChecklistTemplate({
   const templateWithItems = (id: string) =>
     db.checklistTemplate.findFirst({
       where: { id },
-      include: { items: { orderBy: { order: "asc" } } }
+      include: { items: { orderBy: { personalOrder: "asc" } } }
     });
 
   if (aircraftId) {
@@ -65,7 +65,7 @@ export async function selectChecklistTemplate({
       phase,
       isDefault: true
     },
-    include: { items: { orderBy: { order: "asc" } } }
+    include: { items: { orderBy: { personalOrder: "asc" } } }
   });
 
   if (userDefault) {
@@ -78,7 +78,7 @@ export async function selectChecklistTemplate({
       phase
     },
     orderBy: { updatedAt: "desc" },
-    include: { items: { orderBy: { order: "asc" } } }
+    include: { items: { orderBy: { personalOrder: "asc" } } }
   });
 
   if (userTemplate) {
@@ -91,7 +91,7 @@ export async function selectChecklistTemplate({
       phase,
       isDefault: true
     },
-    include: { items: { orderBy: { order: "asc" } } }
+    include: { items: { orderBy: { personalOrder: "asc" } } }
   });
 
   if (defaultTemplate) {
@@ -103,6 +103,6 @@ export async function selectChecklistTemplate({
       userId: null,
       phase
     },
-    include: { items: { orderBy: { order: "asc" } } }
+    include: { items: { orderBy: { personalOrder: "asc" } } }
   });
 }

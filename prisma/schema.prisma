@@ -48,6 +48,11 @@ enum ChecklistInputType {
   TEXT
 }
 
+enum ChecklistItemKind {
+  SECTION
+  STEP
+}
+
 enum ChecklistRunStatus {
   NOT_AVAILABLE
   IN_PROGRESS
@@ -381,12 +386,21 @@ model ChecklistTemplate {
 model ChecklistTemplateItem {
   id         String             @id @default(cuid())
   templateId String
+  // Legacy flat ordering (kept for backwards compatibility). New logic should use
+  // `officialOrder` / `personalOrder`.
   order      Int
+  kind       ChecklistItemKind  @default(STEP)
+  parentId   String?
+  officialOrder Int            @default(0)
+  personalOrder Int            @default(0)
   title      String
   details    String?
   required   Boolean            @default(true)
   inputType  ChecklistInputType @default(CHECK)
   template   ChecklistTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  parent     ChecklistTemplateItem? @relation("ChecklistTemplateItemHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children   ChecklistTemplateItem[] @relation("ChecklistTemplateItemHierarchy")
 }
 
 model FlightChecklistRun {
@@ -415,6 +429,10 @@ model FlightChecklistItem {
   id             String             @id @default(cuid())
   checklistRunId String
   order          Int
+  kind           ChecklistItemKind  @default(STEP)
+  parentId       String?
+  officialOrder  Int                @default(0)
+  personalOrder  Int                @default(0)
   title          String
   details        String?
   required       Boolean
@@ -428,6 +446,9 @@ model FlightChecklistItem {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   checklistRun   FlightChecklistRun @relation(fields: [checklistRunId], references: [id], onDelete: Cascade)
+
+  parent         FlightChecklistItem? @relation("FlightChecklistItemHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children       FlightChecklistItem[] @relation("FlightChecklistItemHierarchy")
 
   @@index([checklistRunId, order])
 }

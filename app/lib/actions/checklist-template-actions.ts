@@ -61,15 +61,20 @@ export async function addChecklistTemplateItemAction(formData: FormData) {
 
   const lastItem = await prisma.checklistTemplateItem.findFirst({
     where: { templateId },
-    orderBy: { order: "desc" },
-    select: { order: true }
+    orderBy: { personalOrder: "desc" },
+    select: { personalOrder: true }
   });
 
+  const nextOrder = (lastItem?.personalOrder ?? 0) + 1;
   await prisma.checklistTemplateItem.create({
     data: {
       templateId,
       title,
-      order: (lastItem?.order ?? 0) + 1,
+      kind: "STEP",
+      parentId: null,
+      officialOrder: nextOrder,
+      personalOrder: nextOrder,
+      order: nextOrder,
       required: true,
       inputType: "CHECK"
     }
@@ -99,9 +104,10 @@ export async function moveChecklistTemplateItemAction(formData: FormData) {
   const target = await prisma.checklistTemplateItem.findFirst({
     where: {
       templateId: item.templateId,
-      order: direction === "up" ? { lt: item.order } : { gt: item.order }
+      personalOrder:
+        direction === "up" ? { lt: item.personalOrder } : { gt: item.personalOrder }
     },
-    orderBy: { order: direction === "up" ? "desc" : "asc" }
+    orderBy: { personalOrder: direction === "up" ? "desc" : "asc" }
   });
 
   if (!target) {
@@ -111,11 +117,11 @@ export async function moveChecklistTemplateItemAction(formData: FormData) {
   await prisma.$transaction([
     prisma.checklistTemplateItem.update({
       where: { id: item.id },
-      data: { order: target.order }
+      data: { personalOrder: target.personalOrder, order: target.personalOrder }
     }),
     prisma.checklistTemplateItem.update({
       where: { id: target.id },
-      data: { order: item.order }
+      data: { personalOrder: item.personalOrder, order: item.personalOrder }
     })
   ]);
 

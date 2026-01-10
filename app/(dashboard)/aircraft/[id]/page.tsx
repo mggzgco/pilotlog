@@ -30,8 +30,8 @@ export default async function AircraftDetailPage({
   const aircraft = await prisma.aircraft.findFirst({
     where: { id: params.id, userId: user.id },
     include: {
-      preflightChecklistTemplate: { include: { items: { orderBy: { order: "asc" } } } },
-      postflightChecklistTemplate: { include: { items: { orderBy: { order: "asc" } } } }
+      preflightChecklistTemplate: { include: { items: { orderBy: { personalOrder: "asc" } } } },
+      postflightChecklistTemplate: { include: { items: { orderBy: { personalOrder: "asc" } } } }
     }
   });
 
@@ -61,7 +61,8 @@ export default async function AircraftDetailPage({
               {template.name}
             </p>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              {template.items?.length ?? 0} step{(template.items?.length ?? 0) === 1 ? "" : "s"}
+              {(template.items ?? []).filter((item: any) => item.kind !== "SECTION").length} step
+              {(template.items ?? []).filter((item: any) => item.kind !== "SECTION").length === 1 ? "" : "s"}
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
@@ -72,28 +73,97 @@ export default async function AircraftDetailPage({
         {(template.items?.length ?? 0) === 0 ? (
           <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">No steps yet.</p>
         ) : (
-          <ol className="mt-4 space-y-2 text-sm text-slate-900 dark:text-slate-100">
-            {template.items!.map((item: any, index: number) => (
-              <li
-                key={item.id}
-                className="rounded-md border border-slate-200 px-3 py-2 dark:border-slate-800"
-              >
-                <div className="flex gap-2">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    {index + 1}.
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-medium">{item.title}</p>
-                    {item.details ? (
-                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                        {item.details}
+          (() => {
+            const items = (template.items ?? []) as any[];
+            const sections = items
+              .filter((item) => item.kind === "SECTION")
+              .sort((a, b) => (a.personalOrder ?? a.order ?? 0) - (b.personalOrder ?? b.order ?? 0));
+            const steps = items.filter((item) => item.kind !== "SECTION");
+            const stepsByParent = steps.reduce<Record<string, any[]>>((acc, step) => {
+              const key = step.parentId ?? "__root__";
+              acc[key] ??= [];
+              acc[key].push(step);
+              return acc;
+            }, {});
+            Object.values(stepsByParent).forEach((group) =>
+              group.sort((a, b) => (a.personalOrder ?? a.order ?? 0) - (b.personalOrder ?? b.order ?? 0))
+            );
+
+            const rootSteps = stepsByParent["__root__"] ?? [];
+
+            return (
+              <div className="mt-4 space-y-4 text-sm text-slate-900 dark:text-slate-100">
+                {rootSteps.length > 0 ? (
+                  <ol className="space-y-2">
+                    {rootSteps.map((item, index) => (
+                      <li
+                        key={item.id}
+                        className="rounded-md border border-slate-200 px-3 py-2 dark:border-slate-800"
+                      >
+                        <div className="flex gap-2">
+                          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            {index + 1}.
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium">{item.title}</p>
+                            {item.details ? (
+                              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                                {item.details}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+
+                {sections.map((section) => {
+                  const children = stepsByParent[section.id] ?? [];
+                  return (
+                    <div key={section.id} className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {section.title}
                       </p>
-                    ) : null}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
+                      {section.details ? (
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          {section.details}
+                        </p>
+                      ) : null}
+                      {children.length === 0 ? (
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          No sub-steps yet.
+                        </p>
+                      ) : (
+                        <ol className="space-y-2">
+                          {children.map((item, index) => (
+                            <li
+                              key={item.id}
+                              className="rounded-md border border-slate-200 px-3 py-2 dark:border-slate-800"
+                            >
+                              <div className="flex gap-2">
+                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                  {String.fromCharCode(97 + index)}.)
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-medium">{item.title}</p>
+                                  {item.details ? (
+                                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                                      {item.details}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()
         )}
       </div>
     );

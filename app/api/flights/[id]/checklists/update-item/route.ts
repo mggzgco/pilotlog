@@ -62,6 +62,18 @@ export async function POST(
     return NextResponse.redirect(redirectUrl);
   }
 
+  if (item.kind === "SECTION") {
+    if (wantsJson) {
+      return NextResponse.json(
+        { status: "error", message: "Checklist section headers cannot be updated." },
+        { status: 400 }
+      );
+    }
+    redirectUrl.searchParams.set("toast", "Checklist section headers cannot be updated.");
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+
   if (!isChecklistAvailable(item.checklistRun)) {
     if (wantsJson) {
       return NextResponse.json(

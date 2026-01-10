@@ -15,6 +15,17 @@ type StepDraft = {
   id: string;
   title: string;
   instructions: string;
+  officialOrder: number;
+  personalOrder: number;
+};
+
+type SectionDraft = {
+  id: string;
+  title: string;
+  instructions: string;
+  officialOrder: number;
+  personalOrder: number;
+  steps: StepDraft[];
 };
 
 type CreateAircraftChecklistModalProps = {
@@ -23,6 +34,33 @@ type CreateAircraftChecklistModalProps = {
 };
 
 const newId = () => Math.random().toString(16).slice(2);
+
+const recomputePersonalOrders = (sections: SectionDraft[]): SectionDraft[] => {
+  let counter = 1;
+  return sections.map((section) => {
+    const sectionPersonalOrder = counter++;
+    const nextSection: SectionDraft = {
+      ...section,
+      personalOrder: sectionPersonalOrder,
+      officialOrder:
+        section.officialOrder === 0 || section.officialOrder === 999
+          ? sectionPersonalOrder
+          : section.officialOrder,
+      steps: section.steps.map((step) => ({
+        ...step,
+        personalOrder: (() => {
+          const personalOrder = counter++;
+          return personalOrder;
+        })(),
+        officialOrder:
+          step.officialOrder === 0 || step.officialOrder === 999
+            ? counter - 1
+            : step.officialOrder
+      }))
+    };
+    return nextSection;
+  });
+};
 
 export function CreateAircraftChecklistModal({
   aircraftId,
@@ -33,42 +71,159 @@ export function CreateAircraftChecklistModal({
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<ChecklistPhase>("PREFLIGHT");
   const [name, setName] = useState("");
-  const [steps, setSteps] = useState<StepDraft[]>([
-    { id: newId(), title: "", instructions: "" }
-  ]);
+  const [sections, setSections] = useState<SectionDraft[]>(
+    recomputePersonalOrders([
+      {
+        id: newId(),
+        title: "Cabin",
+        instructions: "",
+        officialOrder: 1,
+        personalOrder: 1,
+        steps: [
+          {
+            id: newId(),
+            title: "",
+            instructions: "",
+            officialOrder: 2,
+            personalOrder: 2
+          }
+        ]
+      }
+    ])
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
     const trimmedName = name.trim();
-    const hasAnyStepTitle = steps.some((step) => step.title.trim().length > 0);
+    const hasAnyStepTitle = sections.some((section) =>
+      section.steps.some((step) => step.title.trim().length > 0)
+    );
     return trimmedName.length > 0 && hasAnyStepTitle;
-  }, [name, steps]);
+  }, [name, sections]);
 
   const reset = () => {
     setPhase("PREFLIGHT");
     setName("");
-    setSteps([{ id: newId(), title: "", instructions: "" }]);
+    setSections(
+      recomputePersonalOrders([
+        {
+          id: newId(),
+          title: "Cabin",
+          instructions: "",
+          officialOrder: 1,
+          personalOrder: 1,
+          steps: [
+            {
+              id: newId(),
+              title: "",
+              instructions: "",
+              officialOrder: 2,
+              personalOrder: 2
+            }
+          ]
+        }
+      ])
+    );
     setErrorMessage(null);
   };
 
-  const moveStep = (index: number, direction: "up" | "down") => {
-    setSteps((prev) => {
-      const next = [...prev];
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= next.length) return prev;
-      const [removed] = next.splice(index, 1);
-      next.splice(targetIndex, 0, removed);
-      return next;
+  const addSection = () => {
+    setSections((prev) =>
+      recomputePersonalOrders([
+        ...prev,
+        {
+          id: newId(),
+          title: "New section",
+          instructions: "",
+          officialOrder: 999,
+          personalOrder: 0,
+          steps: [
+            {
+              id: newId(),
+              title: "",
+              instructions: "",
+              officialOrder: 999,
+              personalOrder: 0
+            }
+          ]
+        }
+      ])
+    );
+  };
+
+  const removeSection = (sectionId: string) => {
+    setSections((prev) => {
+      const next = prev.filter((s) => s.id !== sectionId);
+      return recomputePersonalOrders(next.length === 0 ? prev : next);
     });
   };
 
-  const removeStep = (index: number) => {
-    setSteps((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)));
+  const moveSection = (sectionIndex: number, direction: "up" | "down") => {
+    setSections((prev) => {
+      const next = [...prev];
+      const targetIndex = direction === "up" ? sectionIndex - 1 : sectionIndex + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      const [removed] = next.splice(sectionIndex, 1);
+      next.splice(targetIndex, 0, removed);
+      return recomputePersonalOrders(next);
+    });
   };
 
-  const addStep = () => {
-    setSteps((prev) => [...prev, { id: newId(), title: "", instructions: "" }]);
+  const addStep = (sectionId: string) => {
+    setSections((prev) =>
+      recomputePersonalOrders(
+        prev.map((section) =>
+          section.id === sectionId
+            ? {
+                ...section,
+                steps: [
+                  ...section.steps,
+                  {
+                    id: newId(),
+                    title: "",
+                    instructions: "",
+                    officialOrder: 999,
+                    personalOrder: 0
+                  }
+                ]
+              }
+            : section
+        )
+      )
+    );
+  };
+
+  const removeStep = (sectionId: string, stepId: string) => {
+    setSections((prev) =>
+      recomputePersonalOrders(
+        prev.map((section) => {
+          if (section.id !== sectionId) return section;
+          const nextSteps = section.steps.filter((s) => s.id !== stepId);
+          return { ...section, steps: nextSteps.length === 0 ? section.steps : nextSteps };
+        })
+      )
+    );
+  };
+
+  const moveStep = (
+    sectionId: string,
+    stepIndex: number,
+    direction: "up" | "down"
+  ) => {
+    setSections((prev) =>
+      recomputePersonalOrders(
+        prev.map((section) => {
+          if (section.id !== sectionId) return section;
+          const nextSteps = [...section.steps];
+          const targetIndex = direction === "up" ? stepIndex - 1 : stepIndex + 1;
+          if (targetIndex < 0 || targetIndex >= nextSteps.length) return section;
+          const [removed] = nextSteps.splice(stepIndex, 1);
+          nextSteps.splice(targetIndex, 0, removed);
+          return { ...section, steps: nextSteps };
+        })
+      )
+    );
   };
 
   const handleSubmit = async () => {
@@ -86,12 +241,22 @@ export function CreateAircraftChecklistModal({
         body: JSON.stringify({
           phase,
           name: name.trim(),
-          steps: steps
-            .map((step) => ({
-              title: step.title.trim(),
-              instructions: step.instructions.trim()
+          sections: sections
+            .map((section) => ({
+              title: section.title.trim(),
+              instructions: section.instructions.trim(),
+              officialOrder: section.officialOrder,
+              personalOrder: section.personalOrder,
+              steps: section.steps
+                .map((step) => ({
+                  title: step.title.trim(),
+                  instructions: step.instructions.trim(),
+                  officialOrder: step.officialOrder,
+                  personalOrder: step.personalOrder
+                }))
+                .filter((step) => step.title.length > 0)
             }))
-            .filter((step) => step.title.length > 0)
+            .filter((section) => section.title.length > 0)
         })
       });
 
@@ -172,47 +337,227 @@ export function CreateAircraftChecklistModal({
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Steps</p>
-              <Button type="button" variant="outline" size="sm" onClick={addStep}>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Checklist</p>
+              <Button type="button" variant="outline" size="sm" onClick={addSection}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add step
+                Add section
               </Button>
             </div>
 
             <div className="space-y-3">
-              {steps.map((step, index) => (
+              {sections.map((section, sectionIndex) => (
                 <div
-                  key={step.id}
+                  key={section.id}
                   className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                          {index + 1}
+                          Section
                         </span>
                         <Input
-                          value={step.title}
+                          value={section.title}
                           onChange={(e) =>
-                            setSteps((prev) =>
-                              prev.map((s) => (s.id === step.id ? { ...s, title: e.target.value } : s))
+                            setSections((prev) =>
+                              prev.map((s) => (s.id === section.id ? { ...s, title: e.target.value } : s))
                             )
                           }
-                          placeholder="Step title"
+                          placeholder="Section title (e.g., Cabin)"
                         />
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            Official
+                          </label>
+                          <input
+                            type="number"
+                            className="h-10 w-24 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                            value={section.officialOrder}
+                            onChange={(e) =>
+                              setSections((prev) =>
+                                prev.map((s) =>
+                                  s.id === section.id
+                                    ? { ...s, officialOrder: Number(e.target.value || 0) }
+                                    : s
+                                )
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            Personal
+                          </label>
+                          <input
+                            type="number"
+                            readOnly
+                            className="h-10 w-24 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-200"
+                            value={section.personalOrder}
+                          />
+                        </div>
                       </div>
+
                       <textarea
-                        value={step.instructions}
+                        value={section.instructions}
                         onChange={(e) =>
-                          setSteps((prev) =>
+                          setSections((prev) =>
                             prev.map((s) =>
-                              s.id === step.id ? { ...s, instructions: e.target.value } : s
+                              s.id === section.id ? { ...s, instructions: e.target.value } : s
                             )
                           )
                         }
-                        placeholder="Instructions (optional)"
-                        className="mt-3 min-h-[90px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
+                        placeholder="Section instructions (optional)"
+                        className="min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
                       />
+
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          Sub-steps
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addStep(section.id)}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add sub-step
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {section.steps.map((step, stepIndex) => (
+                          <div
+                            key={step.id}
+                            className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/30"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                    Step
+                                  </span>
+                                  <Input
+                                    value={step.title}
+                                    onChange={(e) =>
+                                      setSections((prev) =>
+                                        prev.map((s) =>
+                                          s.id !== section.id
+                                            ? s
+                                            : {
+                                                ...s,
+                                                steps: s.steps.map((st) =>
+                                                  st.id === step.id
+                                                    ? { ...st, title: e.target.value }
+                                                    : st
+                                                )
+                                              }
+                                        )
+                                      )
+                                    }
+                                    placeholder='e.g., "Battery 1 switch - ON"'
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                      Official
+                                    </label>
+                                    <input
+                                      type="number"
+                                      className="h-10 w-24 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                                      value={step.officialOrder}
+                                      onChange={(e) =>
+                                        setSections((prev) =>
+                                          prev.map((s) =>
+                                            s.id !== section.id
+                                              ? s
+                                              : {
+                                                  ...s,
+                                                  steps: s.steps.map((st) =>
+                                                    st.id === step.id
+                                                      ? {
+                                                          ...st,
+                                                          officialOrder: Number(e.target.value || 0)
+                                                        }
+                                                      : st
+                                                  )
+                                                }
+                                          )
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                      Personal
+                                    </label>
+                                    <input
+                                      type="number"
+                                      readOnly
+                                      className="h-10 w-24 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-200"
+                                      value={step.personalOrder}
+                                    />
+                                  </div>
+                                </div>
+
+                                <textarea
+                                  value={step.instructions}
+                                  onChange={(e) =>
+                                    setSections((prev) =>
+                                      prev.map((s) =>
+                                        s.id !== section.id
+                                          ? s
+                                          : {
+                                              ...s,
+                                              steps: s.steps.map((st) =>
+                                                st.id === step.id
+                                                  ? { ...st, instructions: e.target.value }
+                                                  : st
+                                              )
+                                            }
+                                      )
+                                    )
+                                  }
+                                  placeholder="Instructions (optional)"
+                                  className="min-h-[70px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
+                                />
+                              </div>
+
+                              <div className="flex flex-col items-center gap-2">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  onClick={() => moveStep(section.id, stepIndex, "up")}
+                                  disabled={stepIndex === 0}
+                                  aria-label="Move step up"
+                                >
+                                  <ArrowUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  onClick={() => moveStep(section.id, stepIndex, "down")}
+                                  disabled={stepIndex === section.steps.length - 1}
+                                  aria-label="Move step down"
+                                >
+                                  <ArrowDown className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  onClick={() => removeStep(section.id, step.id)}
+                                  disabled={section.steps.length === 1}
+                                  aria-label="Remove step"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="flex flex-col items-center gap-2">
@@ -220,9 +565,9 @@ export function CreateAircraftChecklistModal({
                         type="button"
                         size="icon"
                         variant="outline"
-                        onClick={() => moveStep(index, "up")}
-                        disabled={index === 0}
-                        aria-label="Move step up"
+                        onClick={() => moveSection(sectionIndex, "up")}
+                        disabled={sectionIndex === 0}
+                        aria-label="Move section up"
                       >
                         <ArrowUp className="h-4 w-4" />
                       </Button>
@@ -230,9 +575,9 @@ export function CreateAircraftChecklistModal({
                         type="button"
                         size="icon"
                         variant="outline"
-                        onClick={() => moveStep(index, "down")}
-                        disabled={index === steps.length - 1}
-                        aria-label="Move step down"
+                        onClick={() => moveSection(sectionIndex, "down")}
+                        disabled={sectionIndex === sections.length - 1}
+                        aria-label="Move section down"
                       >
                         <ArrowDown className="h-4 w-4" />
                       </Button>
@@ -240,9 +585,9 @@ export function CreateAircraftChecklistModal({
                         type="button"
                         size="icon"
                         variant="outline"
-                        onClick={() => removeStep(index)}
-                        disabled={steps.length === 1}
-                        aria-label="Remove step"
+                        onClick={() => removeSection(section.id)}
+                        disabled={sections.length === 1}
+                        aria-label="Remove section"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

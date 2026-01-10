@@ -22,6 +22,7 @@ const ChecklistRunStatus = {
 type ChecklistInputType = (typeof ChecklistInputType)[keyof typeof ChecklistInputType];
 type ChecklistRunStatus = (typeof ChecklistRunStatus)[keyof typeof ChecklistRunStatus];
 type ChecklistDecision = "ACCEPTED" | "REJECTED";
+type ChecklistItemKind = "SECTION" | "STEP";
 
 type SaveStatus = "saved" | "saving" | "offline";
 
@@ -47,6 +48,10 @@ type ChecklistSavePayload = {
 export type ChecklistItemView = {
   id: string;
   order: number;
+  kind: ChecklistItemKind;
+  parentId: string | null;
+  officialOrder: number;
+  personalOrder: number;
   title: string;
   details: string | null;
   required: boolean;
@@ -82,6 +87,9 @@ type ChecklistSectionProps = {
 
 const createInitialState = (items: ChecklistItemView[]) =>
   items.reduce<Record<string, ChecklistItemState>>((acc, item) => {
+    if (item.kind === "SECTION") {
+      return acc;
+    }
     acc[item.id] = {
       valueText: item.valueText ?? "",
       valueNumber:
@@ -116,6 +124,7 @@ export function ChecklistSection({
   const [activeTab, setActiveTab] = useState<"PREFLIGHT" | "POSTFLIGHT">(
     "PREFLIGHT"
   );
+  const [orderMode, setOrderMode] = useState<"personal" | "official">("personal");
   const [signingPhase, setSigningPhase] = useState<
     "PREFLIGHT" | "POSTFLIGHT" | null
   >(null);
@@ -182,7 +191,7 @@ export function ChecklistSection({
     }
 
     setItemState(mergedState);
-    setActiveItemId(activeRun.items[0]?.id ?? null);
+    setActiveItemId(activeRun.items.find((item) => item.kind !== "SECTION")?.id ?? null);
   }, [activeRun?.id, flightId]);
 
   useEffect(() => {
@@ -650,8 +659,47 @@ export function ChecklistSection({
       );
     }
 
+    const getSortKey = (item: ChecklistItemView) =>
+      orderMode === "official"
+        ? item.officialOrder ?? item.order
+        : item.personalOrder ?? item.order;
+
+    const topLevelItems = run.items
+      .filter((item) => !item.parentId)
+      .sort((a, b) => getSortKey(a) - getSortKey(b));
+    const childrenByParent = run.items.reduce<Record<string, ChecklistItemView[]>>(
+      (acc, item) => {
+        if (item.parentId) {
+          acc[item.parentId] ??= [];
+          acc[item.parentId].push(item);
+        }
+        return acc;
+      },
+      {}
+    );
+    Object.values(childrenByParent).forEach((children) =>
+      children.sort((a, b) => getSortKey(a) - getSortKey(b))
+    );
+
+    const displayRows: Array<{ item: ChecklistItemView; depth: 0 | 1; prefix?: string }> = [];
+    for (const item of topLevelItems) {
+      displayRows.push({ item, depth: 0 });
+      if (item.kind === "SECTION") {
+        const children = childrenByParent[item.id] ?? [];
+        children.forEach((child, index) => {
+          displayRows.push({
+            item: child,
+            depth: 1,
+            prefix: `${String.fromCharCode(97 + index)}.)`
+          });
+        });
+      }
+    }
+
     const isLocked = run.status === ChecklistRunStatus.SIGNED;
-    const requiredRemaining = run.items.filter((item) => {
+    const requiredRemaining = run.items
+      .filter((item) => item.kind !== "SECTION")
+      .filter((item) => {
       const state = itemState[item.id];
       const completed = state?.completed ?? item.completed;
       return item.required && !completed;
@@ -695,7 +743,31 @@ export function ChecklistSection({
           </div>
         ) : null}
 
-        {run.items.length === 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Order
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={orderMode === "personal" ? "default" : "outline"}
+              onClick={() => setOrderMode("personal")}
+            >
+              Personal
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={orderMode === "official" ? "default" : "outline"}
+              onClick={() => setOrderMode("official")}
+            >
+              Official
+            </Button>
+          </div>
+        </div>
+
+        {displayRows.filter((row) => row.item.kind !== "SECTION").length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
             <p>No checklist items available.</p>
             {aircraftId ? (
@@ -709,7 +781,24 @@ export function ChecklistSection({
           </div>
         ) : (
           <div className="space-y-4">
-            {run.items.map((item) => {
+            {displayRows.map((row) => {
+              const item = row.item;
+              if (item.kind === "SECTION") {
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      {item.title}
+                    </p>
+                    {item.details ? (
+                      <p className="mt-1 text-xs text-slate-400">{item.details}</p>
+                    ) : null}
+                  </div>
+                );
+              }
+
               const state = itemState[item.id];
               const completed = state?.completed ?? item.completed;
               const isActive = activeItemId === item.id;
@@ -729,7 +818,11 @@ export function ChecklistSection({
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-lg font-semibold text-slate-100">
-                          {item.order}. {item.title}
+                          {(() => {
+                            const prefix =
+                              row.prefix ?? (row.depth === 0 ? `${getSortKey(item)}.` : "");
+                            return prefix ? `${prefix} ${item.title}` : item.title;
+                          })()}
                         </p>
                         {item.required ? (
                           <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
