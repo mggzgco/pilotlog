@@ -146,7 +146,9 @@ async function fetchAeroApi<T>(
     throw new AdsbProviderError("AeroAPI key is missing.");
   }
 
-  const url = new URL(path, AEROAPI_API_BASE);
+  const base = AEROAPI_API_BASE.endsWith("/") ? AEROAPI_API_BASE : `${AEROAPI_API_BASE}/`;
+  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  const url = new URL(normalizedPath, base);
   Object.entries(params).forEach(([key, value]) => {
     if (value === null || value === undefined || value === "") {
       return;
