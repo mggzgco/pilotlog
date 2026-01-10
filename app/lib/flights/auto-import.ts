@@ -7,6 +7,7 @@ import { computeDistanceNm, computeDurationMinutes } from "@/app/lib/flights/com
 import { recordAuditEvent } from "@/app/lib/audit";
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 const AUTO_MATCH_THRESHOLD_MS = 20 * 60 * 1000;
 
