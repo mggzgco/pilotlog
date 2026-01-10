@@ -92,6 +92,7 @@ export default async function FlightLogbookPage({
   const logbookDefaultTimeIn = (logbookEntry as any)?.timeIn ?? "";
   const logbookDefaultHobbsOut = (logbookEntry as any)?.hobbsOut?.toString?.() ?? "";
   const logbookDefaultHobbsIn = (logbookEntry as any)?.hobbsIn?.toString?.() ?? "";
+  const logbookDefaultTotalTime = (logbookEntry as any)?.totalTime?.toString?.() ?? "";
   const logbookDefaultDayTakeoffs = (logbookEntry as any)?.dayTakeoffs?.toString?.() ?? "";
   const logbookDefaultDayLandings = (logbookEntry as any)?.dayLandings?.toString?.() ?? "";
   const logbookDefaultNightTakeoffs = (logbookEntry as any)?.nightTakeoffs?.toString?.() ?? "";
@@ -168,6 +169,7 @@ export default async function FlightLogbookPage({
             participantId={selectedParticipant?.id ?? null}
             defaultStatus={logbookDefaultStatus}
             defaultDate={logbookDefaultDate}
+            defaultTotalTime={logbookDefaultTotalTime}
             defaultPicTime={prefillPicTime}
             defaultSicTime={prefillSicTime}
             defaultDualReceivedTime={logbookDefaultDualReceivedTime}

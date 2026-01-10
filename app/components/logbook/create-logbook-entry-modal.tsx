@@ -83,10 +83,11 @@ export function CreateLogbookEntryModal({
             <Input name="timeIn" type="time" placeholder="Time in" />
             <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" />
             <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" />
+            <Input name="totalTime" type="number" step="0.1" placeholder="Total time" />
 
             <div className="lg:col-span-3">
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Total time is computed when you save (PIC/SIC/Dual/Solo preferred; otherwise Hobbs or Time In/Out).
+                Logbook fields are saved exactly as entered (no auto-calculations).
               </p>
             </div>
 

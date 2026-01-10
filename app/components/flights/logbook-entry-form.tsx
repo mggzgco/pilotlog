@@ -6,6 +6,7 @@ type LogbookEntryFormProps = {
   participantId: string | null;
   defaultStatus: "OPEN" | "CLOSED";
   defaultDate: string;
+  defaultTotalTime: string;
   defaultPicTime: string;
   defaultSicTime: string;
   defaultDualReceivedTime: string;
@@ -33,6 +34,7 @@ export function LogbookEntryForm({
   participantId,
   defaultStatus,
   defaultDate,
+  defaultTotalTime,
   defaultPicTime,
   defaultSicTime,
   defaultDualReceivedTime,
@@ -74,9 +76,16 @@ export function LogbookEntryForm({
       <Input name="timeIn" type="time" placeholder="Time in" defaultValue={defaultTimeIn} />
       <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" defaultValue={defaultHobbsOut} />
       <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" defaultValue={defaultHobbsIn} />
+      <Input
+        name="totalTime"
+        type="number"
+        step="0.1"
+        placeholder="Total time"
+        defaultValue={defaultTotalTime}
+      />
       <div className="lg:col-span-3">
         <p className="text-xs text-slate-600 dark:text-slate-400">
-          Total time is computed when you save (Hobbs or Time In/Out preferred; otherwise time buckets).
+          Logbook fields are saved exactly as entered (no auto-calculations).
         </p>
       </div>
       <Input

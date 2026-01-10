@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
-import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { Prisma } from "@prisma/client";
 
@@ -12,6 +11,7 @@ const emptyToNull = (value: unknown) =>
 const logbookSchema = z.object({
   date: z.coerce.date(),
   status: z.enum(["OPEN", "CLOSED"]).default("OPEN"),
+  totalTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   picTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   sicTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   dualReceivedTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
@@ -82,6 +82,7 @@ export async function POST(
     const parsed = logbookSchema.safeParse({
       ...raw,
       status: raw.status ?? "OPEN",
+      totalTime: toNumber(raw.totalTime as FormDataEntryValue | undefined),
       picTime: toNumber(raw.picTime as FormDataEntryValue | undefined),
       sicTime: toNumber(raw.sicTime as FormDataEntryValue | undefined),
       dualReceivedTime: toNumber(raw.dualReceivedTime as FormDataEntryValue | undefined),
@@ -114,6 +115,7 @@ export async function POST(
     const data = {
       date: parsed.data.date,
       status: parsed.data.status,
+      totalTime: parsed.data.totalTime,
       picTime: parsed.data.picTime,
       sicTime: parsed.data.sicTime,
       dualReceivedTime: parsed.data.dualReceivedTime,
@@ -132,32 +134,8 @@ export async function POST(
       dayLandings: parsed.data.dayLandings,
       nightTakeoffs: parsed.data.nightTakeoffs,
       nightLandings: parsed.data.nightLandings,
-      totalTime: computeTotalTimeHours({
-        hobbsOut: parsed.data.hobbsOut,
-        hobbsIn: parsed.data.hobbsIn,
-        timeOut: parsed.data.timeOut,
-        timeIn: parsed.data.timeIn,
-        picTime: parsed.data.picTime,
-        sicTime: parsed.data.sicTime,
-        dualReceivedTime: parsed.data.dualReceivedTime,
-        soloTime: parsed.data.soloTime,
-        nightTime: parsed.data.nightTime,
-        xcTime: parsed.data.xcTime,
-        simulatedInstrumentTime: parsed.data.simulatedInstrumentTime,
-        instrumentTime: parsed.data.instrumentTime,
-        groundTime: parsed.data.groundTime,
-        simulatorTime: parsed.data.simulatorTime
-      }),
       remarks: parsed.data.remarks
     };
-    if (data.totalTime !== null) {
-      if (participant.role === "PIC" && data.picTime === null) {
-        data.picTime = data.totalTime;
-      }
-      if (participant.role === "SIC" && data.sicTime === null) {
-        data.sicTime = data.totalTime;
-      }
-    }
 
     const saved = existingEntry
       ? await prisma.logbookEntry.update({ where: { id: existingEntry.id }, data })

@@ -77,6 +77,7 @@ export const logbookSchema = z.object({
   status: z.enum(["OPEN", "CLOSED"]).optional(),
   date: z.string().min(1),
   flightId: z.string().optional(),
+  totalTime: z.string().optional(),
   picTime: z.string().optional(),
   sicTime: z.string().optional(),
   dualReceivedTime: z.string().optional(),

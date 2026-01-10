@@ -3,7 +3,6 @@ import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { logbookSchema } from "@/app/lib/validation";
-import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
 import { Prisma } from "@prisma/client";
 
 export async function POST(request: Request) {
@@ -64,23 +63,6 @@ export async function POST(request: Request) {
       return Number.isFinite(numeric) ? Math.trunc(numeric) : null;
     };
 
-    const computedTotalTime = computeTotalTimeHours({
-      hobbsOut: parsed.data.hobbsOut,
-      hobbsIn: parsed.data.hobbsIn,
-      timeOut: parsed.data.timeOut,
-      timeIn: parsed.data.timeIn,
-      picTime: parsed.data.picTime,
-      sicTime: parsed.data.sicTime,
-      dualReceivedTime: parsed.data.dualReceivedTime,
-      soloTime: parsed.data.soloTime,
-      nightTime: parsed.data.nightTime,
-      xcTime: parsed.data.xcTime,
-      simulatedInstrumentTime: parsed.data.simulatedInstrumentTime,
-      instrumentTime: parsed.data.instrumentTime,
-      groundTime: parsed.data.groundTime,
-      simulatorTime: parsed.data.simulatorTime
-    });
-
     const data = {
       userId: user.id,
       flightId: linkedFlightId,
@@ -93,7 +75,7 @@ export async function POST(request: Request) {
       timeIn: parsed.data.timeIn?.trim() || null,
       hobbsOut: toNumberOrNull(parsed.data.hobbsOut),
       hobbsIn: toNumberOrNull(parsed.data.hobbsIn),
-      totalTime: computedTotalTime,
+      totalTime: toNumberOrNull(parsed.data.totalTime),
       picTime: toNumberOrNull(parsed.data.picTime),
       sicTime: toNumberOrNull(parsed.data.sicTime),
       dualReceivedTime: toNumberOrNull(parsed.data.dualReceivedTime),
