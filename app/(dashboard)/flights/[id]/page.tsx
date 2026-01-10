@@ -79,6 +79,20 @@ export default async function FlightDetailPage({
     (total, item) => total + item.amountCents,
     0
   );
+  const groundspeedValues = flight.trackPoints
+    .map((point) => point.groundspeedKt)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const minSpeedKt =
+    groundspeedValues.length > 0 ? Math.min(...groundspeedValues) : null;
+  const maxSpeedKt =
+    groundspeedValues.length > 0 ? Math.max(...groundspeedValues) : null;
+  const avgSpeedKt =
+    groundspeedValues.length > 0
+      ? Math.round(
+          groundspeedValues.reduce((sum, value) => sum + value, 0) /
+            groundspeedValues.length
+        )
+      : null;
   const currencyFormatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD"
@@ -238,10 +252,10 @@ export default async function FlightDetailPage({
           <p className="text-sm text-slate-400">Stats</p>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 lg:grid-cols-4">
-            <div>
-              <p className="text-xs uppercase text-slate-400">Tail number</p>
-              <div className="mt-1 flex items-center gap-3">
+          <div className="grid gap-3 lg:grid-cols-6 lg:grid-rows-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 lg:col-span-2 lg:row-span-2">
+              <p className="text-xs font-semibold uppercase text-slate-400">Aircraft</p>
+              <div className="mt-2 flex items-center gap-3">
                 {flight.aircraft?.photoStoragePath ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -260,9 +274,10 @@ export default async function FlightDetailPage({
                 </div>
               </div>
             </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Planned time</p>
-              <p className="text-sm text-slate-100">
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Planned</p>
+              <p className="text-sm font-semibold text-slate-100">
                 {flight.plannedStartTime
                   ? flight.plannedStartTime.toLocaleString()
                   : "—"}
@@ -273,9 +288,10 @@ export default async function FlightDetailPage({
                   : "No planned end time"}
               </p>
             </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Imported time</p>
-              <p className="text-sm text-slate-100">
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Imported</p>
+              <p className="text-sm font-semibold text-slate-100">
                 {isImported ? flight.startTime.toLocaleString() : "—"}
               </p>
               <p className="text-xs text-slate-400">
@@ -286,26 +302,50 @@ export default async function FlightDetailPage({
                   : "—"}
               </p>
             </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Duration</p>
-              <p className="text-lg font-semibold">
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Duration</p>
+              <p className="text-lg font-semibold text-slate-100">
                 {isImported && flight.durationMinutes !== null
                   ? `${flight.durationMinutes} mins`
                   : "—"}
               </p>
             </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Distance</p>
-              <p className="text-lg font-semibold">
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Distance</p>
+              <p className="text-lg font-semibold text-slate-100">
                 {isImported && flight.distanceNm !== null
                   ? `${flight.distanceNm} nm`
                   : "—"}
               </p>
             </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Max altitude</p>
-              <p className="text-lg font-semibold">
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Max altitude</p>
+              <p className="text-lg font-semibold text-slate-100">
                 {maxAltitude ? `${maxAltitude.toLocaleString()} ft` : "—"}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Min speed</p>
+              <p className="text-lg font-semibold text-slate-100">
+                {minSpeedKt !== null ? `${Math.round(minSpeedKt)} kt` : "—"}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Avg speed</p>
+              <p className="text-lg font-semibold text-slate-100">
+                {avgSpeedKt !== null ? `${avgSpeedKt} kt` : "—"}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">Max speed</p>
+              <p className="text-lg font-semibold text-slate-100">
+                {maxSpeedKt !== null ? `${Math.round(maxSpeedKt)} kt` : "—"}
               </p>
             </div>
           </div>
