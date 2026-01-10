@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { defaultProviderName, getAdsbProvider } from "@/app/lib/adsb";
+import { aeroApiProviderName } from "@/app/lib/adsb/aeroApiProvider";
 
 // Debug-only endpoint to exercise the ADS-B provider with a specific tail/time range.
 // Example:
@@ -83,6 +84,53 @@ export async function GET(request: Request) {
 
     const merged = [...mergedMap.values()];
 
+    // Direct AeroAPI raw probes (only when using AeroAPI provider)
+    let raw: Record<
+      string,
+      { status?: number; error?: string; count?: number; sampleId?: string | null }
+    > | null = null;
+    if (defaultProviderName === aeroApiProviderName) {
+      const apiKey = process.env.AEROAPI_KEY?.trim();
+      const apiBase = process.env.AEROAPI_API_BASE ?? "https://aeroapi.flightaware.com/aeroapi";
+      if (apiKey) {
+        raw = {};
+        const headers = { "x-apikey": apiKey };
+        const primaryUrl = new URL(`/flights/${encodeURIComponent(tail)}`, apiBase);
+        primaryUrl.searchParams.set("start", Math.floor(windowStart.getTime() / 1000).toString());
+        primaryUrl.searchParams.set("end", Math.floor(windowEnd.getTime() / 1000).toString());
+        primaryUrl.searchParams.set("max_pages", "5");
+
+        const searchUrl = new URL("/search/flights", apiBase);
+        searchUrl.searchParams.set(
+          "query",
+          `-idents ${tail} -begin ${Math.floor(windowStart.getTime() / 1000)} -end ${Math.floor(
+            windowEnd.getTime() / 1000
+          )}`
+        );
+        searchUrl.searchParams.set("max_pages", "5");
+
+        const probe = async (label: string, url: URL) => {
+          try {
+            const res = await fetch(url.toString(), { headers });
+            const json = await res.json().catch(() => ({}));
+            const flights = Array.isArray(json.flights) ? json.flights : [];
+            raw![label] = {
+              status: res.status,
+              count: flights.length,
+              sampleId: flights[0]?.fa_flight_id ?? flights[0]?.ident ?? null
+            };
+          } catch (error) {
+            raw![label] = {
+              error: error instanceof Error ? error.message : "Unknown error"
+            };
+          }
+        };
+
+        await probe("primary_direct", primaryUrl);
+        await probe("search_direct", searchUrl);
+      }
+    }
+
     return NextResponse.json({
       tail,
       provider: defaultProviderName,
@@ -100,6 +148,7 @@ export async function GET(request: Request) {
         stats: f.stats ?? null,
         trackPoints: f.track.length,
       })),
+      raw
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
