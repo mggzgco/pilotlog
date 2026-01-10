@@ -21,12 +21,57 @@ export async function selectChecklistTemplate({
   const db = client ?? prisma;
   const normalizedTail = tailNumber.trim();
 
+  if (normalizedTail) {
+    const userTailDefault = await db.checklistTemplate.findFirst({
+      where: {
+        userId,
+        phase,
+        aircraftTailNumber: normalizedTail,
+        isDefault: true
+      },
+      include: { items: { orderBy: { order: "asc" } } }
+    });
+
+    if (userTailDefault) {
+      return userTailDefault;
+    }
+
+    const userTailTemplate = await db.checklistTemplate.findFirst({
+      where: {
+        userId,
+        phase,
+        aircraftTailNumber: normalizedTail
+      },
+      orderBy: { updatedAt: "desc" },
+      include: { items: { orderBy: { order: "asc" } } }
+    });
+
+    if (userTailTemplate) {
+      return userTailTemplate;
+    }
+  }
+
+  const userDefault = await db.checklistTemplate.findFirst({
+    where: {
+      userId,
+      phase,
+      aircraftTailNumber: null,
+      isDefault: true
+    },
+    include: { items: { orderBy: { order: "asc" } } }
+  });
+
+  if (userDefault) {
+    return userDefault;
+  }
+
   const userTemplate = await db.checklistTemplate.findFirst({
     where: {
       userId,
       phase,
-      aircraftTailNumber: normalizedTail
+      aircraftTailNumber: null
     },
+    orderBy: { updatedAt: "desc" },
     include: { items: { orderBy: { order: "asc" } } }
   });
 
