@@ -75,7 +75,10 @@ export function ImportClient({ flightId }: ImportClientProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: isAttachMode
-            ? JSON.stringify({})
+            ? JSON.stringify({
+                start: startTime,
+                end: endTime
+              })
             : JSON.stringify({
                 tailNumber: tailNumber.trim(),
                 start: startTime,
@@ -167,9 +170,25 @@ export function ImportClient({ flightId }: ImportClientProps) {
         <CardContent>
           <form onSubmit={handleSearch} className="grid gap-3 md:grid-cols-3">
             {isAttachMode ? (
-              <div className="md:col-span-3 text-sm text-slate-400">
-                Tail number and time window are derived from the planned flight details.
-              </div>
+              <>
+                <div className="md:col-span-3 text-sm text-slate-400">
+                  Tail number is derived from the planned flight details.
+                </div>
+                <Input
+                  name="start"
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(event) => setStartTime(event.target.value)}
+                  required
+                />
+                <Input
+                  name="end"
+                  type="datetime-local"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
+                  required
+                />
+              </>
             ) : (
               <>
                 <Input

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { prisma } from "@/app/lib/db";
@@ -38,30 +39,65 @@ export async function POST(
     return NextResponse.json({ error: "Flight tail number is missing." }, { status: 400 });
   }
 
+  const payload = await request.json().catch(() => ({}));
+  const parsed = z
+    .object({
+      start: z.string().optional(),
+      end: z.string().optional()
+    })
+    .safeParse(payload);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid time window." }, { status: 400 });
+  }
+
+  const hasCustomWindow = Boolean(parsed.data.start || parsed.data.end);
+  if (hasCustomWindow && (!parsed.data.start || !parsed.data.end)) {
+    return NextResponse.json({ error: "Start and end time are required." }, { status: 400 });
+  }
+
   const window = deriveAutoImportWindow(flight);
+  const customStart = parsed.data.start ? new Date(parsed.data.start) : null;
+  const customEnd = parsed.data.end ? new Date(parsed.data.end) : null;
+
+  if (
+    hasCustomWindow &&
+    (!customStart || !customEnd || Number.isNaN(customStart.getTime()) || Number.isNaN(customEnd.getTime()))
+  ) {
+    return NextResponse.json({ error: "Invalid time window." }, { status: 400 });
+  }
+
+  if (customStart && customEnd && customStart > customEnd) {
+    return NextResponse.json({ error: "Start time must be before end time." }, { status: 400 });
+  }
+
   const provider = getAdsbProvider();
   const flights = await provider.searchFlights(
     tailNumber,
-    window.searchStart,
-    window.searchEnd
+    customStart ?? window.searchStart,
+    customEnd ?? window.searchEnd
   );
 
   const deduped = dedupeImportCandidates(flights);
-  deduped.sort(
-    (a, b) =>
-      scoreAutoImportCandidate(
-        window.referenceStart,
-        window.referenceEnd,
-        a.startTime,
-        a.endTime
-      ) -
-      scoreAutoImportCandidate(
-        window.referenceStart,
-        window.referenceEnd,
-        b.startTime,
-        b.endTime
-      )
-  );
+  if (customStart && customEnd) {
+    deduped.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+  } else {
+    deduped.sort(
+      (a, b) =>
+        scoreAutoImportCandidate(
+          window.referenceStart,
+          window.referenceEnd,
+          a.startTime,
+          a.endTime
+        ) -
+        scoreAutoImportCandidate(
+          window.referenceStart,
+          window.referenceEnd,
+          b.startTime,
+          b.endTime
+        )
+    );
+  }
 
   return NextResponse.json({
     provider: defaultProviderName,
