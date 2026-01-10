@@ -470,10 +470,10 @@ export default async function FlightDetailPage({
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-      <Card>
+        <Card>
         <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-slate-400">Costs</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Costs</p>
               <Button asChild variant="outline" size="sm">
                 <Link href={`/flights/${flight.id}/costs`}>Open costs</Link>
               </Button>
@@ -482,28 +482,28 @@ export default async function FlightDetailPage({
         <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                <p className="text-xs uppercase text-slate-400">Total</p>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Total</p>
                 <p className="text-lg font-semibold">
                   {costTotalCents > 0 ? currencyFormatter.format(costTotalCents / 100) : "—"}
                 </p>
                     </div>
               <div>
-                <p className="text-xs uppercase text-slate-400">Receipts</p>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Receipts</p>
                 <p className="text-lg font-semibold">{receiptCount}</p>
                 </div>
             </div>
             {!hasCosts ? (
-              <div className="mt-4 rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
+              <div className="mt-4 rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
                 No costs yet — add fuel, rental, instruction, etc.
               </div>
             ) : null}
         </CardContent>
       </Card>
 
-      <Card>
+        <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-slate-400">Logbook</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Logbook</p>
             <Button asChild variant="outline" size="sm">
                 <Link href={`/flights/${flight.id}/logbook`}>Open logbook</Link>
             </Button>
@@ -512,17 +512,17 @@ export default async function FlightDetailPage({
         <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-xs uppercase text-slate-400">Entries</p>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Entries</p>
                 <p className="text-lg font-semibold">{logbookEntryCount}</p>
               </div>
               <div>
-                <p className="text-xs uppercase text-slate-400">Status</p>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Status</p>
                 <p className="text-lg font-semibold">{hasAnyLogbookEntry ? "Started" : "Not started"}</p>
               </div>
             </div>
             {!hasAnyLogbookEntry ? (
-              <div className="mt-4 rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
-                No logbook entry yet — add hours and remarks.
+              <div className="mt-4 rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                No logbook entry yet — log hours and remarks.
             </div>
           ) : null}
           </CardContent>

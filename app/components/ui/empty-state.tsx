@@ -21,18 +21,18 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-start gap-4 rounded-lg border border-dashed border-slate-800 bg-slate-950/40 p-6 text-left",
+        "flex flex-col items-start gap-4 rounded-lg border border-dashed border-slate-200 bg-white p-6 text-left shadow-sm dark:border-slate-800 dark:bg-slate-950/40",
         className
       )}
     >
       {icon ? (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-brand-400">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-brand-600 dark:bg-slate-900 dark:text-brand-400">
           {icon}
         </div>
       ) : null}
       <div className="space-y-1">
         <h3 className="text-lg font-semibold">{title}</h3>
-        <p className="text-sm text-slate-400">{description}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{description}</p>
       </div>
       <div className="flex flex-wrap gap-3">
         {action}

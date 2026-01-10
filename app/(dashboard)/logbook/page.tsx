@@ -280,14 +280,16 @@ export default async function LogbookPage({
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold">Logbook</h2>
-        <p className="text-sm text-slate-400">Track PIC/SIC, night, and IFR time.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Track PIC/SIC, night, and IFR time.
+        </p>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-slate-400">Totals</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Totals</p>
               <p className="text-xs text-slate-500">
                 Based on {entries.length} matching entries
               </p>
@@ -301,10 +303,12 @@ export default async function LogbookPage({
               .map((metric) => (
                 <div
                   key={metric.key}
-                  className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3"
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/30"
                 >
-                  <p className="text-xs uppercase text-slate-400">{metric.label}</p>
-                  <p className="text-lg font-semibold text-slate-100">
+                  <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                    {metric.label}
+                  </p>
+                  <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     {formatHours(totals[metric.key])} hrs
                   </p>
                 </div>
@@ -315,7 +319,7 @@ export default async function LogbookPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Filters</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Filters</p>
         </CardHeader>
         <CardContent>
           <form method="get" className="grid gap-3 lg:grid-cols-4">
@@ -334,7 +338,7 @@ export default async function LogbookPage({
             <select
               name="aircraft"
               defaultValue={aircraftFilter}
-              className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
             >
               <option value="">All aircraft</option>
               {aircraftOptions.map((tailNumber) => (
@@ -349,21 +353,21 @@ export default async function LogbookPage({
               defaultValue={searchFilter}
             />
             <div className="lg:col-span-4">
-              <p className="text-xs font-semibold uppercase text-slate-400">
+              <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
                 Summary metrics
               </p>
               <div className="mt-2 flex flex-wrap gap-3">
                 {metrics.map((metric) => (
                   <label
                     key={metric.key}
-                    className="flex items-center gap-2 text-sm text-slate-200"
+                    className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
                   >
                     <input
                       type="checkbox"
                       name="metrics"
                       value={metric.key}
                       defaultChecked={selectedMetrics.includes(metric.key)}
-                      className="h-4 w-4 rounded border-slate-700"
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700"
                     />
                     {metric.label}
                   </label>
@@ -384,14 +388,14 @@ export default async function LogbookPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Add logbook entry</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Add logbook entry</p>
         </CardHeader>
         <CardContent>
           <form action={createLogbookEntryAction} className="grid gap-3 lg:grid-cols-3">
             <select
               name="flightId"
               defaultValue={selectedFlight?.id ?? ""}
-              className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100 lg:col-span-3"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
             >
               <option value="">Link a flight (optional)</option>
               {flights.map((flight) => {
@@ -411,14 +415,16 @@ export default async function LogbookPage({
               })}
             </select>
             {selectedFlight ? (
-              <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-200 lg:col-span-3">
-                <p className="text-xs uppercase text-slate-400">Selected flight</p>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 lg:col-span-3">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                  Selected flight
+                </p>
                 <p className="font-semibold">{selectedFlightLabel}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   {selectedFlight.startTime.toLocaleString()}
                 </p>
                 {selectedFlightCrew.length > 0 ? (
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                     Crew: {selectedFlightCrew.map((crew) => `${crew.name} (${crew.role})`).join(", ")}
                   </p>
                 ) : null}
@@ -453,15 +459,15 @@ export default async function LogbookPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Logbook entries</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Logbook entries</p>
         </CardHeader>
         <CardContent>
           {entries.length === 0 ? (
             <p className="text-sm text-slate-500">No logbook entries yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm text-slate-200">
-                <thead className="text-xs uppercase text-slate-500">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+              <table className="min-w-full text-left text-sm text-slate-900 dark:text-slate-100">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                   <tr>
                     <th className="px-4 py-2">Date</th>
                     <th className="px-4 py-2">Aircraft</th>
@@ -474,7 +480,7 @@ export default async function LogbookPage({
                     <th className="px-4 py-2">Links</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {entries.map((entry) => {
                     const flight = entry.flight;
                     const tailNumber =
@@ -483,7 +489,7 @@ export default async function LogbookPage({
                       flight?.tailNumber ||
                       "—";
                     return (
-                      <tr key={entry.id} className="border-t border-slate-800">
+                      <tr key={entry.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
                         <td className="px-4 py-3">
                           {entry.date.toLocaleDateString()}
                         </td>
@@ -501,13 +507,13 @@ export default async function LogbookPage({
                             <div className="flex flex-col gap-1">
                               <Link
                                 href={`/flights/${flight.id}`}
-                                className="text-sky-400 hover:text-sky-300"
+                                className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
                               >
                                 View flight
                               </Link>
                               <Link
                                 href={`/flights/${flight.id}#costs`}
-                                className="text-sky-400 hover:text-sky-300"
+                                className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
                               >
                                 View costs
                               </Link>

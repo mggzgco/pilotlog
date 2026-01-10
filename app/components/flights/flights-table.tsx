@@ -46,9 +46,9 @@ export function FlightsTable({ flights }: FlightsTableProps) {
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-800">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
       <table className="w-full text-sm">
-        <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+        <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
           <tr>
             <th className="px-4 py-3 text-left font-medium">Date/time</th>
             <th className="px-4 py-3 text-left font-medium">Aircraft</th>
@@ -60,10 +60,13 @@ export function FlightsTable({ flights }: FlightsTableProps) {
             <th className="px-4 py-3 text-right font-medium">Next action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
           {flights.map((flight) => (
-            <tr key={flight.id} className="text-slate-200 hover:bg-slate-900/60">
-              <td className="px-4 py-3 text-slate-400">
+            <tr
+              key={flight.id}
+              className="text-slate-900 transition hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-900/40"
+            >
+              <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                 <Link
                   href={`/flights/${flight.id}`}
                   className="block -mx-4 -my-3 px-4 py-3"
@@ -89,7 +92,9 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                       {flight.origin} → {flight.destination}
                     </>
                   ) : (
-                    <span className="text-slate-400">{flight.origin} → —</span>
+                    <span className="text-slate-600 dark:text-slate-400">
+                      {flight.origin} → —
+                    </span>
                   )}
                 </Link>
               </td>
@@ -145,27 +150,27 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                     </Button>
                   )}
                   <details className="relative">
-                    <summary className="list-none rounded-md border border-slate-700 p-2 text-slate-300 transition hover:bg-slate-800">
+                    <summary className="list-none rounded-md border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900">
                       <MoreHorizontal className="h-4 w-4" />
                     </summary>
-                    <div className="absolute right-0 z-10 mt-2 w-40 rounded-md border border-slate-800 bg-slate-950 py-2 text-sm text-slate-200 shadow-lg">
+                    <div className="absolute right-0 z-10 mt-2 w-40 rounded-md border border-slate-200 bg-white py-2 text-sm text-slate-900 shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                       {flight.menuItems.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
-                          className="block px-3 py-2 transition hover:bg-slate-900"
+                          className="block px-3 py-2 transition hover:bg-slate-50 dark:hover:bg-slate-900"
                         >
                           {item.label}
                         </Link>
                       ))}
-                      <div className="my-1 border-t border-slate-800" />
+                      <div className="my-1 border-t border-slate-200 dark:border-slate-800" />
                       <form
                         action={`/api/flights/${flight.id}/delete`}
                         method="post"
                       >
                         <button
                           type="submit"
-                          className="block w-full px-3 py-2 text-left text-rose-200 transition hover:bg-rose-500/10"
+                          className="block w-full px-3 py-2 text-left text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
                         >
                           Delete flight
                         </button>

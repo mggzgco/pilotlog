@@ -188,12 +188,14 @@ export default async function CostsPage({
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold">Costs</h2>
-        <p className="text-sm text-slate-400">Track receipts and training spend.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Track receipts and training spend.
+        </p>
       </div>
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Totals</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Totals</p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -216,10 +218,12 @@ export default async function CostsPage({
             ].map((summary) => (
               <div
                 key={summary.label}
-                className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3"
+                className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/30"
               >
-                <p className="text-xs uppercase text-slate-400">{summary.label}</p>
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                  {summary.label}
+                </p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   {currencyFormatter.format(summary.total / 100)}
                 </p>
                 <p className="text-xs text-slate-500">{summary.count} costs</p>
@@ -231,7 +235,7 @@ export default async function CostsPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Filters</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Filters</p>
         </CardHeader>
         <CardContent>
           <form method="get" className="grid gap-3 lg:grid-cols-5">
@@ -250,7 +254,7 @@ export default async function CostsPage({
             <select
               name="category"
               defaultValue={resolvedCategoryFilter}
-              className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
             >
               <option value="">All categories</option>
               {costCategoryOptions.map((option) => (
@@ -262,7 +266,7 @@ export default async function CostsPage({
             <select
               name="aircraft"
               defaultValue={aircraftFilter}
-              className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
             >
               <option value="">All aircraft</option>
               {aircraftOptions.map((tailNumber) => (
@@ -274,7 +278,7 @@ export default async function CostsPage({
             <select
               name="flightId"
               defaultValue={flightIdFilter}
-              className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
             >
               <option value="">All flights</option>
               {flights.map((flight) => {
@@ -307,7 +311,7 @@ export default async function CostsPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Add expense</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Add expense</p>
         </CardHeader>
         <CardContent>
           <form
@@ -318,7 +322,7 @@ export default async function CostsPage({
             <select
               name="flightId"
               defaultValue={flightIdFilter}
-              className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100 lg:col-span-3"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
               required
             >
               <option value="">Select a flight</option>
@@ -347,7 +351,7 @@ export default async function CostsPage({
                   ? resolvedCategoryFilter
                   : ""
               }
-              className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
               required
             >
               <option value="">Select category</option>
@@ -362,7 +366,7 @@ export default async function CostsPage({
             <Input name="vendor" placeholder="Vendor" />
             <Input name="notes" placeholder="Notes" className="lg:col-span-2" />
             <div className="lg:col-span-3">
-              <label className="text-xs uppercase text-slate-400" htmlFor="cost-receipts">
+              <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400" htmlFor="cost-receipts">
                 Receipts
               </label>
               <input
@@ -371,7 +375,7 @@ export default async function CostsPage({
                 type="file"
                 multiple
                 accept={receiptAccept}
-                className="mt-2 block w-full text-sm text-slate-200 file:mr-4 file:rounded-md file:border-0 file:bg-slate-800 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-100 hover:file:bg-slate-700"
+                className="mt-2 block w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border file:border-slate-200 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-900 hover:file:bg-slate-50 dark:text-slate-200 dark:file:border-slate-800 dark:file:bg-slate-950 dark:file:text-slate-100 dark:hover:file:bg-slate-900"
               />
               <p className="mt-2 text-xs text-slate-500">
                 Upload PDF, PNG, or JPEG receipts. Files attach to the selected flight.
@@ -386,12 +390,12 @@ export default async function CostsPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Expenses</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Expenses</p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-lg border border-slate-800">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Date</th>
                   <th className="px-4 py-3 text-left font-medium">Category</th>
@@ -404,7 +408,7 @@ export default async function CostsPage({
                   <th className="px-4 py-3 text-left font-medium">Links</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {costs.length === 0 ? (
                   <tr>
                     <td className="px-4 py-4 text-sm text-slate-500" colSpan={9}>
@@ -430,8 +434,8 @@ export default async function CostsPage({
                     const logbookCount = cost.flight?.logbookEntries.length ?? 0;
 
                     return (
-                      <tr key={cost.id} className="text-slate-200">
-                        <td className="px-4 py-3 text-slate-400">
+                      <tr key={cost.id} className="text-slate-900 dark:text-slate-100">
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                           {cost.date.toDateString()}
                         </td>
                         <td className="px-4 py-3">
@@ -440,7 +444,7 @@ export default async function CostsPage({
                         <td className="px-4 py-3">
                           {cost.flight ? (
                             <Link
-                              className="text-sky-400 hover:text-sky-300"
+                              className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
                               href={`/flights/${cost.flight.id}`}
                             >
                               {flightLabel}
@@ -454,7 +458,7 @@ export default async function CostsPage({
                             </p>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3 text-slate-400">{aircraftLabel}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{aircraftLabel}</td>
                         <td className="px-4 py-3">{cost.vendor ?? "—"}</td>
                         <td className="px-4 py-3">{cost.notes ?? "—"}</td>
                         <td className="px-4 py-3">
@@ -465,7 +469,7 @@ export default async function CostsPage({
                               {cost.receipts.map((receipt) => (
                                 <li key={receipt.id}>
                                   <Link
-                                    className="text-sky-400 hover:text-sky-300"
+                                    className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
                                     href={`/api/receipts/${receipt.id}/download`}
                                   >
                                     {receipt.originalFilename}
@@ -481,7 +485,7 @@ export default async function CostsPage({
                         <td className="px-4 py-3">
                           {cost.flight ? (
                             <Link
-                              className="text-sky-400 hover:text-sky-300"
+                              className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
                               href={`/logbook?flightId=${cost.flight.id}`}
                             >
                               Logbook entries ({logbookCount})

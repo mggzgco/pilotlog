@@ -96,12 +96,12 @@ export default async function AircraftPage() {
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Fleet</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Fleet</p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-lg border border-slate-800">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Tail</th>
                   <th className="px-4 py-3 text-left font-medium">Type</th>
@@ -110,7 +110,7 @@ export default async function AircraftPage() {
                   <th className="px-4 py-3 text-left font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {aircraft.length === 0 ? (
                   <tr>
                     <td className="px-4 py-4 text-sm text-slate-500" colSpan={5}>
@@ -121,7 +121,10 @@ export default async function AircraftPage() {
                   aircraft.map((plane) => {
                     const readiness = readinessFor(plane);
                     return (
-                      <tr key={plane.id} className="text-slate-200">
+                      <tr
+                        key={plane.id}
+                        className="text-slate-900 transition hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-900/40"
+                      >
                         <td className="px-4 py-3">
                           <Link href={`/aircraft/${plane.id}`} className="font-semibold">
                             {plane.tailNumber}
@@ -131,7 +134,7 @@ export default async function AircraftPage() {
                         <td className={`px-4 py-3 ${readiness.tone}`}>
                           {readiness.label}
                         </td>
-                        <td className="px-4 py-3 text-slate-400">
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                           {plane.createdAt.toDateString()}
                         </td>
                         <td className="px-4 py-3">
