@@ -11,7 +11,8 @@ const updateSchema = z.object({
   valueNumber: z.string().optional(),
   valueYesNo: z.string().optional(),
   valueCheck: z.string().optional(),
-  complete: z.string().optional()
+  complete: z.string().optional(),
+  clientUpdatedAt: z.string().optional()
 });
 
 export async function POST(
@@ -69,6 +70,34 @@ export async function POST(
       );
     }
     redirectUrl.searchParams.set("toast", "Checklist not available.");
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  const clientUpdatedAt = parsed.data.clientUpdatedAt
+    ? new Date(parsed.data.clientUpdatedAt)
+    : null;
+
+  if (clientUpdatedAt && Number.isNaN(clientUpdatedAt.getTime())) {
+    if (wantsJson) {
+      return NextResponse.json(
+        { status: "error", message: "Invalid timestamp." },
+        { status: 400 }
+      );
+    }
+    redirectUrl.searchParams.set("toast", "Invalid timestamp.");
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (clientUpdatedAt && item.updatedAt > clientUpdatedAt) {
+    if (wantsJson) {
+      return NextResponse.json(
+        { status: "stale", message: "Checklist item is newer on the server." },
+        { status: 409 }
+      );
+    }
+    redirectUrl.searchParams.set("toast", "Checklist item updated elsewhere.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }

@@ -133,6 +133,7 @@ export default async function FlightsPage({
           select: {
             phase: true,
             status: true,
+            decision: true,
             items: { select: { required: true, inputType: true, valueYesNo: true } }
           }
         }
@@ -159,6 +160,12 @@ export default async function FlightsPage({
   ) => {
     if (!run || run.status !== "SIGNED") {
       return "—";
+    }
+    if (run.decision === "REJECTED") {
+      return "Rejected";
+    }
+    if (run.decision === "ACCEPTED") {
+      return "Accepted";
     }
     const hasRejected = run.items.some(
       (item) =>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
@@ -20,6 +21,7 @@ const ChecklistRunStatus = {
 
 type ChecklistInputType = (typeof ChecklistInputType)[keyof typeof ChecklistInputType];
 type ChecklistRunStatus = (typeof ChecklistRunStatus)[keyof typeof ChecklistRunStatus];
+type ChecklistDecision = "ACCEPTED" | "REJECTED";
 
 type SaveStatus = "saved" | "saving" | "offline";
 
@@ -39,6 +41,7 @@ type ChecklistSavePayload = {
   valueYesNo?: string;
   valueCheck?: string;
   complete?: string;
+  clientUpdatedAt?: string;
 };
 
 export type ChecklistItemView = {
@@ -60,6 +63,8 @@ export type ChecklistRunView = {
   id: string;
   phase: "PREFLIGHT" | "POSTFLIGHT";
   status: ChecklistRunStatus;
+  decision: ChecklistDecision | null;
+  decisionNote: string | null;
   startedAt: string | null;
   signedAt: string | null;
   signatureName: string | null;
@@ -69,6 +74,7 @@ export type ChecklistRunView = {
 type ChecklistSectionProps = {
   flightId: string;
   flightStatus: string;
+  aircraftId: string | null;
   defaultSignatureName: string;
   preflightRun: ChecklistRunView | null;
   postflightRun: ChecklistRunView | null;
@@ -102,6 +108,7 @@ const buildFormData = (payload: ChecklistSavePayload) => {
 export function ChecklistSection({
   flightId,
   flightStatus,
+  aircraftId,
   defaultSignatureName,
   preflightRun,
   postflightRun
@@ -112,6 +119,10 @@ export function ChecklistSection({
   const [signingPhase, setSigningPhase] = useState<
     "PREFLIGHT" | "POSTFLIGHT" | null
   >(null);
+  const [rejectingPhase, setRejectingPhase] = useState<
+    "PREFLIGHT" | "POSTFLIGHT" | null
+  >(null);
+  const [rejectionNote, setRejectionNote] = useState("");
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
@@ -122,6 +133,11 @@ export function ChecklistSection({
   const pendingCountRef = useRef(0);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const itemStateRef = useRef(itemState);
+  const swipeStartRef = useRef<{
+    itemId: string;
+    startX: number;
+    startY: number;
+  } | null>(null);
 
   useEffect(() => {
     itemStateRef.current = itemState;
@@ -136,7 +152,9 @@ export function ChecklistSection({
   );
 
   const activeRun = runs[activeTab];
-  const preflightSigned = preflightRun?.status === ChecklistRunStatus.SIGNED;
+  const preflightSigned =
+    preflightRun?.status === ChecklistRunStatus.SIGNED &&
+    preflightRun.decision !== "REJECTED";
   const postflightAvailable =
     postflightRun?.status !== ChecklistRunStatus.NOT_AVAILABLE ||
     flightStatus === "COMPLETED";
@@ -268,6 +286,18 @@ export function ChecklistSection({
         }
       });
 
+      if (response.status === 409) {
+        const data = await response.json().catch(() => null);
+        if (data?.status === "stale") {
+          const pending = readPending(runId);
+          if (pending[payload.itemId]) {
+            delete pending[payload.itemId];
+            writePending(runId, pending);
+          }
+          return;
+        }
+      }
+
       if (!response.ok) {
         throw new Error("Failed to save checklist item");
       }
@@ -328,7 +358,8 @@ export function ChecklistSection({
   ): ChecklistSavePayload => {
     const payload: ChecklistSavePayload = {
       itemId: item.id,
-      notes: state.notes
+      notes: state.notes,
+      clientUpdatedAt: new Date().toISOString()
     };
 
     if (item.inputType === ChecklistInputType.CHECK) {
@@ -408,16 +439,74 @@ export function ChecklistSection({
     }, 400);
   };
 
+  const handleSwipeStart = (itemId: string, event: TouchEvent) => {
+    if (event.touches.length === 0) {
+      return;
+    }
+    const touch = event.touches[0];
+    swipeStartRef.current = {
+      itemId,
+      startX: touch.clientX,
+      startY: touch.clientY
+    };
+  };
+
+  const handleSwipeEnd = (
+    item: ChecklistItemView,
+    disabled: boolean,
+    event: TouchEvent
+  ) => {
+    if (disabled) {
+      swipeStartRef.current = null;
+      return;
+    }
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || start.itemId !== item.id || event.changedTouches.length === 0) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.startX;
+    const deltaY = touch.clientY - start.startY;
+    if (Math.abs(deltaX) < 70 || Math.abs(deltaY) > 40) {
+      return;
+    }
+
+    if (item.inputType === ChecklistInputType.CHECK) {
+      if (deltaX > 0) {
+        updateItemState(
+          item.id,
+          { valueYesNo: true, completed: true },
+          { complete: true, immediate: true }
+        );
+      } else {
+        updateItemState(
+          item.id,
+          { valueYesNo: false, completed: false },
+          { immediate: true }
+        );
+      }
+    }
+
+    if (item.inputType === ChecklistInputType.YES_NO) {
+      updateItemState(
+        item.id,
+        { valueYesNo: deltaX > 0, completed: true },
+        { complete: true, immediate: true }
+      );
+    }
+  };
+
   const renderInput = (item: ChecklistItemView, disabled: boolean) => {
     const state = itemState[item.id];
 
     if (item.inputType === ChecklistInputType.CHECK) {
       return (
-        <label className="flex min-h-11 items-center gap-3 text-base text-slate-200">
+        <label className="flex min-h-12 items-center gap-4 text-base font-medium text-slate-100">
           <input
             type="checkbox"
             name="valueCheck"
-            className="h-5 w-5 rounded border-slate-600"
+            className="h-7 w-7 rounded border-slate-600"
             checked={state?.valueYesNo ?? false}
             disabled={disabled}
             onChange={(event) => {
@@ -428,42 +517,44 @@ export function ChecklistSection({
               );
             }}
           />
-          Marked
+          Checked
         </label>
       );
     }
 
     if (item.inputType === ChecklistInputType.YES_NO) {
       return (
-        <div className="flex gap-6 text-base text-slate-200">
-          <label className="flex min-h-11 items-center gap-3">
-            <input
-              type="radio"
-              name={`valueYesNo-${item.id}`}
-              value="yes"
-              className="h-5 w-5"
-              checked={state?.valueYesNo === true}
-              disabled={disabled}
-              onChange={() => {
-                updateItemState(item.id, { valueYesNo: true }, { immediate: true });
-              }}
-            />
+        <div className="flex flex-wrap gap-3 text-base text-slate-200">
+          <Button
+            type="button"
+            size="lg"
+            variant={state?.valueYesNo === true ? "default" : "outline"}
+            disabled={disabled}
+            onClick={() => {
+              updateItemState(
+                item.id,
+                { valueYesNo: true, completed: true },
+                { complete: true, immediate: true }
+              );
+            }}
+          >
             Yes
-          </label>
-          <label className="flex min-h-11 items-center gap-3">
-            <input
-              type="radio"
-              name={`valueYesNo-${item.id}`}
-              value="no"
-              className="h-5 w-5"
-              checked={state?.valueYesNo === false}
-              disabled={disabled}
-              onChange={() => {
-                updateItemState(item.id, { valueYesNo: false }, { immediate: true });
-              }}
-            />
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            variant={state?.valueYesNo === false ? "default" : "outline"}
+            disabled={disabled}
+            onClick={() => {
+              updateItemState(
+                item.id,
+                { valueYesNo: false, completed: true },
+                { complete: true, immediate: true }
+              );
+            }}
+          >
             No
-          </label>
+          </Button>
         </div>
       );
     }
@@ -475,6 +566,7 @@ export function ChecklistSection({
           type="number"
           step="0.1"
           inputMode="decimal"
+          className="h-12 text-base"
           value={state?.valueNumber ?? ""}
           disabled={disabled}
           onChange={(event) =>
@@ -488,6 +580,7 @@ export function ChecklistSection({
       <Input
         name={`valueText-${item.id}`}
         type="text"
+        className="h-12 text-base"
         value={state?.valueText ?? ""}
         disabled={disabled}
         onChange={(event) => updateItemState(item.id, { valueText: event.target.value })}
@@ -502,7 +595,15 @@ export function ChecklistSection({
     if (!run) {
       return (
         <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
-          No checklist template available yet.
+          <p>No checklist template available yet.</p>
+          {aircraftId ? (
+            <Link
+              className="mt-2 inline-flex text-sm font-semibold text-brand-400"
+              href={`/aircraft/${aircraftId}`}
+            >
+              Assign an aircraft checklist
+            </Link>
+          ) : null}
         </div>
       );
     }
@@ -527,6 +628,28 @@ export function ChecklistSection({
       );
     }
 
+    if (
+      phase === "PREFLIGHT" &&
+      run.status === ChecklistRunStatus.IN_PROGRESS &&
+      !run.startedAt
+    ) {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
+            Pre-flight checklist is ready to start.
+          </div>
+          <form
+            action={`/api/flights/${flightId}/checklists/start-preflight`}
+            method="post"
+          >
+            <FormSubmitButton type="submit" pendingText="Starting checklist...">
+              Start Pre-Flight Checklist
+            </FormSubmitButton>
+          </form>
+        </div>
+      );
+    }
+
     const isLocked = run.status === ChecklistRunStatus.SIGNED;
     const requiredRemaining = run.items.filter((item) => {
       const state = itemState[item.id];
@@ -539,7 +662,9 @@ export function ChecklistSection({
         <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-400">
           <div>
             {run.status === ChecklistRunStatus.SIGNED
-              ? `Signed${run.signedAt ? ` on ${new Date(run.signedAt).toLocaleString()}` : ""}`
+              ? `${run.decision === "REJECTED" ? "Rejected" : run.decision === "ACCEPTED" ? "Accepted" : "Signed"}${
+                  run.signedAt ? ` on ${new Date(run.signedAt).toLocaleString()}` : ""
+                }`
               : run.startedAt
                 ? `Started ${new Date(run.startedAt).toLocaleString()}`
                 : "Not started"}
@@ -547,9 +672,40 @@ export function ChecklistSection({
           {run.signatureName ? <div>Signed by {run.signatureName}</div> : null}
         </div>
 
+        {run.status === ChecklistRunStatus.SIGNED ? (
+          <div
+            className={`rounded-lg border px-4 py-3 text-sm ${
+              run.decision === "REJECTED"
+                ? "border-rose-500/40 bg-rose-500/10 text-rose-100"
+                : run.decision === "ACCEPTED"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+                  : "border-slate-700 bg-slate-900/50 text-slate-200"
+            }`}
+          >
+            <p className="font-semibold">
+              {run.decision === "REJECTED"
+                ? "Checklist rejected"
+                : run.decision === "ACCEPTED"
+                  ? "Checklist accepted"
+                  : "Checklist signed"}
+            </p>
+            {run.decisionNote ? (
+              <p className="mt-1 text-xs text-rose-100/80">{run.decisionNote}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {run.items.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
-            No checklist items available.
+            <p>No checklist items available.</p>
+            {aircraftId ? (
+              <Link
+                className="mt-2 inline-flex text-sm font-semibold text-brand-400"
+                href={`/aircraft/${aircraftId}`}
+              >
+                Assign an aircraft checklist
+              </Link>
+            ) : null}
           </div>
         ) : (
           <div className="space-y-4">
@@ -557,19 +713,22 @@ export function ChecklistSection({
               const state = itemState[item.id];
               const completed = state?.completed ?? item.completed;
               const isActive = activeItemId === item.id;
+              const isDisabled = isLocked;
 
               return (
                 <div
                   key={item.id}
                   onClick={() => setActiveItemId(item.id)}
-                  className={`rounded-lg border border-slate-800 p-4 transition ${
+                  onTouchStart={(event) => handleSwipeStart(item.id, event)}
+                  onTouchEnd={(event) => handleSwipeEnd(item, isDisabled, event)}
+                  className={`touch-pan-y rounded-lg border border-slate-800 p-4 transition ${
                     isActive && isFocusMode ? "border-brand-500/70 bg-slate-900/70" : ""
                   }`}
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
+                    <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-semibold text-slate-100">
+                        <p className="text-lg font-semibold text-slate-100">
                           {item.order}. {item.title}
                         </p>
                         {item.required ? (
@@ -588,7 +747,7 @@ export function ChecklistSection({
                         ) : null}
                       </div>
                       {item.details ? (
-                        <p className="mt-1 text-sm text-slate-400">{item.details}</p>
+                        <p className="text-sm text-slate-400">{item.details}</p>
                       ) : null}
                       {item.completedAt ? (
                         <p className="mt-2 text-xs text-slate-500">
@@ -597,16 +756,16 @@ export function ChecklistSection({
                       ) : null}
                     </div>
                     <div className="flex flex-col items-start gap-4 lg:items-end">
-                      <div className="w-full lg:w-72">{renderInput(item, isLocked)}</div>
+                      <div className="w-full lg:w-72">{renderInput(item, isDisabled)}</div>
                       <div className="w-full">
                         <label className="mb-1 block text-xs uppercase text-slate-400">
                           Notes
                         </label>
                         <textarea
                           name={`notes-${item.id}`}
-                          className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                          className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-base text-slate-100"
                           value={state?.notes ?? ""}
-                          disabled={isLocked}
+                          disabled={isDisabled}
                           onChange={(event) =>
                             updateItemState(item.id, { notes: event.target.value })
                           }
@@ -647,16 +806,6 @@ export function ChecklistSection({
           </div>
         )}
 
-        {!isLocked && !isFocusMode && (
-          <Button
-            type="button"
-            size="lg"
-            onClick={() => setSigningPhase(phase)}
-            variant="default"
-          >
-            {phase === "PREFLIGHT" ? "Sign Pre-Flight" : "Sign Post-Flight"}
-          </Button>
-        )}
       </div>
     );
   };
@@ -668,35 +817,28 @@ export function ChecklistSection({
     activeRun?.items.filter((item) => itemState[item.id]?.completed ?? item.completed)
       .length ?? 0;
   const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+  const requiredRemaining =
+    activeRun?.items.filter((item) => {
+      const state = itemState[item.id];
+      const completed = state?.completed ?? item.completed;
+      return item.required && !completed;
+    }).length ?? 0;
 
-  const activeItem = activeItemId ? activeItemsById.get(activeItemId) : null;
-  const activeItemState = activeItemId ? itemState[activeItemId] : null;
   const isChecklistLocked = activeRun?.status === ChecklistRunStatus.SIGNED;
+  const canDecide =
+    activeRun?.status === ChecklistRunStatus.IN_PROGRESS && !isChecklistLocked;
+  const canAccept = Boolean(canDecide && requiredRemaining === 0);
+  const showDecisionFooter =
+    Boolean(activeRun) && activeRun?.status !== ChecklistRunStatus.NOT_AVAILABLE;
 
   const handleFocusToggle = () => {
     focusOverrideRef.current = true;
     setIsFocusMode((prev) => !prev);
   };
 
-  const handleFocusDecision = (accepted: boolean) => {
-    if (!activeItem || !activeItemState || !activeRun || isChecklistLocked) {
-      return;
-    }
-
-    const updates: Partial<ChecklistItemState> = { completed: true };
-    if (activeItem.inputType === ChecklistInputType.CHECK) {
-      updates.valueYesNo = accepted;
-    }
-    if (activeItem.inputType === ChecklistInputType.YES_NO) {
-      updates.valueYesNo = accepted;
-    }
-
-    updateItemState(activeItem.id, updates, { complete: true, immediate: true });
-  };
-
   const statusLabel =
     saveStatus === "offline"
-      ? "Offline (will sync)"
+      ? "Offline — will sync"
       : saveStatus === "saving"
         ? "Saving..."
         : "Saved";
@@ -768,28 +910,126 @@ export function ChecklistSection({
 
       {renderChecklist(activeRun, activeTab)}
 
-      {isFocusMode && activeRun && activeItem && !isChecklistLocked ? (
-        <div className="sticky bottom-0 z-30 rounded-t-lg border border-slate-800 bg-slate-950/95 p-4 shadow-2xl">
-          <div className="flex flex-col gap-4">
-            <div>
-              <p className="text-xs uppercase text-slate-500">Focused item</p>
-              <p className="text-base font-semibold text-slate-100">
-                {activeItem.order}. {activeItem.title}
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button type="button" size="lg" onClick={() => handleFocusDecision(true)}>
-                Accept
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                onClick={() => handleFocusDecision(false)}
+      {showDecisionFooter && activeRun ? (
+        <div className="sticky bottom-0 z-30 rounded-t-2xl border border-slate-800 bg-slate-950/95 p-4 shadow-2xl backdrop-blur">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
+              <div>
+                <p className="font-semibold text-slate-100">Checklist progress</p>
+                <p className="text-xs text-slate-400">
+                  {completedItems}/{totalItems} complete ·{" "}
+                  {requiredRemaining === 0
+                    ? "All required items done"
+                    : `${requiredRemaining} required remaining`}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${
+                  saveStatus === "offline"
+                    ? "bg-amber-500/20 text-amber-200"
+                    : saveStatus === "saving"
+                      ? "bg-sky-500/20 text-sky-200"
+                      : "bg-emerald-500/20 text-emerald-200"
+                }`}
               >
-                Reject
-              </Button>
+                {statusLabel}
+              </span>
             </div>
+            <div className="h-2 w-full rounded-full bg-slate-800">
+              <div
+                className="h-2 rounded-full bg-brand-500"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            {isChecklistLocked ? (
+              <p className="text-xs text-slate-400">
+                Checklist is locked and read-only.
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  size="lg"
+                  disabled={!canAccept}
+                  onClick={() => setSigningPhase(activeRun.phase)}
+                >
+                  Accept
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  disabled={!canDecide}
+                  onClick={() => {
+                    setRejectionNote("");
+                    setRejectingPhase(activeRun.phase);
+                  }}
+                >
+                  Reject
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {rejectingPhase ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-slate-800 bg-slate-950 p-6">
+            <h3 className="text-lg font-semibold text-slate-100">
+              Reject {rejectingPhase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight"}
+            </h3>
+            <p className="mt-2 text-sm text-slate-400">
+              Add a rejection note and confirm your signature to lock the checklist.
+            </p>
+            <form
+              action={`/api/flights/${flightId}/checklists/${
+                rejectingPhase === "PREFLIGHT" ? "reject-preflight" : "reject-postflight"
+              }`}
+              method="post"
+              className="mt-4 grid gap-3"
+            >
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Rejection note
+                </label>
+                <textarea
+                  name="rejectionNote"
+                  className="min-h-[140px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-base text-slate-100"
+                  value={rejectionNote}
+                  onChange={(event) => setRejectionNote(event.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Signature name
+                </label>
+                <Input
+                  name="signatureName"
+                  defaultValue={defaultSignatureName}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Password confirmation
+                </label>
+                <Input name="password" type="password" required />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <FormSubmitButton type="submit" pendingText="Rejecting...">
+                  Reject checklist
+                </FormSubmitButton>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRejectingPhase(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}

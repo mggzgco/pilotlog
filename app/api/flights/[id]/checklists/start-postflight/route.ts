@@ -39,7 +39,8 @@ export async function POST(
   }
 
   const canStart =
-    preflightRun?.status === "SIGNED" || flight.status === "COMPLETED";
+    (preflightRun?.status === "SIGNED" && preflightRun.decision !== "REJECTED") ||
+    flight.status === "COMPLETED";
 
   if (!canStart) {
     redirectUrl.searchParams.set(

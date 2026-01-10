@@ -54,6 +54,11 @@ enum ChecklistRunStatus {
   SIGNED
 }
 
+enum ChecklistDecision {
+  ACCEPTED
+  REJECTED
+}
+
 enum FlightParticipantRole {
   INSTRUCTOR
   STUDENT
@@ -337,6 +342,8 @@ model FlightChecklistRun {
   flightId           String
   phase              ChecklistPhase
   status             ChecklistRunStatus  @default(IN_PROGRESS)
+  decision           ChecklistDecision?
+  decisionNote       String?
   startedAt          DateTime?
   signedAt           DateTime?
   signedByUserId     String?
