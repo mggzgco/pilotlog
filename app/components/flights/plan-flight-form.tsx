@@ -12,11 +12,22 @@ type AircraftOption = {
   model: string | null;
 };
 
-type PlanFlightFormProps = {
-  aircraftOptions: AircraftOption[];
+type ParticipantOption = {
+  id: string;
+  label: string;
 };
 
-export function PlanFlightForm({ aircraftOptions }: PlanFlightFormProps) {
+type PlanFlightFormProps = {
+  aircraftOptions: AircraftOption[];
+  participantOptions: ParticipantOption[];
+};
+
+const roleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
+
+export function PlanFlightForm({
+  aircraftOptions,
+  participantOptions
+}: PlanFlightFormProps) {
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [tailNumber, setTailNumber] = useState("");
   const [unassignedConfirmed, setUnassignedConfirmed] = useState(false);
@@ -122,6 +133,43 @@ export function PlanFlightForm({ aircraftOptions }: PlanFlightFormProps) {
           Planned end time
         </label>
         <Input name="plannedEndTime" type="datetime-local" />
+      </div>
+      <div className="md:col-span-2">
+        <p className="mb-2 text-xs font-semibold uppercase text-slate-400">
+          Participants
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {[0, 1].map((slot) => (
+            <div key={slot} className="grid gap-2 rounded-md border border-slate-800 p-3">
+              <label className="text-xs font-semibold uppercase text-slate-400">
+                Additional participant {slot + 1}
+              </label>
+              <select
+                name="participantUserId"
+                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                defaultValue=""
+              >
+                <option value="">Select a user</option>
+                {participantOptions.map((participant) => (
+                  <option key={participant.id} value={participant.id}>
+                    {participant.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="participantRole"
+                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                defaultValue="SIC"
+              >
+                {roleOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="md:col-span-2 flex flex-wrap gap-3">
         <FormSubmitButton type="submit" pendingText="Planning flight...">

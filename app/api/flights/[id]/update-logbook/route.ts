@@ -32,6 +32,19 @@ export async function POST(
 
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
+  const participantId = formData.get("participantId");
+  if (!participantId || typeof participantId !== "string") {
+    return NextResponse.json(
+      { error: "Participant selection is required." },
+      { status: 400 }
+    );
+  }
+  const participant = await prisma.flightParticipant.findFirst({
+    where: { id: participantId, flightId: flight.id }
+  });
+  if (!participant) {
+    return NextResponse.json({ error: "Participant not found." }, { status: 404 });
+  }
   const toNumber = (value: FormDataEntryValue | undefined) =>
     value === "" || value === undefined ? undefined : Number(value);
   const parsed = logbookSchema.safeParse({
@@ -49,7 +62,7 @@ export async function POST(
   }
 
   const existingEntry = await prisma.logbookEntry.findFirst({
-    where: { flightId: flight.id, userId: user.id }
+    where: { flightId: flight.id, userId: participant.userId }
   });
 
   const data = {
@@ -61,6 +74,14 @@ export async function POST(
     instrumentTime: parsed.data.instrumentTime,
     remarks: parsed.data.remarks
   };
+  if (data.totalTime !== null) {
+    if (participant.role === "PIC" && data.picTime === null) {
+      data.picTime = data.totalTime;
+    }
+    if (participant.role === "SIC" && data.sicTime === null) {
+      data.sicTime = data.totalTime;
+    }
+  }
 
   if (existingEntry) {
     await prisma.logbookEntry.update({
@@ -71,13 +92,14 @@ export async function POST(
     await prisma.logbookEntry.create({
       data: {
         ...data,
-        userId: user.id,
+        userId: participant.userId,
         flightId: flight.id
       }
     });
   }
 
   const redirectUrl = new URL(`/flights/${flight.id}`, request.url);
+  redirectUrl.searchParams.set("participantId", participant.id);
   redirectUrl.searchParams.set("toast", "Logbook updated.");
   redirectUrl.searchParams.set("toastType", "success");
   return NextResponse.redirect(redirectUrl);

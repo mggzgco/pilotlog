@@ -103,6 +103,18 @@ export default async function FlightsPage({
       logbookEntries: { select: { remarks: true } }
     }
   });
+  const users = await prisma.user.findMany({
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    select: { id: true, firstName: true, lastName: true, name: true, email: true }
+  });
+  const participantOptions = users.map((entry) => ({
+    id: entry.id,
+    label:
+      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
+      entry.name ||
+      entry.email
+  }));
+  const roleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
 
   const normalizedTags = tags.map((tag) => tag.toLowerCase());
   const filteredFlights =
@@ -213,6 +225,46 @@ export default async function FlightsPage({
             <Input name="startTime" type="datetime-local" required />
             <Input name="endTime" type="datetime-local" />
             <Input name="durationMinutes" type="number" placeholder="Duration (mins)" />
+            <div className="md:col-span-3 space-y-3">
+              <p className="text-xs font-semibold uppercase text-slate-400">
+                Participants
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {[0, 1].map((slot) => (
+                  <div
+                    key={slot}
+                    className="grid gap-2 rounded-md border border-slate-800 p-3"
+                  >
+                    <label className="text-xs font-semibold uppercase text-slate-400">
+                      Additional participant {slot + 1}
+                    </label>
+                    <select
+                      name="participantUserId"
+                      className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                      defaultValue=""
+                    >
+                      <option value="">Select a user</option>
+                      {participantOptions.map((participant) => (
+                        <option key={participant.id} value={participant.id}>
+                          {participant.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="participantRole"
+                      className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                      defaultValue="SIC"
+                    >
+                      {roleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="md:col-span-3">
               <FormSubmitButton type="submit" pendingText="Saving flight...">
                 Save flight

@@ -114,6 +114,14 @@ export async function POST(request: Request) {
         }
       });
 
+      await tx.flightParticipant.create({
+        data: {
+          flightId: created.id,
+          userId: user.id,
+          role: "PIC"
+        }
+      });
+
       await tx.trackPoint.createMany({
         data: trackPoints.map((point) => ({
           flightId: created.id,

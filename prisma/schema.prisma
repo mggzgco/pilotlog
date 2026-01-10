@@ -54,6 +54,13 @@ enum ChecklistRunStatus {
   SIGNED
 }
 
+enum FlightParticipantRole {
+  INSTRUCTOR
+  STUDENT
+  PIC
+  SIC
+}
+
 model User {
   id                 String                 @id @default(cuid())
   email              String                 @unique
@@ -70,6 +77,7 @@ model User {
   aircraft           Aircraft[]
   logbook            LogbookEntry[]
   costItems          CostItem[]
+  flightParticipants FlightParticipant[]
   resetTokens        PasswordResetToken[]
   approvalTokens     AccountApprovalToken[]
   receiptDocuments   ReceiptDocument[]
@@ -110,6 +118,7 @@ model Flight {
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   aircraft            Aircraft?            @relation(fields: [aircraftId], references: [id], onDelete: SetNull)
   logbookEntries      LogbookEntry[]
+  participants        FlightParticipant[]
   costItems           CostItem[]
   trackPoints         TrackPoint[]
   checklistRuns       FlightChecklistRun[]
@@ -117,6 +126,20 @@ model Flight {
 
   @@unique([userId, importedProvider, providerFlightId])
   @@index([aircraftId])
+}
+
+model FlightParticipant {
+  id        String               @id @default(cuid())
+  flightId  String
+  userId    String
+  role      FlightParticipantRole
+  createdAt DateTime             @default(now())
+  flight    Flight               @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([flightId, userId])
+  @@index([flightId])
+  @@index([userId])
 }
 
 model Aircraft {

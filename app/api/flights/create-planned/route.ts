@@ -5,6 +5,7 @@ import { requireUser } from "@/app/lib/session";
 import { selectChecklistTemplate } from "@/app/lib/checklists/templates";
 import { createChecklistRunSnapshot } from "@/app/lib/checklists/snapshot";
 import { recordAuditEvent } from "@/app/lib/audit";
+import { normalizeParticipants, parseParticipantFormData } from "@/app/lib/flights/participants";
 
 const plannedFlightSchema = z.object({
   tailNumber: z.string().optional(),
@@ -83,6 +84,10 @@ export async function POST(request: Request) {
   const departureLabel = String(parsed.data.departureLabel ?? "").trim();
   const arrivalLabel = String(parsed.data.arrivalLabel ?? "").trim();
   const startTime = plannedStart ?? new Date();
+  const participantInputs = normalizeParticipants(
+    user.id,
+    parseParticipantFormData(formData)
+  );
 
   const flight = await prisma.$transaction(async (tx) => {
     const created = await tx.flight.create({
@@ -96,7 +101,16 @@ export async function POST(request: Request) {
         plannedStartTime: plannedStart,
         plannedEndTime: plannedEnd,
         startTime,
-        status: "PLANNED"
+        status: "PLANNED",
+        participants: {
+          create: [
+            { userId: user.id, role: "PIC" },
+            ...participantInputs.map((participant) => ({
+              userId: participant.userId,
+              role: participant.role
+            }))
+          ]
+        }
       }
     });
 
