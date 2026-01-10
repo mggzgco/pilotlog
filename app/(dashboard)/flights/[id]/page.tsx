@@ -238,7 +238,7 @@ export default async function FlightDetailPage({
           <p className="text-sm text-slate-400">Stats</p>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-4">
             <div>
               <p className="text-xs uppercase text-slate-400">Tail number</p>
               <div className="mt-1 flex items-center gap-3">
@@ -259,10 +259,6 @@ export default async function FlightDetailPage({
                   <p className="text-xs text-slate-400">{aircraftTypeLabel}</p>
                 </div>
               </div>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Aircraft type</p>
-              <p className="text-lg font-semibold">{aircraftTypeLabel}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-slate-400">Planned time</p>
