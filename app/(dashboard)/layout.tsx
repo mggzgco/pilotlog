@@ -14,11 +14,11 @@ export default async function DashboardLayout({
   // UX-004: split layout with left nav + right reading pane
   return (
     <ToastProvider>
-      <div className="flex min-h-screen bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <Sidebar />
         <div className="flex flex-1 flex-col">
           <Topbar user={user} />
-          <main className="app-main flex-1 bg-slate-950 p-4 sm:p-6">
+          <main className="app-main flex-1 bg-white p-4 sm:p-6 dark:bg-slate-950">
             <div className="mx-auto w-full max-w-6xl space-y-6">{children}</div>
           </main>
         </div>

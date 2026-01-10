@@ -91,7 +91,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={toast.id}
               className={cn(
-                "flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/95 px-4 py-3 text-sm text-slate-100 shadow-lg backdrop-blur",
+                "flex items-start gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 text-sm text-slate-900 shadow-lg backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 dark:text-slate-100",
                 toast.variant === "error" && "border-rose-500/40",
                 toast.variant === "success" && "border-emerald-500/40"
               )}

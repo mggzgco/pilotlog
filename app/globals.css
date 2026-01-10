@@ -5,11 +5,11 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 body {
-  @apply bg-slate-950 text-slate-100;
+  @apply bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100;
 }
 
 .checklist-focus .app-sidebar,

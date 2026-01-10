@@ -11,7 +11,9 @@ export default function LoginPage({
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Sign in</h2>
-        <p className="text-sm text-slate-400">Access your training dashboard.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Access your training dashboard.
+        </p>
       </div>
       {searchParams?.registered && (
         <div className="rounded-lg border border-brand-500/40 bg-brand-500/10 p-3 text-sm text-brand-200">
@@ -29,11 +31,11 @@ export default function LoginPage({
         </div>
       )}
       <LoginForm />
-      <div className="flex items-center justify-between text-sm text-slate-400">
-        <Link href="/forgot-password" className="hover:text-white">
+      <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+        <Link href="/forgot-password" className="hover:text-slate-900 dark:hover:text-white">
           Forgot password?
         </Link>
-        <Link href="/register" className="hover:text-white">
+        <Link href="/register" className="hover:text-slate-900 dark:hover:text-white">
           Create account
         </Link>
       </div>

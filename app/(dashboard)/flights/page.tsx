@@ -257,7 +257,7 @@ export default async function FlightsPage({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold">Flights</h2>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             All flights, ready for the next action.
           </p>
         </div>
@@ -268,7 +268,7 @@ export default async function FlightsPage({
         />
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
         <form
           method="get"
           className="grid gap-3 md:grid-cols-2 lg:grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr] lg:items-end"
@@ -311,7 +311,7 @@ export default async function FlightsPage({
             </label>
             <select
               name="status"
-              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
               defaultValue={status}
             >
               <option value="">All statuses</option>
@@ -328,7 +328,7 @@ export default async function FlightsPage({
             </label>
             <select
               name="aircraftId"
-              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
               defaultValue={aircraftId}
             >
               <option value="">All aircraft</option>
@@ -345,7 +345,7 @@ export default async function FlightsPage({
             </label>
             <select
               name="sort"
-              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
               defaultValue={sort}
             >
               <option value="date_desc">Date desc</option>

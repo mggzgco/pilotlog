@@ -36,18 +36,18 @@ export function MobileNav({ user }: MobileNavProps) {
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto border-r border-slate-800 bg-slate-950 p-6 shadow-xl">
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm dark:bg-slate-950/70" />
+        <Dialog.Content className="fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Flight Training
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                PilotLog
               </div>
-              <div className="text-lg font-semibold text-slate-100">Super App</div>
+              <div className="text-lg font-semibold tracking-tight">Flight training</div>
             </div>
             <Dialog.Close asChild>
               <button
-                className="rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+                className="rounded-md p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
                 aria-label="Close navigation"
               >
                 <X className="h-4 w-4" />
@@ -62,7 +62,7 @@ export function MobileNav({ user }: MobileNavProps) {
                 <Dialog.Close asChild key={item.href}>
                   <Link
                     href={item.href}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
@@ -72,7 +72,7 @@ export function MobileNav({ user }: MobileNavProps) {
             })}
           </nav>
 
-          <div className="mt-8 text-xs text-slate-500">
+          <div className="mt-8 text-xs text-slate-500 dark:text-slate-500">
             Signed in as {user.name ?? user.email}
           </div>
         </Dialog.Content>

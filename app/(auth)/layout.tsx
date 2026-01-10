@@ -3,11 +3,13 @@ import { ReactNode } from "react";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   // UX-003: focused authentication layout
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 dark:bg-slate-950">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-950 dark:shadow-slate-950/30">
         <div className="mb-6 text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Flight Training</p>
-          <h1 className="text-2xl font-semibold text-white">Super App</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+            PilotLog
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">Welcome</h1>
         </div>
         {children}
       </div>
