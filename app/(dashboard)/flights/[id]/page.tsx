@@ -72,20 +72,11 @@ export default async function FlightDetailPage({
     participants.find((participant) => participant.id === selectedParticipantId) ??
     defaultParticipant;
 
-  let logbookEntry = selectedParticipant
+  const logbookEntry = selectedParticipant
     ? await prisma.logbookEntry.findFirst({
         where: { flightId: flight.id, userId: selectedParticipant.userId }
       })
     : null;
-  if (!logbookEntry && selectedParticipant) {
-    logbookEntry = await prisma.logbookEntry.create({
-      data: {
-        userId: selectedParticipant.userId,
-        flightId: flight.id,
-        date: flight.plannedStartTime ?? flight.startTime
-      }
-    });
-  }
   const altitudePoints = flight.trackPoints
     .filter((point) => point.altitudeFeet !== null)
     .map((point) => ({
@@ -156,6 +147,7 @@ export default async function FlightDetailPage({
       flight.providerFlightId ||
       ["IMPORTED", "COMPLETED"].includes(flight.status)
   );
+  const hasLogbookEntry = Boolean(logbookEntry);
   const showLogbookPrompt = isImported && logbookEntry?.totalTime == null;
   const prefillTotalTime =
     logbookEntry?.totalTime?.toString() ??
@@ -552,6 +544,12 @@ export default async function FlightDetailPage({
               time has been prefilled from ADS-B when available.
             </div>
           ) : null}
+          {!hasLogbookEntry ? (
+            <div className="mb-4 rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3 text-sm text-slate-200">
+              No logbook entry yet for this participant. Create one to track flight
+              time and notes.
+            </div>
+          ) : null}
           {participants.length > 1 ? (
             <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-2">
@@ -643,8 +641,11 @@ export default async function FlightDetailPage({
               />
             </div>
             <div className="md:col-span-3">
-              <FormSubmitButton type="submit" pendingText="Saving logbook...">
-                Save logbook
+              <FormSubmitButton
+                type="submit"
+                pendingText={hasLogbookEntry ? "Saving logbook..." : "Creating logbook..."}
+              >
+                {hasLogbookEntry ? "Save logbook" : "Create logbook entry"}
               </FormSubmitButton>
             </div>
           </form>
