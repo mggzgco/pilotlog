@@ -31,12 +31,14 @@ export async function POST(request: Request) {
     select: {
       date: true,
       tailNumberSnapshot: true,
+      // NOTE: we don't currently store Aircraft Type; leave blank for LogTen import
       origin: true,
       destination: true,
       timeOut: true,
       timeIn: true,
       hobbsOut: true,
       hobbsIn: true,
+      totalTime: true,
       picTime: true,
       sicTime: true,
       dualReceivedTime: true,
@@ -57,42 +59,56 @@ export async function POST(request: Request) {
 
   const headers = [
     "Date",
-    "Aircraft",
+    "Aircraft ID",
+    "Aircraft Type",
     "From",
+    "Route",
     "To",
-    "Out",
-    "In",
     "Hobbs Out",
     "Hobbs In",
-    "PIC",
-    "SIC",
-    "Dual Received",
-    "Solo",
+    "Out",
+    "In",
+    "Total Time",
     "Night",
+    "PIC",
+    "Dual Rcvd",
+    "Solo",
     "XC",
     "Sim Inst",
     "Actual Inst",
     "Simulator",
     "Ground",
+    "PIC/P1 Crew",
+    "Student",
+    "Instructor",
     "Day T/O",
-    "Day LDG",
+    "Day Ldg",
     "Night T/O",
-    "Night LDG",
-    "Remarks"
+    "Night Ldg",
+    "Approach 1",
+    "Approach 2",
+    "Holds",
+    "Remarks",
+    "Flight Review"
   ];
+
+  const hhmm = (value: string | null) => (value ? value.replace(":", "") : "");
 
   const rows = entries.map((e) => ({
     Date: e.date.toISOString().slice(0, 10),
-    Aircraft: e.tailNumberSnapshot ?? "",
+    "Aircraft ID": e.tailNumberSnapshot ?? "",
+    "Aircraft Type": "",
     From: e.origin ?? "",
+    Route: "",
     To: e.destination ?? "",
-    Out: e.timeOut ?? "",
-    In: e.timeIn ?? "",
     "Hobbs Out": e.hobbsOut ? String(e.hobbsOut) : "",
     "Hobbs In": e.hobbsIn ? String(e.hobbsIn) : "",
+    Out: hhmm(e.timeOut ?? null),
+    In: hhmm(e.timeIn ?? null),
+    "Total Time": e.totalTime ? String(e.totalTime) : "",
     PIC: e.picTime ? String(e.picTime) : "",
     SIC: e.sicTime ? String(e.sicTime) : "",
-    "Dual Received": e.dualReceivedTime ? String(e.dualReceivedTime) : "",
+    "Dual Rcvd": e.dualReceivedTime ? String(e.dualReceivedTime) : "",
     Solo: e.soloTime ? String(e.soloTime) : "",
     Night: e.nightTime ? String(e.nightTime) : "",
     XC: e.xcTime ? String(e.xcTime) : "",
@@ -101,19 +117,27 @@ export async function POST(request: Request) {
     Simulator: e.simulatorTime ? String(e.simulatorTime) : "",
     Ground: e.groundTime ? String(e.groundTime) : "",
     "Day T/O": e.dayTakeoffs !== null && e.dayTakeoffs !== undefined ? String(e.dayTakeoffs) : "",
-    "Day LDG": e.dayLandings !== null && e.dayLandings !== undefined ? String(e.dayLandings) : "",
+    "Day Ldg": e.dayLandings !== null && e.dayLandings !== undefined ? String(e.dayLandings) : "",
     "Night T/O":
       e.nightTakeoffs !== null && e.nightTakeoffs !== undefined ? String(e.nightTakeoffs) : "",
-    "Night LDG":
+    "Night Ldg":
       e.nightLandings !== null && e.nightLandings !== undefined ? String(e.nightLandings) : "",
-    Remarks: e.remarks ?? ""
+    "PIC/P1 Crew": "",
+    Student: "",
+    Instructor: "",
+    "Approach 1": "",
+    "Approach 2": "",
+    Holds: "",
+    Remarks: e.remarks ?? "",
+    "Flight Review": ""
   }));
 
-  const csv = toCsv(headers, rows, ",");
-  return new NextResponse(csv, {
+  // LogTen "Export Flights (Tab)" is typically tab-delimited; emit TSV for best compatibility.
+  const tsv = toCsv(headers, rows, "\t");
+  return new NextResponse(tsv, {
     headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="pilotlog-logten-export.csv"`
+      "content-type": "text/tab-separated-values; charset=utf-8",
+      "content-disposition": `attachment; filename="pilotlog-logten-export.tsv"`
     }
   });
 }

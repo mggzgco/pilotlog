@@ -58,6 +58,7 @@ export async function POST(request: Request) {
       groundTime: row.groundTime,
       simulatorTime: row.simulatorTime
     });
+    const resolvedTotalTime = row.totalTime ?? totalTime;
 
     const date = new Date(row.date);
     if (Number.isNaN(date.getTime())) {
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
         timeIn: row.timeIn,
         hobbsOut: row.hobbsOut,
         hobbsIn: row.hobbsIn,
-        totalTime,
+        totalTime: resolvedTotalTime,
         picTime: row.picTime,
         sicTime: row.sicTime,
         dualReceivedTime: row.dualReceivedTime,

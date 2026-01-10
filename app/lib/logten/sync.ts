@@ -4,12 +4,15 @@ import { LogTenMapping } from "@/app/lib/logten/mapping";
 export type LogTenRowNormalized = {
   date: string; // YYYY-MM-DD (as provided)
   tailNumberSnapshot: string;
+  aircraftType: string | null;
   origin: string;
+  route: string | null;
   destination: string;
   timeOut: string | null; // HH:MM
   timeIn: string | null; // HH:MM
   hobbsOut: number | null;
   hobbsIn: number | null;
+  totalTime: number | null;
   picTime: number | null;
   sicTime: number | null;
   dualReceivedTime: number | null;
@@ -24,6 +27,13 @@ export type LogTenRowNormalized = {
   dayLandings: number | null;
   nightTakeoffs: number | null;
   nightLandings: number | null;
+  picCrew: string | null;
+  student: string | null;
+  instructor: string | null;
+  approach1: string | null;
+  approach2: string | null;
+  holds: string | null;
+  flightReview: string | null;
   remarks: string | null;
   externalId: string | null;
   externalUpdatedAt: string | null;
@@ -54,12 +64,23 @@ function toIntOrNull(value: unknown) {
 function toTimeHHMMOrNull(value: unknown) {
   const raw = cleanString(value);
   if (!raw) return null;
-  const match = /^(\d{1,2}):(\d{2})$/.exec(raw);
-  if (!match) return null;
-  const hh = Number(match[1]);
-  const mm = Number(match[2]);
-  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  // LogTen exports often use "HHMM" (e.g. 1220) rather than "HH:MM"
+  const matchColon = /^(\d{1,2}):(\d{2})$/.exec(raw);
+  if (matchColon) {
+    const hh = Number(matchColon[1]);
+    const mm = Number(matchColon[2]);
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  }
+  const matchHHMM = /^(\d{3,4})$/.exec(raw);
+  if (matchHHMM) {
+    const digits = matchHHMM[1].padStart(4, "0");
+    const hh = Number(digits.slice(0, 2));
+    const mm = Number(digits.slice(2, 4));
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+  }
+  return null;
 }
 
 export function fingerprintForLogbookLikeEntry(input: {
@@ -101,10 +122,13 @@ export function normalizeLogTenRows(
         return null;
       }
 
+      const aircraftType = mapping.aircraftType ? cleanString(row[mapping.aircraftType]) || null : null;
+      const route = mapping.route ? cleanString(row[mapping.route]) || null : null;
       const timeOut = mapping.timeOut ? toTimeHHMMOrNull(row[mapping.timeOut]) : null;
       const timeIn = mapping.timeIn ? toTimeHHMMOrNull(row[mapping.timeIn]) : null;
       const hobbsOut = mapping.hobbsOut ? toNumberOrNull(row[mapping.hobbsOut]) : null;
       const hobbsIn = mapping.hobbsIn ? toNumberOrNull(row[mapping.hobbsIn]) : null;
+      const totalTime = mapping.totalTime ? toNumberOrNull(row[mapping.totalTime]) : null;
 
       const picTime = mapping.pic ? toNumberOrNull(row[mapping.pic]) : null;
       const sicTime = mapping.sic ? toNumberOrNull(row[mapping.sic]) : null;
@@ -127,6 +151,13 @@ export function normalizeLogTenRows(
       const nightLandings = mapping.nightLdg ? toIntOrNull(row[mapping.nightLdg]) : null;
 
       const remarks = mapping.remarks ? cleanString(row[mapping.remarks]) || null : null;
+      const picCrew = mapping.picCrew ? cleanString(row[mapping.picCrew]) || null : null;
+      const student = mapping.student ? cleanString(row[mapping.student]) || null : null;
+      const instructor = mapping.instructor ? cleanString(row[mapping.instructor]) || null : null;
+      const approach1 = mapping.approach1 ? cleanString(row[mapping.approach1]) || null : null;
+      const approach2 = mapping.approach2 ? cleanString(row[mapping.approach2]) || null : null;
+      const holds = mapping.holds ? cleanString(row[mapping.holds]) || null : null;
+      const flightReview = mapping.flightReview ? cleanString(row[mapping.flightReview]) || null : null;
       const externalId = mapping.externalId ? cleanString(row[mapping.externalId]) || null : null;
       const externalUpdatedAt = mapping.updatedAt
         ? cleanString(row[mapping.updatedAt]) || null
@@ -140,18 +171,22 @@ export function normalizeLogTenRows(
         timeOut,
         timeIn,
         hobbsOut,
-        hobbsIn
+        hobbsIn,
+        totalTime
       });
 
       return {
         date,
         tailNumberSnapshot,
+        aircraftType,
         origin,
+        route,
         destination,
         timeOut,
         timeIn,
         hobbsOut,
         hobbsIn,
+        totalTime,
         picTime,
         sicTime,
         dualReceivedTime,
@@ -166,6 +201,13 @@ export function normalizeLogTenRows(
         dayLandings,
         nightTakeoffs,
         nightLandings,
+        picCrew,
+        student,
+        instructor,
+        approach1,
+        approach2,
+        holds,
+        flightReview,
         remarks,
         externalId,
         externalUpdatedAt,

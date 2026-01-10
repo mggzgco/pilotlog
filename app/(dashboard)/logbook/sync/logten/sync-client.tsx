@@ -103,7 +103,7 @@ export function LogTenSyncClient() {
         <div className="mt-4">
           <input
             type="file"
-            accept=".csv,.tsv,text/csv,text/tab-separated-values"
+            accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </div>
