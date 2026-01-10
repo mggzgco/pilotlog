@@ -133,13 +133,21 @@ export default async function FlightsPage({
 
     return {
       id: flight.id,
-      startTime: flight.startTime.toISOString(),
+      sortTime: (flight.plannedStartTime ?? flight.startTime).toISOString(),
+      displayTime: (flight.plannedStartTime ?? flight.startTime).toISOString(),
       tailNumber: flight.tailNumber,
+      tailNumberSnapshot: flight.tailNumberSnapshot,
       origin: flight.origin,
       destination: flight.destination,
       durationMinutes: flight.durationMinutes,
       distanceNm: flight.distanceNm,
-      costTotalCents
+      costTotalCents,
+      status: flight.status,
+      isImported: Boolean(
+        flight.importedProvider ||
+          flight.providerFlightId ||
+          ["IMPORTED", "COMPLETED"].includes(flight.status)
+      )
     };
   });
 

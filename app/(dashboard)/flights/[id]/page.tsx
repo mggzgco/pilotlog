@@ -11,13 +11,12 @@ import { EmptyState } from "@/app/components/ui/empty-state";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { Receipt } from "lucide-react";
 import { ChecklistSection } from "@/app/components/flights/checklist-section";
+import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 
 export default async function FlightDetailPage({
-  params,
-  searchParams
+  params
 }: {
   params: { id: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
   const user = await requireUser();
 
@@ -38,7 +37,16 @@ export default async function FlightDetailPage({
     notFound();
   }
 
-  const logbookEntry = flight.logbookEntries[0] ?? null;
+  let logbookEntry = flight.logbookEntries[0] ?? null;
+  if (!logbookEntry) {
+    logbookEntry = await prisma.logbookEntry.create({
+      data: {
+        userId: user.id,
+        flightId: flight.id,
+        date: flight.plannedStartTime ?? flight.startTime
+      }
+    });
+  }
   const altitudePoints = flight.trackPoints
     .filter((point) => point.altitudeFeet !== null)
     .map((point) => ({
@@ -99,19 +107,108 @@ export default async function FlightDetailPage({
     flight.checklistRuns.find((run) => run.phase === "PREFLIGHT") ?? null;
   const postflightRun =
     flight.checklistRuns.find((run) => run.phase === "POSTFLIGHT") ?? null;
-  const showAutoImportSuccess = searchParams?.adsbImport === "matched";
+  const showAutoImportRunning = flight.autoImportStatus === "RUNNING";
+  const showAutoImportSuccess = flight.autoImportStatus === "MATCHED";
   const showAutoImportMatchCta = flight.autoImportStatus === "AMBIGUOUS";
   const showAutoImportNotFound = flight.autoImportStatus === "NOT_FOUND";
   const showAutoImportFailed = flight.autoImportStatus === "FAILED";
+  const isImported = Boolean(
+    flight.importedProvider ||
+      flight.providerFlightId ||
+      ["IMPORTED", "COMPLETED"].includes(flight.status)
+  );
+  const showLogbookPrompt = isImported && logbookEntry?.totalTime == null;
+  const prefillTotalTime =
+    logbookEntry?.totalTime?.toString() ??
+    (showLogbookPrompt && flight.durationMinutes !== null
+      ? (flight.durationMinutes / 60).toFixed(1)
+      : "");
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Flight details</h2>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-semibold">Flight details</h2>
+          <FlightStatusBadge status={flight.status} />
+        </div>
         <p className="text-sm text-slate-400">
-          {flight.tailNumber} · {flight.origin} → {flight.destination ?? "TBD"}
+          {flight.tailNumberSnapshot ?? flight.tailNumber} · {flight.origin} →{" "}
+          {flight.destination ?? "TBD"}
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-slate-400">Summary</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-xs uppercase text-slate-400">Tail number</p>
+              <p className="text-lg font-semibold">
+                {flight.tailNumberSnapshot ?? flight.tailNumber}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Planned time</p>
+              <p className="text-sm text-slate-100">
+                {flight.plannedStartTime
+                  ? flight.plannedStartTime.toLocaleString()
+                  : "—"}
+              </p>
+              <p className="text-xs text-slate-400">
+                {flight.plannedEndTime
+                  ? `End ${flight.plannedEndTime.toLocaleString()}`
+                  : "No planned end time"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Imported time</p>
+              <p className="text-sm text-slate-100">
+                {isImported ? flight.startTime.toLocaleString() : "—"}
+              </p>
+              <p className="text-xs text-slate-400">
+                {isImported
+                  ? flight.endTime
+                    ? `End ${flight.endTime.toLocaleString()}`
+                    : "No imported end time"
+                  : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Duration</p>
+              <p className="text-lg font-semibold">
+                {isImported && flight.durationMinutes !== null
+                  ? `${flight.durationMinutes} mins`
+                  : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Distance</p>
+              <p className="text-lg font-semibold">
+                {isImported && flight.distanceNm !== null
+                  ? `${flight.distanceNm} nm`
+                  : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Max altitude</p>
+              <p className="text-lg font-semibold">
+                {maxAltitude ? `${maxAltitude.toLocaleString()} ft` : "—"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {showAutoImportRunning ? (
+        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-sky-300" />
+            Importing ADS-B…
+          </div>
+        </div>
+      ) : null}
 
       {showAutoImportSuccess ? (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
@@ -154,12 +251,16 @@ export default async function FlightDetailPage({
           <p className="text-sm text-slate-400">Route map</p>
         </CardHeader>
         <CardContent>
-          <div className="h-80">
-            <FlightMap
-              polyline={flight.routePolyline}
-              track={flight.trackPoints ?? undefined}
+          {flight.trackPoints.length > 1 ? (
+            <div className="h-80">
+              <FlightMap track={flight.trackPoints ?? undefined} />
+            </div>
+          ) : (
+            <EmptyState
+              title="No track data yet"
+              description="Import ADS-B data to view the flight track."
             />
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -236,6 +337,12 @@ export default async function FlightDetailPage({
           <p className="text-sm text-slate-400">Logbook entry</p>
         </CardHeader>
         <CardContent>
+          {showLogbookPrompt ? (
+            <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Complete your logbook entry to finish this imported flight. Total
+              time has been prefilled from ADS-B when available.
+            </div>
+          ) : null}
           <form
             action={`/api/flights/${flight.id}/update-logbook`}
             method="post"
@@ -256,7 +363,7 @@ export default async function FlightDetailPage({
               type="number"
               step="0.1"
               placeholder="Total time"
-              defaultValue={logbookEntry?.totalTime?.toString() ?? ""}
+              defaultValue={prefillTotalTime}
             />
             <Input
               name="picTime"
