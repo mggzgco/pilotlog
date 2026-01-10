@@ -187,13 +187,23 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
 export class AeroApiAdsbProvider implements AdsbProvider {
   async searchFlights(tailNumber: string, start: Date, end: Date): Promise<FlightCandidate[]> {
     const normalizedTailNumber = normalizeTailNumber(tailNumber);
-    const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
-      `/flights/${encodeURIComponent(normalizedTailNumber)}`,
-      {
-        start: Math.floor(start.getTime() / 1000),
-        end: Math.floor(end.getTime() / 1000)
+    let flightsResponse: AeroApiFlightResponse;
+    try {
+      flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
+        `/flights/${encodeURIComponent(normalizedTailNumber)}`,
+        {
+          start: Math.floor(start.getTime() / 1000),
+          end: Math.floor(end.getTime() / 1000)
+        }
+      );
+    } catch (error) {
+      // If AeroAPI returns 404 for the query window/tail, treat it as "no results"
+      // instead of surfacing a hard error to the UI.
+      if (error instanceof AdsbProviderError && error.status === 404) {
+        return [];
       }
-    );
+      throw error;
+    }
 
     const flights = flightsResponse.flights ?? [];
     const candidates = await Promise.all(
