@@ -107,34 +107,24 @@ function computeMaxGroundspeed(track: FlightTrackPoint[]) {
   return maxGroundspeed;
 }
 
-let cachedAeroApiKey: string | null | undefined;
-
 async function resolveAeroApiKey(): Promise<string | null> {
-  if (cachedAeroApiKey !== undefined) {
-    return cachedAeroApiKey;
-  }
-
   const envKey = process.env.AEROAPI_KEY?.trim();
   if (envKey) {
-    cachedAeroApiKey = envKey;
     return envKey;
   }
 
   const keyFile = process.env.AEROAPI_KEY_FILE?.trim();
   if (!keyFile) {
-    cachedAeroApiKey = null;
     return null;
   }
 
   const { readFile } = await import("fs/promises");
   try {
     const fileKey = (await readFile(keyFile, "utf8")).trim();
-    cachedAeroApiKey = fileKey || null;
+    return fileKey || null;
   } catch {
-    cachedAeroApiKey = null;
+    return null;
   }
-
-  return cachedAeroApiKey;
 }
 
 async function fetchAeroApi<T>(

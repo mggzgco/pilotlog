@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { defaultProviderName, getAdsbProvider } from "@/app/lib/adsb";
 import { aeroApiProviderName } from "@/app/lib/adsb/aeroApiProvider";
+import crypto from "crypto";
 
 // Debug-only endpoint to exercise the ADS-B provider with a specific tail/time range.
 // Example:
@@ -111,6 +112,7 @@ export async function GET(request: Request) {
       if (apiKey) {
         raw = {};
         const headers = { "x-apikey": apiKey };
+        const invalidHeaders = { "x-apikey": "invalid-key-for-debug" };
         const primaryUrl = new URL(`flights/${encodeURIComponent(tail)}`, apiBase);
         primaryUrl.searchParams.set("start", windowStart.toISOString());
         primaryUrl.searchParams.set("end", windowEnd.toISOString());
@@ -130,11 +132,11 @@ export async function GET(request: Request) {
         const probe = async (
           label: string,
           url: URL,
-          opts: { note?: string; query?: string } = {}
+          opts: { note?: string; query?: string; headers?: Record<string, string> } = {}
         ) => {
           const started = performance.now();
           try {
-            const res = await fetch(url.toString(), { headers });
+            const res = await fetch(url.toString(), { headers: opts.headers ?? headers });
             const text = await res.text();
             let parsed: unknown = {};
             try {
@@ -173,8 +175,24 @@ export async function GET(request: Request) {
         };
 
         await probe("history_direct", historyUrl, { note: "registration history" });
+        await probe("history_direct_invalid_key", historyUrl, {
+          note: "registration history (invalid key control)",
+          headers: invalidHeaders
+        });
         await probe("primary_direct", primaryUrl, { note: "/flights ident lookup" });
-        await probe("search_direct", searchUrl, { query: searchQuery, note: "/search/flights ident query" });
+        await probe("primary_direct_invalid_key", primaryUrl, {
+          note: "/flights ident lookup (invalid key control)",
+          headers: invalidHeaders
+        });
+        await probe("search_direct", searchUrl, {
+          query: searchQuery,
+          note: "/flights/search ident query"
+        });
+        await probe("search_direct_invalid_key", searchUrl, {
+          query: searchQuery,
+          note: "/flights/search ident query (invalid key control)",
+          headers: invalidHeaders
+        });
 
         // Extra ident variants for search
         const searchVariants = [
@@ -190,18 +208,36 @@ export async function GET(request: Request) {
             query: q,
             note: "/search/flights variant"
           });
+          await probe(`search_direct_variant_${idx + 1}_invalid_key`, urlVariant, {
+            query: q,
+            note: "/search/flights variant (invalid key control)",
+            headers: invalidHeaders
+          });
         }
 
         // Aircraft info (type, owner) if available
         const aircraftUrl = new URL(`aircraft/${encodeURIComponent(tail)}`, apiBase);
         await probe("aircraft_direct", aircraftUrl, { note: "/aircraft (registration lookup)" });
+        await probe("aircraft_direct_invalid_key", aircraftUrl, {
+          note: "/aircraft (invalid key control)",
+          headers: invalidHeaders
+        });
       }
     }
 
     return NextResponse.json({
       tail,
       provider: defaultProviderName,
+      aeroApiBase: process.env.AEROAPI_API_BASE ?? "https://aeroapi.flightaware.com/aeroapi",
       keyPresent: Boolean(process.env.AEROAPI_KEY?.trim()),
+      keyLength: process.env.AEROAPI_KEY?.trim()?.length ?? 0,
+      keyFingerprint: process.env.AEROAPI_KEY?.trim()
+        ? crypto
+            .createHash("sha256")
+            .update(process.env.AEROAPI_KEY.trim())
+            .digest("hex")
+            .slice(0, 12)
+        : null,
       windowEpoch: { start: epochStart, end: epochEnd },
       windows: results,
       mergedCount: merged.length,
