@@ -23,6 +23,23 @@ export async function POST(
   }
 
   const formData = await request.formData();
+  const costItemIdRaw = formData.get("costItemId");
+  const costItemId =
+    typeof costItemIdRaw === "string" && costItemIdRaw.trim()
+      ? costItemIdRaw
+      : null;
+  if (costItemId) {
+    const costItem = await prisma.costItem.findFirst({
+      where: { id: costItemId, userId: user.id, flightId: flight.id },
+      select: { id: true }
+    });
+    if (!costItem) {
+      return NextResponse.json(
+        { error: "Invalid cost item selection." },
+        { status: 400 }
+      );
+    }
+  }
   const files = formData
     .getAll("receipts")
     .filter((value): value is File => value instanceof File);
@@ -53,6 +70,7 @@ export async function POST(
       data: {
         userId: user.id,
         flightId: flight.id,
+        costItemId,
         originalFilename: file.name,
         storagePath,
         contentType: file.type,

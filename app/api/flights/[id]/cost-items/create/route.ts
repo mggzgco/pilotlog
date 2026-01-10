@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
-import { parseAmountToCents } from "@/app/lib/costs/utils";
+import {
+  parseAmountToCents,
+  parseOptionalAmountToCents,
+  parseOptionalQuantity
+} from "@/app/lib/costs/utils";
 
 const costItemSchema = z.object({
   costItemId: z.string().optional(),
   category: z.string().min(1),
-  amount: z.string().min(1),
+  amount: z.string().optional(),
+  rate: z.string().optional(),
+  quantityHours: z.string().optional(),
+  fuelGallons: z.string().optional(),
+  fuelPrice: z.string().optional(),
   vendor: z.string().optional(),
   notes: z.string().optional(),
   date: z.string().min(1)
@@ -34,7 +42,58 @@ export async function POST(
     return NextResponse.json({ error: "Invalid cost data." }, { status: 400 });
   }
 
-  const amountCents = parseAmountToCents(parsed.data.amount);
+  const rateRaw = parsed.data.rate?.trim() ?? "";
+  const quantityHoursRaw = parsed.data.quantityHours?.trim() ?? "";
+  const fuelGallonsRaw = parsed.data.fuelGallons?.trim() ?? "";
+  const fuelPriceRaw = parsed.data.fuelPrice?.trim() ?? "";
+
+  const rateCents = parseOptionalAmountToCents(parsed.data.rate);
+  const quantityHours = parseOptionalQuantity(parsed.data.quantityHours);
+  const fuelGallons = parseOptionalQuantity(parsed.data.fuelGallons);
+  const fuelPriceCents = parseOptionalAmountToCents(parsed.data.fuelPrice);
+
+  if (rateRaw && rateCents === null) {
+    return NextResponse.json({ error: "Invalid rate." }, { status: 400 });
+  }
+  if (quantityHoursRaw && quantityHours === null) {
+    return NextResponse.json({ error: "Invalid hours." }, { status: 400 });
+  }
+  if (fuelGallonsRaw && fuelGallons === null) {
+    return NextResponse.json({ error: "Invalid fuel gallons." }, { status: 400 });
+  }
+  if (fuelPriceRaw && fuelPriceCents === null) {
+    return NextResponse.json({ error: "Invalid fuel price." }, { status: 400 });
+  }
+
+  if (
+    (rateCents !== null || quantityHours !== null) &&
+    (rateCents === null || quantityHours === null)
+  ) {
+    return NextResponse.json(
+      { error: "Rate and hours are required together." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    (fuelGallons !== null || fuelPriceCents !== null) &&
+    (fuelGallons === null || fuelPriceCents === null)
+  ) {
+    return NextResponse.json(
+      { error: "Fuel gallons and price are required together." },
+      { status: 400 }
+    );
+  }
+
+  let amountCents: number | null = null;
+  if (rateCents !== null && quantityHours !== null) {
+    amountCents = Math.round(rateCents * quantityHours);
+  } else if (fuelGallons !== null && fuelPriceCents !== null) {
+    amountCents = Math.round(fuelGallons * fuelPriceCents);
+  } else if (parsed.data.amount) {
+    amountCents = parseAmountToCents(parsed.data.amount);
+  }
+
   if (amountCents === null) {
     return NextResponse.json({ error: "Invalid cost amount." }, { status: 400 });
   }
@@ -47,6 +106,10 @@ export async function POST(
   const data = {
     category: parsed.data.category,
     amountCents,
+    rateCents,
+    quantityHours,
+    fuelGallons,
+    fuelPriceCents,
     vendor: parsed.data.vendor ?? null,
     notes: parsed.data.notes ?? null,
     date
