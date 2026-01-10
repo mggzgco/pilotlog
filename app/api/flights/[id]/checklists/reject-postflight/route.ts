@@ -4,11 +4,11 @@ import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { verifyPassword } from "@/app/lib/password";
 import { recordAuditEvent } from "@/app/lib/audit";
-import { triggerAutoImportForFlight } from "@/app/lib/flights/auto-import";
 
-const signSchema = z.object({
+const rejectSchema = z.object({
   signatureName: z.string().min(1),
-  password: z.string().min(1)
+  password: z.string().min(1),
+  rejectionNote: z.string().min(1)
 });
 
 export async function POST(
@@ -19,9 +19,9 @@ export async function POST(
   const redirectUrl = new URL(`/flights/${params.id}`, request.url);
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
-  const parsed = signSchema.safeParse(raw);
+  const parsed = rejectSchema.safeParse(raw);
   if (!parsed.success) {
-    redirectUrl.searchParams.set("toast", "Invalid signature details.");
+    redirectUrl.searchParams.set("toast", "Invalid rejection details.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }
@@ -29,9 +29,7 @@ export async function POST(
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
     include: {
-      checklistRuns: {
-        include: { items: true }
-      }
+      checklistRuns: true
     }
   });
 
@@ -48,21 +46,14 @@ export async function POST(
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (run.status !== "IN_PROGRESS") {
-    redirectUrl.searchParams.set("toast", "Post-flight checklist not started.");
+  if (run.status === "SIGNED") {
+    redirectUrl.searchParams.set("toast", "Post-flight checklist already signed.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }
 
-  const remainingRequired = run.items.filter(
-    (item) => item.required && !item.completed
-  );
-
-  if (remainingRequired.length > 0) {
-    redirectUrl.searchParams.set(
-      "toast",
-      "Complete required items before signing the post-flight checklist."
-    );
+  if (run.status !== "IN_PROGRESS") {
+    redirectUrl.searchParams.set("toast", "Post-flight checklist not started.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }
@@ -81,14 +72,15 @@ export async function POST(
   const signatureIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const signatureUserAgent = request.headers.get("user-agent") ?? null;
   const signedAt = new Date();
+  const decisionNote = String(parsed.data.rejectionNote);
 
   await prisma.$transaction(async (tx) => {
     await tx.flightChecklistRun.update({
       where: { id: run.id },
       data: {
         status: "SIGNED",
-        decision: "ACCEPTED",
-        decisionNote: null,
+        decision: "REJECTED",
+        decisionNote,
         signedAt,
         signedByUserId: user.id,
         signatureName: parsed.data.signatureName,
@@ -105,31 +97,13 @@ export async function POST(
 
   await recordAuditEvent({
     userId: user.id,
-    action: "postflight_signed",
+    action: "postflight_rejected",
     entityType: "Flight",
-    entityId: flight.id
+    entityId: flight.id,
+    metadata: { decisionNote }
   });
 
-  const autoImportResult = await triggerAutoImportForFlight({
-    flightId: flight.id,
-    userId: user.id
-  });
-
-  if (autoImportResult.status === "AMBIGUOUS") {
-    return NextResponse.redirect(new URL(`/flights/${flight.id}/match`, request.url));
-  }
-
-  if (autoImportResult.status === "MATCHED") {
-    redirectUrl.searchParams.set("adsbImport", "matched");
-  }
-
-  if (autoImportResult.status === "FAILED") {
-    redirectUrl.searchParams.set("toast", "Post-flight checklist signed, but ADS-B import failed.");
-    redirectUrl.searchParams.set("toastType", "error");
-  } else {
-    redirectUrl.searchParams.set("toast", "Post-flight checklist signed.");
-    redirectUrl.searchParams.set("toastType", "success");
-  }
-
+  redirectUrl.searchParams.set("toast", "Post-flight checklist rejected.");
+  redirectUrl.searchParams.set("toastType", "success");
   return NextResponse.redirect(redirectUrl);
 }

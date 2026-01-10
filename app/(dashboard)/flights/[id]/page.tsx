@@ -116,6 +116,8 @@ export default async function FlightDetailPage({
     id: run.id,
     phase: run.phase,
     status: run.status,
+    decision: run.decision,
+    decisionNote: run.decisionNote,
     startedAt: run.startedAt ? run.startedAt.toISOString() : null,
     signedAt: run.signedAt ? run.signedAt.toISOString() : null,
     signatureName: run.signatureName,
@@ -407,6 +409,7 @@ export default async function FlightDetailPage({
           <ChecklistSection
             flightId={flight.id}
             flightStatus={flight.status}
+            aircraftId={flight.aircraftId}
             defaultSignatureName={defaultSignatureName}
             preflightRun={preflightRun ? toChecklistRunView(preflightRun) : null}
             postflightRun={postflightRun ? toChecklistRunView(postflightRun) : null}
