@@ -60,6 +60,9 @@ type AeroApiTrackPosition = {
   ground_speed?: number | null;
   groundspeed?: number | null;
   groundspeed_kt?: number | null;
+  groundspeed_kts?: number | null;
+  groundspeed_knots?: number | null;
+  ground_speed_kt?: number | null;
   heading?: number | null;
 };
 
@@ -104,6 +107,21 @@ function parseIsoOrEpoch(value: unknown): Date | null {
     }
     const date = new Date(trimmed);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+  return null;
+}
+
+function parseNumeric(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
 }
@@ -226,8 +244,11 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
       const heading = anyPosition.heading as unknown;
       const groundSpeed =
         (anyPosition.ground_speed as unknown) ??
+        (anyPosition.ground_speed_kt as unknown) ??
         (anyPosition.groundspeed as unknown) ??
         (anyPosition.groundspeed_kt as unknown) ??
+        (anyPosition.groundspeed_kts as unknown) ??
+        (anyPosition.groundspeed_knots as unknown) ??
         null;
       const recordedAt = parseIsoOrEpoch(timestamp);
       if (
@@ -238,13 +259,17 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
         return null;
       }
 
+      const altitudeValue = parseNumeric(altitude);
+      const groundSpeedValue = parseNumeric(groundSpeed);
+      const headingValue = parseNumeric(heading);
+
       return {
         recordedAt,
         latitude,
         longitude,
-        altitudeFeet: typeof altitude === "number" ? altitude : null,
-        groundspeedKt: typeof groundSpeed === "number" ? groundSpeed : null,
-        headingDeg: typeof heading === "number" ? heading : null
+        altitudeFeet: altitudeValue,
+        groundspeedKt: groundSpeedValue,
+        headingDeg: headingValue !== null ? Math.round(headingValue) : null
       } satisfies FlightTrackPoint;
     })
     .filter((point): point is FlightTrackPoint => point !== null);

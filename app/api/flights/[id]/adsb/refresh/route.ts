@@ -75,6 +75,19 @@ export async function POST(
       }))
       .sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime());
 
+    const speedValues = trackPoints
+      .map((point) => point.groundspeedKt)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    const speedSummary =
+      speedValues.length > 0
+        ? {
+            min: Math.round(Math.min(...speedValues)),
+            max: Math.round(Math.max(...speedValues)),
+            avg: Math.round(speedValues.reduce((sum, v) => sum + v, 0) / speedValues.length),
+            count: speedValues.length
+          }
+        : null;
+
     await prisma.$transaction(async (tx) => {
       await tx.trackPoint.deleteMany({ where: { flightId: flight.id } });
       if (trackPoints.length > 0) {
@@ -105,7 +118,12 @@ export async function POST(
       refererUrl && refererUrl.origin === origin
         ? refererUrl
         : new URL(`/flights/${flight.id}`, request.url);
-    redirectUrl.searchParams.set("toast", "ADS-B track refreshed.");
+    redirectUrl.searchParams.set(
+      "toast",
+      speedSummary
+        ? `ADS-B refreshed. Speed kt min/avg/max: ${speedSummary.min}/${speedSummary.avg}/${speedSummary.max} (${speedSummary.count} pts).`
+        : "ADS-B refreshed. No speed values returned by provider."
+    );
     redirectUrl.searchParams.set("toastType", "success");
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
