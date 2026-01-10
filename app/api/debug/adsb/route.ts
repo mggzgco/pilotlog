@@ -97,49 +97,69 @@ export async function GET(request: Request) {
         url?: string;
         query?: string;
         note?: string;
+        durationMs?: number;
+        responseSnippet?: string;
       }
     > | null = null;
     if (defaultProviderName === aeroApiProviderName) {
       const apiKey = process.env.AEROAPI_KEY?.trim();
-      const apiBase = process.env.AEROAPI_API_BASE ?? "https://aeroapi.flightaware.com/aeroapi";
+      const apiBaseRaw =
+        process.env.AEROAPI_API_BASE ?? "https://aeroapi.flightaware.com/aeroapi";
+      const apiBase = apiBaseRaw.endsWith("/") ? apiBaseRaw : `${apiBaseRaw}/`;
       if (apiKey) {
         raw = {};
-        const headers = { "x-apikey": apiKey };
-        const primaryUrl = new URL(`/flights/${encodeURIComponent(tail)}`, apiBase);
+        const headers = { "x-apikey": apiKey, Authorization: `Bearer ${apiKey}` };
+        const primaryUrl = new URL(`flights/${encodeURIComponent(tail)}`, apiBase);
         primaryUrl.searchParams.set("start", Math.floor(windowStart.getTime() / 1000).toString());
         primaryUrl.searchParams.set("end", Math.floor(windowEnd.getTime() / 1000).toString());
         primaryUrl.searchParams.set("max_pages", "5");
 
-        const searchUrl = new URL("/search/flights", apiBase);
+        const searchUrl = new URL("search/flights", apiBase);
         const searchQuery = `-idents ${tail} -begin ${epochStart} -end ${epochEnd}`;
         searchUrl.searchParams.set("query", searchQuery);
         searchUrl.searchParams.set("max_pages", "5");
 
-        const historyUrl = new URL(`/history/flights/${encodeURIComponent(tail)}`, apiBase);
+        const historyUrl = new URL(`history/flights/${encodeURIComponent(tail)}`, apiBase);
         historyUrl.searchParams.set("ident_type", "registration");
         historyUrl.searchParams.set("start", windowStart.toISOString());
         historyUrl.searchParams.set("end", windowEnd.toISOString());
         historyUrl.searchParams.set("max_pages", "5");
 
-        const probe = async (label: string, url: URL, opts: { note?: string; query?: string } = {}) => {
+        const probe = async (
+          label: string,
+          url: URL,
+          opts: { note?: string; query?: string } = {}
+        ) => {
+          const started = performance.now();
           try {
             const res = await fetch(url.toString(), { headers });
-            const json = await res.json().catch(() => ({}));
-            const flights = Array.isArray(json.flights) ? json.flights : [];
+            const text = await res.text();
+            let parsed: unknown = {};
+            try {
+              parsed = JSON.parse(text);
+            } catch {
+              // ignore non-JSON
+            }
+            const flights = Array.isArray((parsed as any).flights) ? (parsed as any).flights : [];
+            const durationMs = Math.round(performance.now() - started);
             raw![label] = {
               status: res.status,
               count: flights.length,
               sampleId: flights[0]?.fa_flight_id ?? flights[0]?.ident ?? null,
               url: url.toString(),
               query: opts.query,
-              note: opts.note
+              note: opts.note,
+              durationMs,
+              responseSnippet: text.slice(0, 500)
             };
           } catch (error) {
+            const durationMs = Math.round(performance.now() - started);
             raw![label] = {
               error: error instanceof Error ? error.message : "Unknown error",
               url: url.toString(),
               query: opts.query,
-              note: opts.note
+              note: opts.note,
+              durationMs
             };
           }
         };
@@ -155,7 +175,7 @@ export async function GET(request: Request) {
           `-ident ${tail}`
         ];
         for (const [idx, q] of searchVariants.entries()) {
-          const urlVariant = new URL("/search/flights", apiBase);
+          const urlVariant = new URL("search/flights", apiBase);
           urlVariant.searchParams.set("query", q);
           urlVariant.searchParams.set("max_pages", "5");
           await probe(`search_direct_variant_${idx + 1}`, urlVariant, {
