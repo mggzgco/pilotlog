@@ -165,7 +165,15 @@ export default async function FlightDetailPage({
   const [logbookEntries, receiptCount] = await Promise.all([
     prisma.logbookEntry.findMany({
       where: { flightId: flight.id },
-      select: { id: true, status: true }
+      select: {
+        id: true,
+        status: true,
+        totalTime: true,
+        dayTakeoffs: true,
+        nightTakeoffs: true,
+        dayLandings: true,
+        nightLandings: true
+      }
     }),
     prisma.receiptDocument.count({
       where: { flightId: flight.id, userId: user.id, NOT: { storagePath: { startsWith: "photo_" } } }
@@ -216,6 +224,17 @@ export default async function FlightDetailPage({
     : logbookEntries.some((entry) => entry.status === "OPEN")
       ? "Open"
       : "Closed";
+
+  const logbookTotals = logbookEntries.reduce(
+    (acc, entry) => {
+      const totalTime = entry.totalTime ? Number(entry.totalTime) : 0;
+      acc.totalHours += Number.isFinite(totalTime) ? totalTime : 0;
+      acc.takeoffs += (entry.dayTakeoffs ?? 0) + (entry.nightTakeoffs ?? 0);
+      acc.landings += (entry.dayLandings ?? 0) + (entry.nightLandings ?? 0);
+      return acc;
+    },
+    { totalHours: 0, takeoffs: 0, landings: 0 }
+  );
 
   return (
     <div className="space-y-6">
@@ -355,7 +374,7 @@ export default async function FlightDetailPage({
               </p>
               <div className="mt-3 flex items-start gap-5">
                 {flight.aircraft?.photoStoragePath ? (
-                  <div className="h-48 w-48 overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-900/30">
+                  <div className="h-48 w-48 overflow-hidden rounded-xl bg-transparent">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`/api/aircraft/${flight.aircraft.id}/photo`}
@@ -364,7 +383,7 @@ export default async function FlightDetailPage({
                     />
                   </div>
                 ) : (
-                  <div className="h-48 w-48 rounded-xl bg-slate-50 dark:bg-slate-900/30" />
+                  <div className="h-48 w-48 rounded-xl bg-transparent" />
                 )}
                 <div className="min-w-0">
                   <p className="text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-100">
@@ -588,14 +607,26 @@ export default async function FlightDetailPage({
           </div>
         </CardHeader>
         <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Entries</p>
-                <p className="text-lg font-semibold">{logbookEntryCount}</p>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Total hours</p>
+                <p className="text-lg font-semibold">
+                  {hasAnyLogbookEntry ? logbookTotals.totalHours.toFixed(1) : "—"}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {logbookStatusLabel}
+                  {logbookEntryCount ? ` · ${logbookEntryCount} entry${logbookEntryCount === 1 ? "" : "ies"}` : ""}
+                </p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Status</p>
-                <p className="text-lg font-semibold">{logbookStatusLabel}</p>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Takeoffs</p>
+                <p className="text-lg font-semibold">{hasAnyLogbookEntry ? logbookTotals.takeoffs : "—"}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Day + night</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Landings</p>
+                <p className="text-lg font-semibold">{hasAnyLogbookEntry ? logbookTotals.landings : "—"}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Day + night</p>
               </div>
             </div>
             {!hasAnyLogbookEntry ? (
