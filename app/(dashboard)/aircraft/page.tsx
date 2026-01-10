@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
-import { createAircraftAction } from "@/app/lib/actions/aircraft-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
+import { CreateAircraftModal } from "@/app/components/aircraft/create-aircraft-modal";
+import { AircraftRowMenu } from "@/app/components/aircraft/aircraft-row-menu";
 
 export default async function AircraftPage() {
   const user = await requireUser();
@@ -74,66 +74,12 @@ export default async function AircraftPage() {
           <p className="text-sm text-slate-400">Maintain your fleet list.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button asChild>
-            <Link href="#create-aircraft">Create Aircraft</Link>
-          </Button>
+          <CreateAircraftModal aircraftTypes={aircraftTypes} triggerLabel="Create aircraft" />
           <Button asChild variant="outline">
             <Link href="/checklists">Manage checklists</Link>
           </Button>
         </div>
       </div>
-
-      <Card id="create-aircraft">
-        <CardHeader>
-          <p className="text-sm text-slate-400">Add aircraft</p>
-        </CardHeader>
-        <CardContent>
-          <form action={createAircraftAction} className="grid gap-3 lg:grid-cols-3">
-            <Input name="tailNumber" placeholder="Tail number" required />
-            <Input name="manufacturer" placeholder="Manufacturer" />
-            <Input name="model" placeholder="Model" />
-            <label className="text-sm text-slate-300 lg:col-span-3">
-              <span className="mb-1 block text-xs uppercase text-slate-500">Type</span>
-              <select
-                name="category"
-                className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
-                defaultValue="SINGLE_ENGINE_PISTON"
-              >
-                <option value="SINGLE_ENGINE_PISTON">Single-engine piston</option>
-                <option value="MULTI_ENGINE_PISTON">Multi-engine piston</option>
-                <option value="SINGLE_ENGINE_TURBINE">Single-engine turbine</option>
-                <option value="MULTI_ENGINE_TURBINE">Multi-engine turbine</option>
-                <option value="JET">Jet</option>
-                <option value="HELICOPTER">Helicopter</option>
-                <option value="GLIDER">Glider</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </label>
-            {aircraftTypes.length > 0 ? (
-              <label className="text-sm text-slate-300 lg:col-span-3">
-                <span className="mb-1 block text-xs uppercase text-slate-500">
-                  Checklist profile (optional)
-                </span>
-                <select
-                  name="aircraftTypeId"
-                  className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
-                  defaultValue=""
-                >
-                  <option value="">No profile selected</option>
-                  {aircraftTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <div className="lg:col-span-3">
-              <Button type="submit">Save aircraft</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -150,12 +96,13 @@ export default async function AircraftPage() {
                   <th className="px-4 py-3 text-left font-medium">Type</th>
                   <th className="px-4 py-3 text-left font-medium">Checklist readiness</th>
                   <th className="px-4 py-3 text-left font-medium">Added</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {aircraft.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={6}>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={7}>
                       No aircraft listed.
                     </td>
                   </tr>
@@ -197,6 +144,11 @@ export default async function AircraftPage() {
                           <Link href={href} className="block">
                             {plane.createdAt.toDateString()}
                           </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end">
+                            <AircraftRowMenu aircraftId={plane.id} />
+                          </div>
                         </td>
                       </tr>
                     );
