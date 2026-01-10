@@ -91,10 +91,7 @@ async function resolveAeroApiKey(): Promise<string | null> {
     return cachedAeroApiKey;
   }
 
-  const envKey =
-    process.env.AEROAPI_KEY?.trim() ||
-    process.env.AEROAPI_API_KEY?.trim() ||
-    process.env.FLIGHTAWARE_API_KEY?.trim();
+  const envKey = process.env.AEROAPI_KEY?.trim();
   if (envKey) {
     cachedAeroApiKey = envKey;
     return envKey;
@@ -102,6 +99,7 @@ async function resolveAeroApiKey(): Promise<string | null> {
 
   const keyFile = process.env.AEROAPI_KEY_FILE?.trim();
   if (!keyFile) {
+    cachedAeroApiKey = null;
     return null;
   }
 
@@ -110,10 +108,10 @@ async function resolveAeroApiKey(): Promise<string | null> {
     const fileKey = (await readFile(keyFile, "utf8")).trim();
     cachedAeroApiKey = fileKey || null;
   } catch {
-    return null;
+    cachedAeroApiKey = null;
   }
 
-  return cachedAeroApiKey ?? null;
+  return cachedAeroApiKey;
 }
 
 async function fetchAeroApi<T>(

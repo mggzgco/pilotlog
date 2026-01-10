@@ -16,8 +16,6 @@ describe("AeroApiAdsbProvider", () => {
     vi.restoreAllMocks();
     vi.resetModules();
     process.env.AEROAPI_KEY = "test-key";
-    delete process.env.AEROAPI_API_KEY;
-    delete process.env.FLIGHTAWARE_API_KEY;
     delete process.env.AEROAPI_KEY_FILE;
   });
 
@@ -102,31 +100,6 @@ describe("AeroApiAdsbProvider", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           "x-apikey": "file-key"
-        })
-      })
-    );
-  });
-
-  it("uses the AeroAPI API key alias when present", async () => {
-    delete process.env.AEROAPI_KEY;
-    process.env.AEROAPI_API_KEY = "alias-key";
-
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      buildResponse({
-        flights: []
-      })
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const { AeroApiAdsbProvider } = await import("@/app/lib/adsb/aeroApiProvider");
-    const provider = new AeroApiAdsbProvider();
-    await provider.searchFlights("N246FB", baseDate, new Date(2000 * 1000));
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "x-apikey": "alias-key"
         })
       })
     );
