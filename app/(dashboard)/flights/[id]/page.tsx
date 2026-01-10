@@ -107,8 +107,29 @@ export default async function FlightDetailPage({
     altitudePointsDisplay.length > 0
       ? Math.max(...altitudePointsDisplay.map((point) => point.altitudeFeet))
       : null;
-  const aircraftTypeLabel =
-    flight.aircraft?.aircraftType?.name ?? flight.aircraft?.model ?? "—";
+  const aircraftProfileLabel = flight.aircraft?.aircraftType?.name ?? null;
+  const aircraftMakeModelLabel =
+    [flight.aircraft?.manufacturer, flight.aircraft?.model].filter(Boolean).join(" ") || "—";
+  const aircraftCategoryLabel = (() => {
+    switch (flight.aircraft?.category) {
+      case "SINGLE_ENGINE_PISTON":
+        return "Single-engine piston";
+      case "MULTI_ENGINE_PISTON":
+        return "Multi-engine piston";
+      case "SINGLE_ENGINE_TURBINE":
+        return "Single-engine turbine";
+      case "MULTI_ENGINE_TURBINE":
+        return "Multi-engine turbine";
+      case "JET":
+        return "Jet";
+      case "HELICOPTER":
+        return "Helicopter";
+      case "GLIDER":
+        return "Glider";
+      default:
+        return "Other";
+    }
+  })();
   const costTotalCents = flight.costItems.reduce(
     (total, item) => total + item.amountCents,
     0
@@ -330,22 +351,30 @@ export default async function FlightDetailPage({
           <div className="grid gap-3 lg:grid-cols-6 lg:grid-rows-2">
             <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 lg:col-span-2 lg:row-span-2">
               <p className="text-xs font-semibold uppercase text-slate-400">Aircraft</p>
-              <div className="mt-3 flex items-start gap-4">
+              <div className="mt-3 flex items-start gap-5">
                 {flight.aircraft?.photoStoragePath ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/api/aircraft/${flight.aircraft.id}/photo`}
-                    alt={`${flight.tailNumberSnapshot ?? flight.tailNumber} aircraft photo`}
-                    className="h-32 w-32 rounded-lg border border-slate-800 object-cover"
-                  />
+                  <div className="h-48 w-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/api/aircraft/${flight.aircraft.id}/photo`}
+                      alt={`${flight.tailNumberSnapshot ?? flight.tailNumber} aircraft photo`}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                 ) : (
-                  <div className="h-32 w-32 rounded-lg border border-slate-800 bg-slate-950/40" />
+                  <div className="h-48 w-48 rounded-xl border border-slate-800 bg-slate-950/40" />
                 )}
-                <div>
-                  <p className="text-xl font-semibold">
+                <div className="min-w-0">
+                  <p className="text-2xl font-semibold leading-tight">
                     {flight.tailNumberSnapshot ?? flight.tailNumber}
                   </p>
-                  <p className="text-xs text-slate-400">{aircraftTypeLabel}</p>
+                  <p className="mt-1 text-sm font-medium text-slate-200">
+                    {aircraftMakeModelLabel}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {aircraftCategoryLabel}
+                    {aircraftProfileLabel ? ` · ${aircraftProfileLabel}` : ""}
+                  </p>
                 </div>
               </div>
             </div>

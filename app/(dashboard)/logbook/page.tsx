@@ -5,6 +5,8 @@ import { getCurrentSession } from "@/app/lib/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
+import { CreateLogbookEntryModal } from "@/app/components/logbook/create-logbook-entry-modal";
+import { LogbookRowMenu } from "@/app/components/logbook/logbook-row-menu";
 
 const metrics = [
   { key: "totalTime", label: "Total" },
@@ -275,6 +277,14 @@ export default async function LogbookPage({
       ? (selectedFlight.durationMinutes / 60).toFixed(1)
       : "";
 
+  const flightOptions = flights.map((flight) => {
+    const tailNumber = flight.tailNumberSnapshot || flight.aircraft?.tailNumber || flight.tailNumber;
+    const label = `${tailNumber} · ${formatRoute(flight.origin, flight.destination)} · ${flight.startTime
+      .toISOString()
+      .slice(0, 10)}`;
+    return { id: flight.id, label };
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -283,6 +293,16 @@ export default async function LogbookPage({
           Track PIC/SIC, night, and IFR time.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
+          <CreateLogbookEntryModal
+            flights={flightOptions}
+            defaultFlightId={selectedFlight?.id ?? ""}
+            defaultDate={
+              selectedFlight
+                ? selectedFlight.startTime.toISOString().slice(0, 10)
+                : new Date().toISOString().slice(0, 10)
+            }
+            triggerLabel="Add entry"
+          />
           <Button asChild variant="outline" size="sm">
             <Link href="/logbook/sync/logten">Sync with LogTen</Link>
           </Button>
@@ -392,101 +412,6 @@ export default async function LogbookPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-600 dark:text-slate-400">Add logbook entry</p>
-        </CardHeader>
-        <CardContent>
-          <form action="/api/logbook/create" method="post" className="grid gap-3 lg:grid-cols-3">
-            <select
-              name="status"
-              defaultValue="OPEN"
-              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
-            >
-              <option value="OPEN">Open</option>
-              <option value="CLOSED">Closed</option>
-            </select>
-            <select
-              name="flightId"
-              defaultValue={selectedFlight?.id ?? ""}
-              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
-            >
-              <option value="">Link a flight (optional)</option>
-              {flights.map((flight) => {
-                const tailNumber =
-                  flight.tailNumberSnapshot ||
-                  flight.aircraft?.tailNumber ||
-                  flight.tailNumber;
-                const label = `${tailNumber} · ${formatRoute(
-                  flight.origin,
-                  flight.destination
-                )} · ${flight.startTime.toISOString().slice(0, 10)}`;
-                return (
-                  <option key={flight.id} value={flight.id}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-            {selectedFlight ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 lg:col-span-3">
-                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                  Selected flight
-                </p>
-                <p className="font-semibold">{selectedFlightLabel}</p>
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  {selectedFlight.startTime.toLocaleString()}
-                </p>
-                {selectedFlightCrew.length > 0 ? (
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                    Crew: {selectedFlightCrew.map((crew) => `${crew.name} (${crew.role})`).join(", ")}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <Input
-              name="date"
-              type="date"
-              required
-              defaultValue={
-                selectedFlight
-                  ? selectedFlight.startTime.toISOString().slice(0, 10)
-                  : new Date().toISOString().slice(0, 10)
-              }
-            />
-            <Input name="timeOut" type="time" placeholder="Time out" />
-            <Input name="timeIn" type="time" placeholder="Time in" />
-            <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" />
-            <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" />
-
-            <div className="lg:col-span-3">
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                Total time is computed when you save (Hobbs or Time In/Out preferred; otherwise time buckets).
-              </p>
-            </div>
-
-            <Input name="picTime" type="number" step="0.1" placeholder="PIC" />
-            <Input name="dualReceivedTime" type="number" step="0.1" placeholder="Dual rcvd" />
-            <Input name="sicTime" type="number" step="0.1" placeholder="SIC" />
-            <Input name="soloTime" type="number" step="0.1" placeholder="Solo" />
-            <Input name="nightTime" type="number" step="0.1" placeholder="Night" />
-            <Input name="xcTime" type="number" step="0.1" placeholder="XC" />
-            <Input name="simulatedInstrumentTime" type="number" step="0.1" placeholder="Sim inst" />
-            <Input name="instrumentTime" type="number" step="0.1" placeholder="Actual inst" />
-            <Input name="simulatorTime" type="number" step="0.1" placeholder="Simulator" />
-            <Input name="groundTime" type="number" step="0.1" placeholder="Ground" />
-            <Input name="dayTakeoffs" type="number" step="1" placeholder="Day T/O" />
-            <Input name="dayLandings" type="number" step="1" placeholder="Day LDG" />
-            <Input name="nightTakeoffs" type="number" step="1" placeholder="Night T/O" />
-            <Input name="nightLandings" type="number" step="1" placeholder="Night LDG" />
-            <Input name="remarks" placeholder="Remarks" className="lg:col-span-3" />
-            <div className="lg:col-span-3">
-              <Button type="submit">Save entry</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <p className="text-sm text-slate-600 dark:text-slate-400">Logbook entries</p>
         </CardHeader>
         <CardContent>
@@ -506,7 +431,7 @@ export default async function LogbookPage({
                     <th className="px-4 py-2">SIC</th>
                     <th className="px-4 py-2">Night</th>
                     <th className="px-4 py-2">Instrument</th>
-                    <th className="px-4 py-2">Links</th>
+                    <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -566,24 +491,9 @@ export default async function LogbookPage({
                           </Link>
                         </td>
                         <td className="px-4 py-3">
-                          {flight ? (
-                            <div className="flex flex-col gap-1">
-                              <Link
-                                href={`/flights/${flight.id}`}
-                                className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
-                              >
-                                View flight
-                              </Link>
-                              <Link
-                                href={`/flights/${flight.id}#costs`}
-                                className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
-                              >
-                                View costs
-                              </Link>
-                            </div>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
+                          <div className="flex justify-end">
+                            <LogbookRowMenu entryId={entry.id} flightId={flight?.id ?? null} />
+                          </div>
                         </td>
                       </tr>
                     );
