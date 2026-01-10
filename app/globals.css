@@ -12,6 +12,15 @@ body {
   @apply bg-slate-950 text-slate-100;
 }
 
+.checklist-focus .app-sidebar,
+.checklist-focus .app-topbar {
+  display: none;
+}
+
+.checklist-focus .app-main {
+  padding-top: 1.5rem;
+}
+
 .leaflet-container {
   height: 100%;
   width: 100%;

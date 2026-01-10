@@ -180,7 +180,7 @@ export default async function FlightsPage({
           <p className="text-sm text-slate-400">Search flights</p>
         </CardHeader>
         <CardContent>
-          <form method="get" className="grid gap-3 md:grid-cols-4">
+          <form method="get" className="grid gap-3 lg:grid-cols-4">
             <Input
               name="tailNumber"
               placeholder="Tail number"
@@ -203,7 +203,7 @@ export default async function FlightsPage({
               placeholder="Tags (comma separated)"
               defaultValue={getSearchParam(searchParams?.tags)}
             />
-            <div className="flex flex-wrap gap-2 md:col-span-4">
+            <div className="flex flex-wrap gap-2 lg:col-span-4">
               <Button type="submit">Search</Button>
               <Button variant="outline" asChild>
                 <Link href="/flights">Reset</Link>
@@ -218,18 +218,18 @@ export default async function FlightsPage({
           <p className="text-sm text-slate-400">Add manual flight</p>
         </CardHeader>
         <CardContent>
-          <form action={createFlightAction} className="grid gap-3 md:grid-cols-3">
+          <form action={createFlightAction} className="grid gap-3 lg:grid-cols-3">
             <Input name="tailNumber" placeholder="Tail #" required />
             <Input name="origin" placeholder="Origin (ICAO)" required />
             <Input name="destination" placeholder="Destination (ICAO)" />
             <Input name="startTime" type="datetime-local" required />
             <Input name="endTime" type="datetime-local" />
             <Input name="durationMinutes" type="number" placeholder="Duration (mins)" />
-            <div className="md:col-span-3 space-y-3">
+            <div className="lg:col-span-3 space-y-3">
               <p className="text-xs font-semibold uppercase text-slate-400">
                 Participants
               </p>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 lg:grid-cols-2">
                 {[0, 1].map((slot) => (
                   <div
                     key={slot}
@@ -240,7 +240,7 @@ export default async function FlightsPage({
                     </label>
                     <select
                       name="participantUserId"
-                      className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                      className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                       defaultValue=""
                     >
                       <option value="">Select a user</option>
@@ -252,7 +252,7 @@ export default async function FlightsPage({
                     </select>
                     <select
                       name="participantRole"
-                      className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                      className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                       defaultValue="SIC"
                     >
                       {roleOptions.map((role) => (
@@ -265,7 +265,7 @@ export default async function FlightsPage({
                 ))}
               </div>
             </div>
-            <div className="md:col-span-3">
+            <div className="lg:col-span-3">
               <FormSubmitButton type="submit" pendingText="Saving flight...">
                 Save flight
               </FormSubmitButton>

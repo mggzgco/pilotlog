@@ -176,10 +176,10 @@ export function ImportClient({ flightId }: ImportClientProps) {
           <p className="text-sm text-slate-400">Import criteria</p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearch} className="grid gap-3 md:grid-cols-3">
+          <form onSubmit={handleSearch} className="grid gap-3 lg:grid-cols-3">
             {isAttachMode ? (
               <>
-                <div className="md:col-span-3 text-sm text-slate-400">
+                <div className="lg:col-span-3 text-sm text-slate-400">
                   Tail number is derived from the planned flight details.
                 </div>
                 <Input
@@ -222,7 +222,7 @@ export function ImportClient({ flightId }: ImportClientProps) {
                 />
               </>
             )}
-            <div className="md:col-span-3">
+            <div className="lg:col-span-3">
               <Button type="submit" disabled={isSearching}>
                 {isSearching ? (
                   <>
@@ -301,7 +301,7 @@ export function ImportClient({ flightId }: ImportClientProps) {
         <CardContent className="space-y-4">
           {selectedFlight ? (
             <>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 lg:grid-cols-4">
                 <div>
                   <p className="text-xs uppercase text-slate-400">Route</p>
                   <p className="text-lg font-semibold">

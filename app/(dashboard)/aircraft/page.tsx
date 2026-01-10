@@ -31,10 +31,10 @@ export default async function AircraftPage() {
           <p className="text-sm text-slate-400">Add aircraft</p>
         </CardHeader>
         <CardContent>
-          <form action={createAircraftAction} className="grid gap-3 md:grid-cols-3">
+          <form action={createAircraftAction} className="grid gap-3 lg:grid-cols-3">
             <Input name="tailNumber" placeholder="Tail number" required />
             <Input name="model" placeholder="Model" />
-            <div className="md:col-span-3">
+            <div className="lg:col-span-3">
               <Button type="submit">Save aircraft</Button>
             </div>
           </form>

@@ -41,7 +41,7 @@ export default async function ProfilePage() {
         </CardHeader>
         <CardContent>
           {/* PROF-002: allow pilots to update display name */}
-          <form action="/api/profile/update" method="post" className="grid gap-3 md:grid-cols-2">
+          <form action="/api/profile/update" method="post" className="grid gap-3 lg:grid-cols-2">
             <div>
               <label className="text-sm text-slate-300">First name</label>
               <Input name="firstName" defaultValue={derivedFirstName} />
@@ -58,7 +58,7 @@ export default async function ProfilePage() {
               <label className="text-sm text-slate-300">Phone</label>
               <Input name="phone" defaultValue={user.phone ?? ""} />
             </div>
-            <div className="md:col-span-2">
+            <div className="lg:col-span-2">
               {/* PROF-003: save profile changes */}
               <Button type="submit">Update profile</Button>
             </div>
@@ -83,7 +83,7 @@ export default async function ProfilePage() {
           <form
             action="/api/profile/change-password"
             method="post"
-            className="grid gap-3 md:grid-cols-2"
+            className="grid gap-3 lg:grid-cols-2"
           >
             <div>
               <label className="text-sm text-slate-300">Current password</label>
@@ -101,7 +101,7 @@ export default async function ProfilePage() {
                 autoComplete="new-password"
               />
             </div>
-            <div className="md:col-span-2">
+            <div className="lg:col-span-2">
               <Button type="submit">Update password</Button>
               <p className="mt-2 text-xs text-slate-500">
                 Changing your password will log you out of all sessions.

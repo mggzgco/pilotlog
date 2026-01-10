@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   if (recentFlights.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-semibold">Dashboard</h2>
             <p className="text-sm text-slate-400">
@@ -70,7 +70,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Dashboard</h2>
           <p className="text-sm text-slate-400">
@@ -84,7 +84,7 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm text-slate-400">Most recent flight</p>
               <p className="text-lg font-semibold">

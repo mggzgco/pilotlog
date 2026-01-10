@@ -53,14 +53,14 @@ export default async function ChecklistsPage() {
         <CardContent>
           <form
             action={createChecklistTemplateAction}
-            className="grid gap-3 md:grid-cols-[1.2fr_0.8fr_0.8fr_auto]"
+            className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto]"
           >
             <Input name="name" placeholder="Template name" required />
             <label className="text-sm text-slate-300">
               <span className="mb-1 block text-xs uppercase text-slate-500">Phase</span>
               <select
                 name="phase"
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
+                className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
                 defaultValue="PREFLIGHT"
               >
                 {phases.map((phase) => (
@@ -86,7 +86,7 @@ export default async function ChecklistsPage() {
                   type="checkbox"
                   name="isDefault"
                   defaultChecked
-                  className="h-4 w-4 rounded border-slate-600 bg-slate-950"
+                  className="h-5 w-5 rounded border-slate-600 bg-slate-950"
                 />
                 Make default
               </label>
@@ -191,7 +191,7 @@ export default async function ChecklistsPage() {
 
                   <form
                     action={addChecklistTemplateItemAction}
-                    className="mt-4 flex flex-col gap-3 md:flex-row"
+                    className="mt-4 flex flex-col gap-3 lg:flex-row"
                   >
                     <input type="hidden" name="templateId" value={template.id} />
                     <Input name="title" placeholder="New checklist item" required />

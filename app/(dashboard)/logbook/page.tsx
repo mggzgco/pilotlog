@@ -29,15 +29,15 @@ export default async function LogbookPage() {
         </CardHeader>
         <CardContent>
           {/* LOG-002: capture PIC/SIC/night/IFR details */}
-          <form action={createLogbookEntryAction} className="grid gap-3 md:grid-cols-3">
+          <form action={createLogbookEntryAction} className="grid gap-3 lg:grid-cols-3">
             <Input name="date" type="date" required />
             <Input name="totalTime" placeholder="Total time" />
             <Input name="picTime" placeholder="PIC time" />
             <Input name="sicTime" placeholder="SIC time" />
             <Input name="nightTime" placeholder="Night" />
             <Input name="instrumentTime" placeholder="Instrument" />
-            <Input name="remarks" placeholder="Remarks" className="md:col-span-2" />
-            <div className="md:col-span-3">
+            <Input name="remarks" placeholder="Remarks" className="lg:col-span-2" />
+            <div className="lg:col-span-3">
               <Button type="submit">Save entry</Button>
             </div>
           </form>

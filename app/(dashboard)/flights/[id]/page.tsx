@@ -223,7 +223,7 @@ export default async function FlightDetailPage({
           <p className="text-sm text-slate-400">Summary</p>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-3">
             <div>
               <p className="text-xs uppercase text-slate-400">Tail number</p>
               <p className="text-lg font-semibold">
@@ -299,7 +299,7 @@ export default async function FlightDetailPage({
 
       {showAutoImportNotFound ? (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
             <span>No ADS-B match found. Manually import and attach.</span>
             <Button size="sm" variant="outline" asChild>
               <Link href={`/import?flightId=${flight.id}`}>
@@ -312,7 +312,7 @@ export default async function FlightDetailPage({
 
       {showAutoImportMatchCta ? (
         <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
             <span>Multiple ADS-B matches found. Choose the best one to attach.</span>
             <Button size="sm" variant="outline" asChild>
               <Link href={`/flights/${flight.id}/match`}>Select match</Link>
@@ -350,7 +350,7 @@ export default async function FlightDetailPage({
           <p className="text-sm text-slate-400">Statistics</p>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 lg:grid-cols-4">
             <div>
               <p className="text-xs uppercase text-slate-400">Duration</p>
               <p className="text-lg font-semibold">
@@ -419,13 +419,13 @@ export default async function FlightDetailPage({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2">
               {participants.map((participant) => (
                 <div
                   key={participant.id}
                   className="rounded-lg border border-slate-800 p-4"
                 >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-col gap-3 lg:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-slate-100">
                         {participant.user.name ||
@@ -450,7 +450,7 @@ export default async function FlightDetailPage({
                         <select
                           name="role"
                           defaultValue={participant.role}
-                          className="rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                          className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                         >
                           {participantRoleOptions.map((role) => (
                             <option key={role} value={role}>
@@ -495,11 +495,11 @@ export default async function FlightDetailPage({
             <form
               action={`/api/flights/${flight.id}/participants/add`}
               method="post"
-              className="grid gap-3 md:grid-cols-3"
+              className="grid gap-3 lg:grid-cols-3"
             >
               <select
                 name="userId"
-                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                 required
                 defaultValue=""
               >
@@ -514,7 +514,7 @@ export default async function FlightDetailPage({
               </select>
               <select
                 name="role"
-                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                 defaultValue="SIC"
               >
                 {participantRoleOptions.map((role) => (
@@ -523,7 +523,7 @@ export default async function FlightDetailPage({
                   </option>
                 ))}
               </select>
-              <div className="md:col-span-3">
+              <div className="lg:col-span-3">
                 <FormSubmitButton type="submit" pendingText="Adding participant...">
                   Add participant
                 </FormSubmitButton>
@@ -559,7 +559,7 @@ export default async function FlightDetailPage({
                 <select
                   name="participantId"
                   defaultValue={selectedParticipant?.id}
-                  className="rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                  className="h-11 rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                 >
                   {participants.map((participant) => (
                     <option key={participant.id} value={participant.id}>
@@ -581,7 +581,7 @@ export default async function FlightDetailPage({
           <form
             action={`/api/flights/${flight.id}/update-logbook`}
             method="post"
-            className="grid gap-3 md:grid-cols-3"
+            className="grid gap-3 lg:grid-cols-3"
           >
             <input type="hidden" name="participantId" value={selectedParticipant?.id} />
             <Input
@@ -629,7 +629,7 @@ export default async function FlightDetailPage({
               placeholder="Instrument time"
               defaultValue={logbookEntry?.instrumentTime?.toString() ?? ""}
             />
-            <div className="md:col-span-3">
+            <div className="lg:col-span-3">
               <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
                 Remarks
               </label>
@@ -640,7 +640,7 @@ export default async function FlightDetailPage({
                 defaultValue={logbookEntry?.remarks ?? ""}
               />
             </div>
-            <div className="md:col-span-3">
+            <div className="lg:col-span-3">
               <FormSubmitButton
                 type="submit"
                 pendingText={hasLogbookEntry ? "Saving logbook..." : "Creating logbook..."}
@@ -687,7 +687,7 @@ export default async function FlightDetailPage({
                       key={item.id}
                       className="rounded-lg border border-slate-800 p-4"
                     >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="flex flex-col gap-3 lg:flex-row md:items-start md:justify-between">
                         <div>
                           <p className="text-sm font-semibold text-slate-100">
                             {item.category}
@@ -781,7 +781,7 @@ export default async function FlightDetailPage({
                   id="receipt-cost-filter"
                   name="receiptCostItemId"
                   defaultValue={receiptFilter}
-                  className="h-10 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  className="h-11 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
                 >
                   <option value="all">All receipts</option>
                   <option value="unassigned">Unassigned</option>
@@ -799,12 +799,12 @@ export default async function FlightDetailPage({
                 action={`/api/flights/${flight.id}/receipts/upload`}
                 method="post"
                 encType="multipart/form-data"
-                className="mt-4 grid gap-3 md:grid-cols-3"
+                className="mt-4 grid gap-3 lg:grid-cols-3"
               >
                 <select
                   name="costItemId"
                   defaultValue={receiptUploadDefaultCostItemId}
-                  className="h-10 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  className="h-11 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
                 >
                   <option value="">Link to cost item (optional)</option>
                   {flight.costItems.map((item) => (
@@ -820,9 +820,9 @@ export default async function FlightDetailPage({
                   accept=".pdf,image/png,image/jpeg"
                   multiple
                   required
-                  className="md:col-span-2"
+                  className="lg:col-span-2"
                 />
-                <div className="md:col-span-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                <div className="lg:col-span-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
                   <FormSubmitButton type="submit" pendingText="Uploading...">
                     Upload receipts
                   </FormSubmitButton>

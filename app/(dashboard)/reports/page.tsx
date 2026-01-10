@@ -98,10 +98,10 @@ export default async function ReportsPage({
           <p className="text-sm text-slate-400">Report range</p>
         </CardHeader>
         <CardContent>
-          <form method="get" className="grid gap-3 md:grid-cols-3">
+          <form method="get" className="grid gap-3 lg:grid-cols-3">
             <Input name="start" type="date" defaultValue={start} />
             <Input name="end" type="date" defaultValue={end} />
-            <div className="flex flex-wrap gap-2 md:col-span-3">
+            <div className="flex flex-wrap gap-2 lg:col-span-3">
               <Button type="submit">Update range</Button>
               <Button variant="outline" asChild>
                 <Link href="/reports">Reset</Link>

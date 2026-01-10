@@ -40,9 +40,9 @@ export function PlanFlightForm({
     <form
       action="/api/flights/create-planned"
       method="post"
-      className="grid gap-4 md:grid-cols-2"
+      className="grid gap-4 lg:grid-cols-2"
     >
-      <div className="md:col-span-2 space-y-3">
+      <div className="lg:col-span-2 space-y-3">
         {aircraftOptions.length > 0 ? (
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
@@ -50,7 +50,7 @@ export function PlanFlightForm({
             </label>
             <select
               name="aircraftId"
-              className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
               required={!unassignedConfirmed}
               value={selectedAircraftId}
               onChange={(event) => {
@@ -80,7 +80,7 @@ export function PlanFlightForm({
           <input
             type="checkbox"
             name="unassigned"
-            className="h-4 w-4 rounded border-slate-600 bg-slate-950"
+            className="h-5 w-5 rounded border-slate-600 bg-slate-950"
             checked={unassignedConfirmed}
             disabled={Boolean(selectedAircraftId)}
             required={!selectedAircraftId}
@@ -134,11 +134,11 @@ export function PlanFlightForm({
         </label>
         <Input name="plannedEndTime" type="datetime-local" />
       </div>
-      <div className="md:col-span-2">
+      <div className="lg:col-span-2">
         <p className="mb-2 text-xs font-semibold uppercase text-slate-400">
           Participants
         </p>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2">
           {[0, 1].map((slot) => (
             <div key={slot} className="grid gap-2 rounded-md border border-slate-800 p-3">
               <label className="text-xs font-semibold uppercase text-slate-400">
@@ -146,7 +146,7 @@ export function PlanFlightForm({
               </label>
               <select
                 name="participantUserId"
-                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                 defaultValue=""
               >
                 <option value="">Select a user</option>
@@ -158,7 +158,7 @@ export function PlanFlightForm({
               </select>
               <select
                 name="participantRole"
-                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
                 defaultValue="SIC"
               >
                 {roleOptions.map((role) => (
@@ -171,7 +171,7 @@ export function PlanFlightForm({
           ))}
         </div>
       </div>
-      <div className="md:col-span-2 flex flex-wrap gap-3">
+      <div className="lg:col-span-2 flex flex-wrap gap-3">
         <FormSubmitButton type="submit" pendingText="Planning flight...">
           Create planned flight
         </FormSubmitButton>

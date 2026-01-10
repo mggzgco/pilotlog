@@ -146,7 +146,7 @@ export function MatchClient({ flightId, provider, candidates }: MatchClientProps
         <CardContent className="space-y-4">
           {selectedFlight ? (
             <>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 lg:grid-cols-4">
                 <div>
                   <p className="text-xs uppercase text-slate-400">Route</p>
                   <p className="text-lg font-semibold">

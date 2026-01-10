@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
@@ -20,6 +20,26 @@ const ChecklistRunStatus = {
 
 type ChecklistInputType = (typeof ChecklistInputType)[keyof typeof ChecklistInputType];
 type ChecklistRunStatus = (typeof ChecklistRunStatus)[keyof typeof ChecklistRunStatus];
+
+type SaveStatus = "saved" | "saving" | "offline";
+
+type ChecklistItemState = {
+  valueText: string;
+  valueNumber: string;
+  valueYesNo: boolean | null;
+  notes: string;
+  completed: boolean;
+};
+
+type ChecklistSavePayload = {
+  itemId: string;
+  notes?: string;
+  valueText?: string;
+  valueNumber?: string;
+  valueYesNo?: string;
+  valueCheck?: string;
+  complete?: string;
+};
 
 export type ChecklistItemView = {
   id: string;
@@ -54,6 +74,31 @@ type ChecklistSectionProps = {
   postflightRun: ChecklistRunView | null;
 };
 
+const createInitialState = (items: ChecklistItemView[]) =>
+  items.reduce<Record<string, ChecklistItemState>>((acc, item) => {
+    acc[item.id] = {
+      valueText: item.valueText ?? "",
+      valueNumber:
+        item.valueNumber === null || item.valueNumber === undefined
+          ? ""
+          : String(item.valueNumber),
+      valueYesNo: item.valueYesNo ?? null,
+      notes: item.notes ?? "",
+      completed: item.completed
+    };
+    return acc;
+  }, {});
+
+const buildFormData = (payload: ChecklistSavePayload) => {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined) {
+      formData.append(key, value);
+    }
+  });
+  return formData;
+};
+
 export function ChecklistSection({
   flightId,
   flightStatus,
@@ -67,6 +112,20 @@ export function ChecklistSection({
   const [signingPhase, setSigningPhase] = useState<
     "PREFLIGHT" | "POSTFLIGHT" | null
   >(null);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [isOnline, setIsOnline] = useState(true);
+  const [itemState, setItemState] = useState<Record<string, ChecklistItemState>>({});
+
+  const focusOverrideRef = useRef(false);
+  const pendingCountRef = useRef(0);
+  const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const itemStateRef = useRef(itemState);
+
+  useEffect(() => {
+    itemStateRef.current = itemState;
+  }, [itemState]);
 
   const runs = useMemo(
     () => ({
@@ -83,15 +142,291 @@ export function ChecklistSection({
     flightStatus === "COMPLETED";
   const canStartPostflight = preflightSigned || flightStatus === "COMPLETED";
 
+  useEffect(() => {
+    if (!activeRun) {
+      return;
+    }
+
+    const initialState = createInitialState(activeRun.items);
+    let mergedState = initialState;
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem(
+        `checklist-draft:${flightId}:${activeRun.id}`
+      );
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Record<string, ChecklistItemState>;
+          mergedState = { ...initialState, ...parsed };
+        } catch {
+          mergedState = initialState;
+        }
+      }
+    }
+
+    setItemState(mergedState);
+    setActiveItemId(activeRun.items[0]?.id ?? null);
+  }, [activeRun?.id, flightId]);
+
+  useEffect(() => {
+    if (activeRun?.status === ChecklistRunStatus.IN_PROGRESS && !focusOverrideRef.current) {
+      setIsFocusMode(true);
+    }
+  }, [activeRun?.status]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const updateOnlineStatus = () => {
+      setIsOnline(navigator.onLine);
+    };
+
+    updateOnlineStatus();
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (isFocusMode) {
+      document.body.classList.add("checklist-focus");
+    } else {
+      document.body.classList.remove("checklist-focus");
+    }
+
+    return () => {
+      document.body.classList.remove("checklist-focus");
+    };
+  }, [isFocusMode]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      setSaveStatus("offline");
+    }
+  }, [isOnline]);
+
+  const getPendingKey = (runId: string) => `checklist-pending:${flightId}:${runId}`;
+  const getDraftKey = (runId: string) => `checklist-draft:${flightId}:${runId}`;
+
+  const readPending = (runId: string) => {
+    if (typeof window === "undefined") {
+      return {} as Record<string, ChecklistSavePayload>;
+    }
+    const stored = window.localStorage.getItem(getPendingKey(runId));
+    if (!stored) {
+      return {} as Record<string, ChecklistSavePayload>;
+    }
+    try {
+      return JSON.parse(stored) as Record<string, ChecklistSavePayload>;
+    } catch {
+      return {} as Record<string, ChecklistSavePayload>;
+    }
+  };
+
+  const writePending = (runId: string, pending: Record<string, ChecklistSavePayload>) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(getPendingKey(runId), JSON.stringify(pending));
+  };
+
+  const persistDraft = (runId: string, draft: Record<string, ChecklistItemState>) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(getDraftKey(runId), JSON.stringify(draft));
+  };
+
+  const saveItem = async (payload: ChecklistSavePayload, runId: string) => {
+    if (!isOnline) {
+      const pending = readPending(runId);
+      pending[payload.itemId] = payload;
+      writePending(runId, pending);
+      setSaveStatus("offline");
+      return;
+    }
+
+    pendingCountRef.current += 1;
+    setSaveStatus("saving");
+
+    try {
+      const response = await fetch(`/api/flights/${flightId}/checklists/update-item`, {
+        method: "POST",
+        body: buildFormData(payload),
+        headers: {
+          "x-checklist-autosave": "true",
+          accept: "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save checklist item");
+      }
+
+      const pending = readPending(runId);
+      if (pending[payload.itemId]) {
+        delete pending[payload.itemId];
+        writePending(runId, pending);
+      }
+    } catch {
+      const pending = readPending(runId);
+      pending[payload.itemId] = payload;
+      writePending(runId, pending);
+      setSaveStatus("offline");
+    } finally {
+      pendingCountRef.current = Math.max(0, pendingCountRef.current - 1);
+      if (pendingCountRef.current === 0 && isOnline) {
+        setSaveStatus("saved");
+      }
+    }
+  };
+
+  const flushPending = async (runId: string) => {
+    if (!isOnline) {
+      return;
+    }
+
+    const pending = readPending(runId);
+    const entries = Object.values(pending);
+    if (entries.length === 0) {
+      return;
+    }
+
+    setSaveStatus("saving");
+    for (const payload of entries) {
+      await saveItem(payload, runId);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeRun) {
+      return;
+    }
+    void flushPending(activeRun.id);
+  }, [activeRun?.id, isOnline]);
+
+  const activeItemsById = useMemo(() => {
+    if (!activeRun) {
+      return new Map<string, ChecklistItemView>();
+    }
+    return new Map(activeRun.items.map((item) => [item.id, item]));
+  }, [activeRun]);
+
+  const buildPayload = (
+    item: ChecklistItemView,
+    state: ChecklistItemState,
+    complete = false
+  ): ChecklistSavePayload => {
+    const payload: ChecklistSavePayload = {
+      itemId: item.id,
+      notes: state.notes
+    };
+
+    if (item.inputType === ChecklistInputType.CHECK) {
+      payload.valueCheck = state.valueYesNo ? "on" : "";
+    }
+
+    if (item.inputType === ChecklistInputType.YES_NO) {
+      if (state.valueYesNo === true) {
+        payload.valueYesNo = "yes";
+      } else if (state.valueYesNo === false) {
+        payload.valueYesNo = "no";
+      } else {
+        payload.valueYesNo = "";
+      }
+    }
+
+    if (item.inputType === ChecklistInputType.NUMBER) {
+      payload.valueNumber = state.valueNumber;
+    }
+
+    if (item.inputType === ChecklistInputType.TEXT) {
+      payload.valueText = state.valueText;
+    }
+
+    if (complete) {
+      payload.complete = "true";
+    }
+
+    return payload;
+  };
+
+  const updateItemState = (
+    itemId: string,
+    updates: Partial<ChecklistItemState>,
+    options?: { complete?: boolean; immediate?: boolean }
+  ) => {
+    const currentState = itemStateRef.current[itemId];
+    const nextState: ChecklistItemState = {
+      valueText: currentState?.valueText ?? "",
+      valueNumber: currentState?.valueNumber ?? "",
+      valueYesNo: currentState?.valueYesNo ?? null,
+      notes: currentState?.notes ?? "",
+      completed: currentState?.completed ?? false,
+      ...updates
+    };
+
+    setItemState((prev) => {
+      const next = { ...prev, [itemId]: nextState };
+      if (activeRun) {
+        persistDraft(activeRun.id, next);
+      }
+      return next;
+    });
+
+    if (!activeRun) {
+      return;
+    }
+
+    const item = activeItemsById.get(itemId);
+    if (!item) {
+      return;
+    }
+
+    const payload = buildPayload(item, nextState, options?.complete ?? false);
+
+    if (options?.immediate) {
+      void saveItem(payload, activeRun.id);
+      return;
+    }
+
+    if (saveTimersRef.current[itemId]) {
+      clearTimeout(saveTimersRef.current[itemId]);
+    }
+
+    saveTimersRef.current[itemId] = setTimeout(() => {
+      void saveItem(payload, activeRun.id);
+    }, 400);
+  };
+
   const renderInput = (item: ChecklistItemView, disabled: boolean) => {
+    const state = itemState[item.id];
+
     if (item.inputType === ChecklistInputType.CHECK) {
       return (
-        <label className="flex items-center gap-2 text-sm text-slate-200">
+        <label className="flex min-h-11 items-center gap-3 text-base text-slate-200">
           <input
             type="checkbox"
             name="valueCheck"
-            defaultChecked={item.valueYesNo ?? false}
+            className="h-5 w-5 rounded border-slate-600"
+            checked={state?.valueYesNo ?? false}
             disabled={disabled}
+            onChange={(event) => {
+              updateItemState(
+                item.id,
+                { valueYesNo: event.target.checked },
+                { immediate: true }
+              );
+            }}
           />
           Marked
         </label>
@@ -100,24 +435,32 @@ export function ChecklistSection({
 
     if (item.inputType === ChecklistInputType.YES_NO) {
       return (
-        <div className="flex gap-4 text-sm text-slate-200">
-          <label className="flex items-center gap-2">
+        <div className="flex gap-6 text-base text-slate-200">
+          <label className="flex min-h-11 items-center gap-3">
             <input
               type="radio"
-              name="valueYesNo"
+              name={`valueYesNo-${item.id}`}
               value="yes"
-              defaultChecked={item.valueYesNo === true}
+              className="h-5 w-5"
+              checked={state?.valueYesNo === true}
               disabled={disabled}
+              onChange={() => {
+                updateItemState(item.id, { valueYesNo: true }, { immediate: true });
+              }}
             />
             Yes
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-11 items-center gap-3">
             <input
               type="radio"
-              name="valueYesNo"
+              name={`valueYesNo-${item.id}`}
               value="no"
-              defaultChecked={item.valueYesNo === false}
+              className="h-5 w-5"
+              checked={state?.valueYesNo === false}
               disabled={disabled}
+              onChange={() => {
+                updateItemState(item.id, { valueYesNo: false }, { immediate: true });
+              }}
             />
             No
           </label>
@@ -128,21 +471,26 @@ export function ChecklistSection({
     if (item.inputType === ChecklistInputType.NUMBER) {
       return (
         <Input
-          name="valueNumber"
+          name={`valueNumber-${item.id}`}
           type="number"
           step="0.1"
-          defaultValue={item.valueNumber ?? ""}
+          inputMode="decimal"
+          value={state?.valueNumber ?? ""}
           disabled={disabled}
+          onChange={(event) =>
+            updateItemState(item.id, { valueNumber: event.target.value })
+          }
         />
       );
     }
 
     return (
       <Input
-        name="valueText"
+        name={`valueText-${item.id}`}
         type="text"
-        defaultValue={item.valueText ?? ""}
+        value={state?.valueText ?? ""}
         disabled={disabled}
+        onChange={(event) => updateItemState(item.id, { valueText: event.target.value })}
       />
     );
   };
@@ -180,9 +528,11 @@ export function ChecklistSection({
     }
 
     const isLocked = run.status === ChecklistRunStatus.SIGNED;
-    const requiredRemaining = run.items.filter(
-      (item) => item.required && !item.completed
-    ).length;
+    const requiredRemaining = run.items.filter((item) => {
+      const state = itemState[item.id];
+      const completed = state?.completed ?? item.completed;
+      return item.required && !completed;
+    }).length;
 
     return (
       <div className="space-y-4">
@@ -194,9 +544,7 @@ export function ChecklistSection({
                 ? `Started ${new Date(run.startedAt).toLocaleString()}`
                 : "Not started"}
           </div>
-          {run.signatureName ? (
-            <div>Signed by {run.signatureName}</div>
-          ) : null}
+          {run.signatureName ? <div>Signed by {run.signatureName}</div> : null}
         </div>
 
         {run.items.length === 0 ? (
@@ -205,71 +553,85 @@ export function ChecklistSection({
           </div>
         ) : (
           <div className="space-y-4">
-            {run.items.map((item) => (
-              <form
-                key={item.id}
-                action={`/api/flights/${flightId}/checklists/update-item`}
-                method="post"
-                className="rounded-lg border border-slate-800 p-4"
-              >
-                <input type="hidden" name="itemId" value={item.id} />
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-100">
-                        {item.order}. {item.title}
-                      </p>
-                      {item.required ? (
-                        <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
-                          Required
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-400">
-                          Optional
-                        </span>
-                      )}
-                      {item.completed ? (
-                        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-200">
-                          Complete
-                        </span>
+            {run.items.map((item) => {
+              const state = itemState[item.id];
+              const completed = state?.completed ?? item.completed;
+              const isActive = activeItemId === item.id;
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setActiveItemId(item.id)}
+                  className={`rounded-lg border border-slate-800 p-4 transition ${
+                    isActive && isFocusMode ? "border-brand-500/70 bg-slate-900/70" : ""
+                  }`}
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-base font-semibold text-slate-100">
+                          {item.order}. {item.title}
+                        </p>
+                        {item.required ? (
+                          <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
+                            Required
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-400">
+                            Optional
+                          </span>
+                        )}
+                        {completed ? (
+                          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-200">
+                            Complete
+                          </span>
+                        ) : null}
+                      </div>
+                      {item.details ? (
+                        <p className="mt-1 text-sm text-slate-400">{item.details}</p>
+                      ) : null}
+                      {item.completedAt ? (
+                        <p className="mt-2 text-xs text-slate-500">
+                          Completed {new Date(item.completedAt).toLocaleString()}
+                        </p>
                       ) : null}
                     </div>
-                    {item.details ? (
-                      <p className="mt-1 text-xs text-slate-400">{item.details}</p>
-                    ) : null}
-                    {item.completedAt ? (
-                      <p className="mt-2 text-xs text-slate-500">
-                        Completed {new Date(item.completedAt).toLocaleString()}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col items-start gap-3 md:items-end">
-                    <div className="w-full md:w-64">{renderInput(item, isLocked)}</div>
-                    <div className="w-full">
-                      <label className="mb-1 block text-xs uppercase text-slate-400">
-                        Notes
-                      </label>
-                      <textarea
-                        name="notes"
-                        className="min-h-[80px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
-                        defaultValue={item.notes ?? ""}
-                        disabled={isLocked}
-                      />
+                    <div className="flex flex-col items-start gap-4 lg:items-end">
+                      <div className="w-full lg:w-72">{renderInput(item, isLocked)}</div>
+                      <div className="w-full">
+                        <label className="mb-1 block text-xs uppercase text-slate-400">
+                          Notes
+                        </label>
+                        <textarea
+                          name={`notes-${item.id}`}
+                          className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                          value={state?.notes ?? ""}
+                          disabled={isLocked}
+                          onChange={(event) =>
+                            updateItemState(item.id, { notes: event.target.value })
+                          }
+                        />
+                      </div>
+                      {!isLocked && !isFocusMode ? (
+                        <Button
+                          type="button"
+                          size="lg"
+                          onClick={() =>
+                            updateItemState(
+                              item.id,
+                              { completed: true },
+                              { complete: true, immediate: true }
+                            )
+                          }
+                        >
+                          {completed ? "Update item" : "Complete item"}
+                        </Button>
+                      ) : null}
                     </div>
-                    {!isLocked ? (
-                      <FormSubmitButton
-                        type="submit"
-                        size="sm"
-                        pendingText="Saving item..."
-                      >
-                        {item.completed ? "Update item" : "Complete item"}
-                      </FormSubmitButton>
-                    ) : null}
                   </div>
                 </div>
-                <input type="hidden" name="complete" value="true" />
-              </form>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -285,9 +647,10 @@ export function ChecklistSection({
           </div>
         )}
 
-        {!isLocked && (
+        {!isLocked && !isFocusMode && (
           <Button
             type="button"
+            size="lg"
             onClick={() => setSigningPhase(phase)}
             variant="default"
           >
@@ -300,11 +663,50 @@ export function ChecklistSection({
 
   const signingLabel = signingPhase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight";
 
+  const totalItems = activeRun?.items.length ?? 0;
+  const completedItems =
+    activeRun?.items.filter((item) => itemState[item.id]?.completed ?? item.completed)
+      .length ?? 0;
+  const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+
+  const activeItem = activeItemId ? activeItemsById.get(activeItemId) : null;
+  const activeItemState = activeItemId ? itemState[activeItemId] : null;
+  const isChecklistLocked = activeRun?.status === ChecklistRunStatus.SIGNED;
+
+  const handleFocusToggle = () => {
+    focusOverrideRef.current = true;
+    setIsFocusMode((prev) => !prev);
+  };
+
+  const handleFocusDecision = (accepted: boolean) => {
+    if (!activeItem || !activeItemState || !activeRun || isChecklistLocked) {
+      return;
+    }
+
+    const updates: Partial<ChecklistItemState> = { completed: true };
+    if (activeItem.inputType === ChecklistInputType.CHECK) {
+      updates.valueYesNo = accepted;
+    }
+    if (activeItem.inputType === ChecklistInputType.YES_NO) {
+      updates.valueYesNo = accepted;
+    }
+
+    updateItemState(activeItem.id, updates, { complete: true, immediate: true });
+  };
+
+  const statusLabel =
+    saveStatus === "offline"
+      ? "Offline (will sync)"
+      : saveStatus === "saving"
+        ? "Saving..."
+        : "Saved";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
         <Button
           type="button"
+          size="lg"
           variant={activeTab === "PREFLIGHT" ? "default" : "outline"}
           onClick={() => setActiveTab("PREFLIGHT")}
         >
@@ -312,6 +714,7 @@ export function ChecklistSection({
         </Button>
         <Button
           type="button"
+          size="lg"
           variant={activeTab === "POSTFLIGHT" ? "default" : "outline"}
           onClick={() => setActiveTab("POSTFLIGHT")}
         >
@@ -322,9 +725,74 @@ export function ChecklistSection({
             Not available
           </span>
         ) : null}
+        <Button
+          type="button"
+          size="lg"
+          variant={isFocusMode ? "default" : "outline"}
+          onClick={handleFocusToggle}
+        >
+          {isFocusMode ? "Exit Focus Mode" : "Checklist Focus Mode"}
+        </Button>
+        <span
+          className={`self-center rounded-full px-3 py-1 text-xs font-semibold uppercase ${
+            saveStatus === "offline"
+              ? "bg-amber-500/20 text-amber-200"
+              : saveStatus === "saving"
+                ? "bg-sky-500/20 text-sky-200"
+                : "bg-emerald-500/20 text-emerald-200"
+          }`}
+        >
+          {statusLabel}
+        </span>
       </div>
 
+      {isFocusMode && activeRun ? (
+        <div className="sticky top-0 z-30 rounded-lg border border-slate-800 bg-slate-950/95 p-4 shadow-lg backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-100">Checklist Progress</p>
+              <p className="text-xs text-slate-400">
+                {completedItems}/{totalItems} items complete
+              </p>
+            </div>
+            <div className="text-xs uppercase text-slate-500">{activeRun.phase}</div>
+          </div>
+          <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
+            <div
+              className="h-2 rounded-full bg-brand-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {renderChecklist(activeRun, activeTab)}
+
+      {isFocusMode && activeRun && activeItem && !isChecklistLocked ? (
+        <div className="sticky bottom-0 z-30 rounded-t-lg border border-slate-800 bg-slate-950/95 p-4 shadow-2xl">
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-xs uppercase text-slate-500">Focused item</p>
+              <p className="text-base font-semibold text-slate-100">
+                {activeItem.order}. {activeItem.title}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button type="button" size="lg" onClick={() => handleFocusDecision(true)}>
+                Accept
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={() => handleFocusDecision(false)}
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {signingPhase ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
