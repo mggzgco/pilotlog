@@ -164,6 +164,19 @@ export default async function FlightDetailPage({
               >
                 ADS-B match
               </Link>
+              {flight.importedProvider === "aeroapi" && flight.providerFlightId ? (
+                <form action={`/api/flights/${flight.id}/adsb/refresh`} method="post">
+                  <FormSubmitButton
+                    type="submit"
+                    size="sm"
+                    variant="outline"
+                    pendingText="Refreshing..."
+                    className="h-auto rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+                  >
+                    Refresh ADS-B
+                  </FormSubmitButton>
+                </form>
+              ) : null}
               <Link
                 href={`/import?flightId=${flight.id}`}
                 className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
