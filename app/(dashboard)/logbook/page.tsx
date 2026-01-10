@@ -440,16 +440,32 @@ export default async function LogbookPage({
                   : new Date().toISOString().slice(0, 10)
               }
             />
-            <Input
-              name="totalTime"
-              placeholder="Total time"
-              defaultValue={prefillTotalTime}
-            />
-            <Input name="picTime" placeholder="PIC time" />
-            <Input name="sicTime" placeholder="SIC time" />
-            <Input name="nightTime" placeholder="Night" />
-            <Input name="instrumentTime" placeholder="Instrument" />
-            <Input name="remarks" placeholder="Remarks" className="lg:col-span-2" />
+            <Input name="timeOut" type="time" placeholder="Time out" />
+            <Input name="timeIn" type="time" placeholder="Time in" />
+            <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" />
+            <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" />
+
+            <div className="lg:col-span-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Total time is computed when you save (Hobbs or Time In/Out preferred; otherwise time buckets).
+              </p>
+            </div>
+
+            <Input name="picTime" type="number" step="0.1" placeholder="PIC" />
+            <Input name="dualReceivedTime" type="number" step="0.1" placeholder="Dual rcvd" />
+            <Input name="sicTime" type="number" step="0.1" placeholder="SIC" />
+            <Input name="soloTime" type="number" step="0.1" placeholder="Solo" />
+            <Input name="nightTime" type="number" step="0.1" placeholder="Night" />
+            <Input name="xcTime" type="number" step="0.1" placeholder="XC" />
+            <Input name="simulatedInstrumentTime" type="number" step="0.1" placeholder="Sim inst" />
+            <Input name="instrumentTime" type="number" step="0.1" placeholder="Actual inst" />
+            <Input name="simulatorTime" type="number" step="0.1" placeholder="Simulator" />
+            <Input name="groundTime" type="number" step="0.1" placeholder="Ground" />
+            <Input name="dayTakeoffs" type="number" step="1" placeholder="Day T/O" />
+            <Input name="dayLandings" type="number" step="1" placeholder="Day LDG" />
+            <Input name="nightTakeoffs" type="number" step="1" placeholder="Night T/O" />
+            <Input name="nightLandings" type="number" step="1" placeholder="Night LDG" />
+            <Input name="remarks" placeholder="Remarks" className="lg:col-span-3" />
             <div className="lg:col-span-3">
               <Button type="submit">Save entry</Button>
             </div>

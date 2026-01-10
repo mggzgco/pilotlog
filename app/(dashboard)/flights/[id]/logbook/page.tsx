@@ -70,23 +70,32 @@ export default async function FlightLogbookPage({
       ["IMPORTED", "COMPLETED"].includes(flight.status)
   );
   const showLogbookPrompt = isImported && logbookEntry?.totalTime == null;
-  const prefillTotalTime =
-    logbookEntry?.totalTime?.toString() ??
-    (showLogbookPrompt && flight.durationMinutes !== null
-      ? (flight.durationMinutes / 60).toFixed(1)
-      : "");
   const prefillPicTime =
     logbookEntry?.picTime?.toString() ??
-    (selectedParticipant?.role === "PIC" && prefillTotalTime ? prefillTotalTime : "");
-  const prefillSicTime =
-    logbookEntry?.sicTime?.toString() ??
-    (selectedParticipant?.role === "SIC" && prefillTotalTime ? prefillTotalTime : "");
+    "";
+  const prefillSicTime = logbookEntry?.sicTime?.toString() ?? "";
 
   const logbookDefaultDate = logbookEntry?.date
     ? logbookEntry.date.toISOString().slice(0, 10)
     : flight.startTime.toISOString().slice(0, 10);
   const logbookDefaultNightTime = logbookEntry?.nightTime?.toString() ?? "";
+  const logbookDefaultXcTime = (logbookEntry as any)?.xcTime?.toString?.() ?? "";
+  const logbookDefaultDualReceivedTime =
+    (logbookEntry as any)?.dualReceivedTime?.toString?.() ?? "";
+  const logbookDefaultSoloTime = (logbookEntry as any)?.soloTime?.toString?.() ?? "";
+  const logbookDefaultSimulatedInstrumentTime =
+    (logbookEntry as any)?.simulatedInstrumentTime?.toString?.() ?? "";
   const logbookDefaultInstrumentTime = logbookEntry?.instrumentTime?.toString() ?? "";
+  const logbookDefaultSimulatorTime = (logbookEntry as any)?.simulatorTime?.toString?.() ?? "";
+  const logbookDefaultGroundTime = (logbookEntry as any)?.groundTime?.toString?.() ?? "";
+  const logbookDefaultTimeOut = (logbookEntry as any)?.timeOut ?? "";
+  const logbookDefaultTimeIn = (logbookEntry as any)?.timeIn ?? "";
+  const logbookDefaultHobbsOut = (logbookEntry as any)?.hobbsOut?.toString?.() ?? "";
+  const logbookDefaultHobbsIn = (logbookEntry as any)?.hobbsIn?.toString?.() ?? "";
+  const logbookDefaultDayTakeoffs = (logbookEntry as any)?.dayTakeoffs?.toString?.() ?? "";
+  const logbookDefaultDayLandings = (logbookEntry as any)?.dayLandings?.toString?.() ?? "";
+  const logbookDefaultNightTakeoffs = (logbookEntry as any)?.nightTakeoffs?.toString?.() ?? "";
+  const logbookDefaultNightLandings = (logbookEntry as any)?.nightLandings?.toString?.() ?? "";
   const logbookDefaultRemarks = logbookEntry?.remarks ?? "";
 
   return (
@@ -114,8 +123,8 @@ export default async function FlightLogbookPage({
         <CardContent>
           {showLogbookPrompt ? (
             <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-              This flight has ADS-B attached—log your time to finish it. Total time is
-              prefilled when available.
+              This flight has ADS-B attached—log your time to finish it. Logbook time is
+              independent from ADS-B.
             </div>
           ) : null}
           {!hasAnyLogbookEntry ? (
@@ -157,11 +166,24 @@ export default async function FlightLogbookPage({
             flightId={flight.id}
             participantId={selectedParticipant?.id ?? null}
             defaultDate={logbookDefaultDate}
-            defaultTotalTime={prefillTotalTime}
             defaultPicTime={prefillPicTime}
             defaultSicTime={prefillSicTime}
+            defaultDualReceivedTime={logbookDefaultDualReceivedTime}
+            defaultSoloTime={logbookDefaultSoloTime}
             defaultNightTime={logbookDefaultNightTime}
+            defaultXcTime={logbookDefaultXcTime}
+            defaultSimulatedInstrumentTime={logbookDefaultSimulatedInstrumentTime}
             defaultInstrumentTime={logbookDefaultInstrumentTime}
+            defaultSimulatorTime={logbookDefaultSimulatorTime}
+            defaultGroundTime={logbookDefaultGroundTime}
+            defaultTimeOut={logbookDefaultTimeOut}
+            defaultTimeIn={logbookDefaultTimeIn}
+            defaultHobbsOut={logbookDefaultHobbsOut}
+            defaultHobbsIn={logbookDefaultHobbsIn}
+            defaultDayTakeoffs={logbookDefaultDayTakeoffs}
+            defaultDayLandings={logbookDefaultDayLandings}
+            defaultNightTakeoffs={logbookDefaultNightTakeoffs}
+            defaultNightLandings={logbookDefaultNightLandings}
             defaultRemarks={logbookDefaultRemarks}
             hasLogbookEntry={hasLogbookEntry}
           />

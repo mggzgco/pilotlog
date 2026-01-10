@@ -5,11 +5,24 @@ type LogbookEntryFormProps = {
   flightId: string;
   participantId: string | null;
   defaultDate: string;
-  defaultTotalTime: string;
   defaultPicTime: string;
   defaultSicTime: string;
+  defaultDualReceivedTime: string;
+  defaultSoloTime: string;
   defaultNightTime: string;
+  defaultXcTime: string;
+  defaultSimulatedInstrumentTime: string;
   defaultInstrumentTime: string;
+  defaultSimulatorTime: string;
+  defaultGroundTime: string;
+  defaultTimeOut: string;
+  defaultTimeIn: string;
+  defaultHobbsOut: string;
+  defaultHobbsIn: string;
+  defaultDayTakeoffs: string;
+  defaultDayLandings: string;
+  defaultNightTakeoffs: string;
+  defaultNightLandings: string;
   defaultRemarks: string;
   hasLogbookEntry: boolean;
 };
@@ -18,11 +31,24 @@ export function LogbookEntryForm({
   flightId,
   participantId,
   defaultDate,
-  defaultTotalTime,
   defaultPicTime,
   defaultSicTime,
+  defaultDualReceivedTime,
+  defaultSoloTime,
   defaultNightTime,
+  defaultXcTime,
+  defaultSimulatedInstrumentTime,
   defaultInstrumentTime,
+  defaultSimulatorTime,
+  defaultGroundTime,
+  defaultTimeOut,
+  defaultTimeIn,
+  defaultHobbsOut,
+  defaultHobbsIn,
+  defaultDayTakeoffs,
+  defaultDayLandings,
+  defaultNightTakeoffs,
+  defaultNightLandings,
   defaultRemarks,
   hasLogbookEntry
 }: LogbookEntryFormProps) {
@@ -34,19 +60,28 @@ export function LogbookEntryForm({
     >
       <input type="hidden" name="participantId" value={participantId ?? ""} />
       <Input name="date" type="date" required defaultValue={defaultDate} />
-      <Input
-        name="totalTime"
-        type="number"
-        step="0.1"
-        placeholder="Total time"
-        defaultValue={defaultTotalTime}
-      />
+      <Input name="timeOut" type="time" placeholder="Time out" defaultValue={defaultTimeOut} />
+      <Input name="timeIn" type="time" placeholder="Time in" defaultValue={defaultTimeIn} />
+      <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" defaultValue={defaultHobbsOut} />
+      <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" defaultValue={defaultHobbsIn} />
+      <div className="lg:col-span-3">
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Total time is computed when you save (Hobbs or Time In/Out preferred; otherwise time buckets).
+        </p>
+      </div>
       <Input
         name="picTime"
         type="number"
         step="0.1"
         placeholder="PIC time"
         defaultValue={defaultPicTime}
+      />
+      <Input
+        name="dualReceivedTime"
+        type="number"
+        step="0.1"
+        placeholder="Dual received"
+        defaultValue={defaultDualReceivedTime}
       />
       <Input
         name="sicTime"
@@ -56,6 +91,13 @@ export function LogbookEntryForm({
         defaultValue={defaultSicTime}
       />
       <Input
+        name="soloTime"
+        type="number"
+        step="0.1"
+        placeholder="Solo"
+        defaultValue={defaultSoloTime}
+      />
+      <Input
         name="nightTime"
         type="number"
         step="0.1"
@@ -63,19 +105,51 @@ export function LogbookEntryForm({
         defaultValue={defaultNightTime}
       />
       <Input
+        name="xcTime"
+        type="number"
+        step="0.1"
+        placeholder="XC"
+        defaultValue={defaultXcTime}
+      />
+      <Input
+        name="simulatedInstrumentTime"
+        type="number"
+        step="0.1"
+        placeholder="Sim inst"
+        defaultValue={defaultSimulatedInstrumentTime}
+      />
+      <Input
         name="instrumentTime"
         type="number"
         step="0.1"
-        placeholder="Instrument time"
+        placeholder="Actual inst"
         defaultValue={defaultInstrumentTime}
       />
+      <Input
+        name="simulatorTime"
+        type="number"
+        step="0.1"
+        placeholder="Simulator"
+        defaultValue={defaultSimulatorTime}
+      />
+      <Input
+        name="groundTime"
+        type="number"
+        step="0.1"
+        placeholder="Ground"
+        defaultValue={defaultGroundTime}
+      />
+      <Input name="dayTakeoffs" type="number" step="1" placeholder="Day T/O" defaultValue={defaultDayTakeoffs} />
+      <Input name="dayLandings" type="number" step="1" placeholder="Day LDG" defaultValue={defaultDayLandings} />
+      <Input name="nightTakeoffs" type="number" step="1" placeholder="Night T/O" defaultValue={defaultNightTakeoffs} />
+      <Input name="nightLandings" type="number" step="1" placeholder="Night LDG" defaultValue={defaultNightLandings} />
       <div className="lg:col-span-3">
-        <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+        <label className="mb-2 block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
           Remarks
         </label>
         <textarea
           name="remarks"
-          className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+          className="min-h-[120px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
           placeholder="Logbook notes, tags, endorsements"
           defaultValue={defaultRemarks}
         />

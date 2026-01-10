@@ -15,6 +15,14 @@ export type ReportSummary = {
   dualReceivedTime: number;
   nightTime: number;
   xcTime: number;
+  simulatedInstrumentTime: number;
+  actualInstrumentTime: number;
+  simulatorTime: number;
+  groundTime: number;
+  dayTakeoffs: number;
+  dayLandings: number;
+  nightTakeoffs: number;
+  nightLandings: number;
   costTotalCents: number;
   costByCategory: Record<string, number>;
 };
@@ -73,6 +81,14 @@ export function computeReportSummary(
     dualReceivedTime: 0,
     nightTime: 0,
     xcTime: 0,
+    simulatedInstrumentTime: 0,
+    actualInstrumentTime: 0,
+    simulatorTime: 0,
+    groundTime: 0,
+    dayTakeoffs: 0,
+    dayLandings: 0,
+    nightTakeoffs: 0,
+    nightLandings: 0,
     costTotalCents: 0,
     costByCategory: {}
   };
@@ -81,9 +97,19 @@ export function computeReportSummary(
     const totalTime = totalTimeForEntry(entry);
     summary.totalTime += totalTime;
     summary.picTime += toNumber(entry.picTime);
-    summary.dualReceivedTime += toNumber(entry.sicTime);
+    // prefer dedicated dualReceivedTime; fall back to legacy sicTime (previously used as "dual received" in UI)
+    summary.dualReceivedTime += toNumber((entry as any).dualReceivedTime ?? entry.sicTime);
     summary.nightTime += toNumber(entry.nightTime);
-    summary.xcTime += xcTimeForEntry(entry, totalTime);
+    const explicitXc = toNumber((entry as any).xcTime);
+    summary.xcTime += explicitXc > 0 ? explicitXc : xcTimeForEntry(entry, totalTime);
+    summary.simulatedInstrumentTime += toNumber((entry as any).simulatedInstrumentTime);
+    summary.actualInstrumentTime += toNumber(entry.instrumentTime);
+    summary.simulatorTime += toNumber((entry as any).simulatorTime);
+    summary.groundTime += toNumber((entry as any).groundTime);
+    summary.dayTakeoffs += toNumber((entry as any).dayTakeoffs);
+    summary.dayLandings += toNumber((entry as any).dayLandings);
+    summary.nightTakeoffs += toNumber((entry as any).nightTakeoffs);
+    summary.nightLandings += toNumber((entry as any).nightLandings);
   }
 
   for (const item of costItems) {

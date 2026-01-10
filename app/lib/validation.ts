@@ -75,11 +75,24 @@ export const costSchema = z.object({
 export const logbookSchema = z.object({
   date: z.string().min(1),
   flightId: z.string().optional(),
-  totalTime: z.string().optional(),
   picTime: z.string().optional(),
   sicTime: z.string().optional(),
+  dualReceivedTime: z.string().optional(),
+  soloTime: z.string().optional(),
   nightTime: z.string().optional(),
+  xcTime: z.string().optional(),
+  simulatedInstrumentTime: z.string().optional(),
   instrumentTime: z.string().optional(),
+  simulatorTime: z.string().optional(),
+  groundTime: z.string().optional(),
+  timeOut: z.string().optional(),
+  timeIn: z.string().optional(),
+  hobbsOut: z.string().optional(),
+  hobbsIn: z.string().optional(),
+  dayTakeoffs: z.string().optional(),
+  dayLandings: z.string().optional(),
+  nightTakeoffs: z.string().optional(),
+  nightLandings: z.string().optional(),
   remarks: z.string().optional()
 });
 

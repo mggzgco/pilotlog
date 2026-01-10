@@ -225,11 +225,25 @@ model LogbookEntry {
   userId         String
   flightId       String?
   date           DateTime
+  timeOut        String?
+  timeIn         String?
+  hobbsOut       Decimal? @db.Decimal(7, 2)
+  hobbsIn        Decimal? @db.Decimal(7, 2)
   totalTime      Decimal? @db.Decimal(5, 2)
   picTime        Decimal? @db.Decimal(5, 2)
   sicTime        Decimal? @db.Decimal(5, 2)
+  dualReceivedTime Decimal? @db.Decimal(5, 2)
+  soloTime       Decimal? @db.Decimal(5, 2)
   nightTime      Decimal? @db.Decimal(5, 2)
-  instrumentTime Decimal? @db.Decimal(5, 2)
+  xcTime         Decimal? @db.Decimal(5, 2)
+  simulatedInstrumentTime Decimal? @db.Decimal(5, 2)
+  instrumentTime Decimal? @db.Decimal(5, 2) // actual instrument
+  simulatorTime  Decimal? @db.Decimal(5, 2)
+  groundTime     Decimal? @db.Decimal(5, 2)
+  dayTakeoffs    Int?
+  dayLandings    Int?
+  nightTakeoffs  Int?
+  nightLandings  Int?
   remarks        String?
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   flight         Flight?  @relation(fields: [flightId], references: [id], onDelete: SetNull)
