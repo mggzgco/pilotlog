@@ -487,12 +487,6 @@ export default async function FlightDetailPage({
         </div>
       ) : null}
 
-      {showAutoImportSuccess ? (
-        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-            ADS-B data imported.
-        </div>
-      ) : null}
-
       {showAutoImportNotFound ? (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
