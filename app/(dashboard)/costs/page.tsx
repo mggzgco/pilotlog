@@ -2,11 +2,11 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
-import { createCostAction } from "@/app/lib/actions/cost-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
+import { CreateCostModal } from "@/app/components/costs/create-cost-modal";
 import {
   costCategoryOptions,
   costCategoryValues,
@@ -188,13 +188,35 @@ export default async function CostsPage({
     startDate || endDate || resolvedCategoryFilter || aircraftFilter || flightIdFilter
   );
 
+  const flightOptions = flights.map((flight) => {
+    const tailNumber =
+      flight.tailNumberSnapshot ||
+      flight.aircraft?.tailNumber ||
+      flight.tailNumber;
+    const label = `${tailNumber} · ${formatRoute(flight.origin, flight.destination)} · ${flight.startTime
+      .toISOString()
+      .slice(0, 10)}`;
+    return { id: flight.id, label };
+  });
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold">Costs</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Track receipts and training spend.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold">Costs</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Track receipts and training spend.
+            </p>
+          </div>
+          <CreateCostModal
+            flights={flightOptions}
+            defaultFlightId={flightIdFilter}
+            defaultDate={defaultEntryDate}
+            receiptAccept={receiptAccept}
+            triggerLabel="Add expense"
+          />
+        </div>
       </div>
 
       <Card>
@@ -307,85 +329,6 @@ export default async function CostsPage({
             </div>
         </form>
       </CollapsibleCard>
-
-      <Card>
-        <CardHeader>
-          <p className="text-sm text-slate-600 dark:text-slate-400">Add expense</p>
-        </CardHeader>
-        <CardContent>
-          <form
-            action={createCostAction}
-            className="grid gap-3 lg:grid-cols-3"
-            encType="multipart/form-data"
-          >
-            <select
-              name="flightId"
-              defaultValue={flightIdFilter}
-              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
-              required
-            >
-              <option value="">Select a flight</option>
-              {flights.map((flight) => {
-                const tailNumber =
-                  flight.tailNumberSnapshot ||
-                  flight.aircraft?.tailNumber ||
-                  flight.tailNumber;
-                const label = `${tailNumber} · ${formatRoute(
-                  flight.origin,
-                  flight.destination
-                )} · ${flight.startTime.toISOString().slice(0, 10)}`;
-                return (
-                  <option key={flight.id} value={flight.id}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-            <select
-              name="category"
-              defaultValue={
-                costCategoryValues.includes(
-                  resolvedCategoryFilter as (typeof costCategoryValues)[number]
-                )
-                  ? resolvedCategoryFilter
-                  : ""
-              }
-              className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
-              required
-            >
-              <option value="">Select category</option>
-              {costCategoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <Input name="amount" placeholder="Amount" type="number" step="0.01" required />
-            <Input name="date" type="date" defaultValue={defaultEntryDate} required />
-            <Input name="vendor" placeholder="Vendor" />
-            <Input name="notes" placeholder="Notes" className="lg:col-span-2" />
-            <div className="lg:col-span-3">
-              <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400" htmlFor="cost-receipts">
-                Receipts
-              </label>
-              <input
-                id="cost-receipts"
-                name="receipts"
-                type="file"
-                multiple
-                accept={receiptAccept}
-                className="mt-2 block w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border file:border-slate-200 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-900 hover:file:bg-slate-50 dark:text-slate-200 dark:file:border-slate-800 dark:file:bg-slate-950 dark:file:text-slate-100 dark:hover:file:bg-slate-900"
-              />
-              <p className="mt-2 text-xs text-slate-500">
-                Upload PDF, PNG, or JPEG receipts. Files attach to the selected flight.
-              </p>
-            </div>
-            <div className="lg:col-span-3">
-              <Button type="submit">Save expense</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
