@@ -74,6 +74,7 @@ model User {
   createdAt          DateTime               @default(now())
   sessions           Session[]
   flights            Flight[]
+  people             Person[]
   aircraft           Aircraft[]
   logbook            LogbookEntry[]
   costItems          CostItem[]
@@ -119,6 +120,7 @@ model Flight {
   aircraft            Aircraft?            @relation(fields: [aircraftId], references: [id], onDelete: SetNull)
   logbookEntries      LogbookEntry[]
   participants        FlightParticipant[]
+  peopleParticipants  FlightPersonParticipant[]
   costItems           CostItem[]
   trackPoints         TrackPoint[]
   checklistRuns       FlightChecklistRun[]
@@ -139,6 +141,33 @@ model FlightParticipant {
 
   @@unique([flightId, userId])
   @@index([flightId])
+  @@index([userId])
+}
+
+model FlightPersonParticipant {
+  id        String               @id @default(cuid())
+  flightId  String
+  personId  String
+  role      FlightParticipantRole
+  createdAt DateTime             @default(now())
+  flight    Flight               @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  person    Person               @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([flightId, personId])
+  @@index([flightId])
+  @@index([personId])
+}
+
+model Person {
+  id        String                     @id @default(cuid())
+  userId    String
+  name      String
+  email     String?
+  phone     String?
+  createdAt DateTime                   @default(now())
+  user      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights   FlightPersonParticipant[]
+
   @@index([userId])
 }
 

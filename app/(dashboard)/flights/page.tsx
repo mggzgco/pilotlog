@@ -6,6 +6,7 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { EmptyState } from "@/app/components/ui/empty-state";
 import { FlightsTable } from "@/app/components/flights/flights-table";
+import { CreateFlightModal } from "@/app/components/flights/create-flight-modal";
 import { Plane } from "lucide-react";
 
 type FlightsSearchParams = {
@@ -116,7 +117,7 @@ export default async function FlightsPage({
     }
   })();
 
-  const [flights, aircraft] = await Promise.all([
+  const [flights, aircraft, users, people] = await Promise.all([
     prisma.flight.findMany({
       where: {
         userId: user.id,
@@ -140,7 +141,16 @@ export default async function FlightsPage({
     prisma.aircraft.findMany({
       where: { userId: user.id },
       orderBy: { tailNumber: "asc" },
-      select: { id: true, tailNumber: true }
+      select: { id: true, tailNumber: true, model: true }
+    }),
+    prisma.user.findMany({
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true, name: true, email: true }
+    }),
+    prisma.person.findMany({
+      where: { userId: user.id },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true }
     })
   ]);
 
@@ -213,6 +223,19 @@ export default async function FlightsPage({
     };
   });
 
+  const participantOptions = users.map((entry) => ({
+    id: entry.id,
+    label:
+      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
+      entry.name ||
+      entry.email
+  }));
+
+  const personOptions = people.map((entry) => ({
+    id: entry.id,
+    label: entry.email ? `${entry.name} · ${entry.email}` : entry.name
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -222,9 +245,11 @@ export default async function FlightsPage({
             All flights, ready for the next action.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/flights/new">Create Flight</Link>
-        </Button>
+        <CreateFlightModal
+          aircraftOptions={aircraft}
+          participantOptions={participantOptions}
+          personOptions={personOptions}
+        />
       </div>
 
       <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
@@ -335,9 +360,12 @@ export default async function FlightsPage({
           }
           action={
             flights.length === 0 ? (
-              <Button asChild>
-                <Link href="/flights/new">Create Flight</Link>
-              </Button>
+              <CreateFlightModal
+                aircraftOptions={aircraft}
+                participantOptions={participantOptions}
+                personOptions={personOptions}
+                triggerLabel="Create Flight"
+              />
             ) : (
               <Button variant="outline" asChild>
                 <Link href="/flights">Reset filters</Link>

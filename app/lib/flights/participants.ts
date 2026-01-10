@@ -14,6 +14,11 @@ type ParticipantInput = {
   role: ParticipantRole;
 };
 
+type PersonParticipantInput = {
+  personId: string;
+  role: ParticipantRole;
+};
+
 export function parseParticipantFormData(formData: FormData): ParticipantInput[] {
   const userIds = formData
     .getAll("participantUserId")
@@ -30,6 +35,24 @@ export function parseParticipantFormData(formData: FormData): ParticipantInput[]
   });
 }
 
+export function parsePersonParticipantFormData(
+  formData: FormData
+): PersonParticipantInput[] {
+  const personIds = formData
+    .getAll("participantPersonId")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const roles = formData.getAll("participantPersonRole").map((value) => String(value));
+
+  return personIds.map((personId, index) => {
+    const role = roles[index];
+    return {
+      personId,
+      role: participantRoleSet.has(role as ParticipantRole) ? (role as ParticipantRole) : "SIC"
+    };
+  });
+}
+
 export function normalizeParticipants(
   ownerId: string,
   participants: ParticipantInput[]
@@ -40,6 +63,19 @@ export function normalizeParticipants(
       return false;
     }
     seen.add(participant.userId);
+    return true;
+  });
+}
+
+export function normalizePersonParticipants(
+  participants: PersonParticipantInput[]
+): PersonParticipantInput[] {
+  const seen = new Set<string>();
+  return participants.filter((participant) => {
+    if (!participant.personId || seen.has(participant.personId)) {
+      return false;
+    }
+    seen.add(participant.personId);
     return true;
   });
 }
