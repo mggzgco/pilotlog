@@ -123,14 +123,23 @@ function computeMaxAltitude(track: FlightTrackPoint[]) {
 async function resolveIcao24(tailNumber: string): Promise<string | null> {
   const normalized = normalizeTailNumber(tailNumber);
   const normalizedCompact = compactTailNumber(tailNumber);
-  let aircraft = await fetchOpenSky<OpenSkyAircraft[]>(
-    "/metadata/aircraft/list",
-    { reg: normalized }
-  );
-  if ((!aircraft || aircraft.length === 0) && normalizedCompact !== normalized) {
+  const registrationQueries = [
+    { key: "registration", value: normalized },
+    ...(normalizedCompact !== normalized
+      ? [{ key: "registration", value: normalizedCompact }]
+      : []),
+    { key: "reg", value: normalized },
+    ...(normalizedCompact !== normalized ? [{ key: "reg", value: normalizedCompact }] : [])
+  ];
+
+  let aircraft: OpenSkyAircraft[] | null = null;
+  for (const query of registrationQueries) {
     aircraft = await fetchOpenSky<OpenSkyAircraft[]>("/metadata/aircraft/list", {
-      reg: normalizedCompact
+      [query.key]: query.value
     });
+    if (aircraft && aircraft.length > 0) {
+      break;
+    }
   }
   if (!aircraft || aircraft.length === 0) {
     return null;
