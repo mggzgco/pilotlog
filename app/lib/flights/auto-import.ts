@@ -7,10 +7,7 @@ import { computeDistanceNm, computeDurationMinutes } from "@/app/lib/flights/com
 import { recordAuditEvent } from "@/app/lib/audit";
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
-const ONE_HOUR_MS = 60 * 60 * 1000;
 const AUTO_MATCH_THRESHOLD_MS = 20 * 60 * 1000;
-const OUTSIDE_WINDOW_PENALTY_MS = 2 * 60 * 60 * 1000;
 
 type FlightWithChecklistRuns = Pick<
   Flight,
@@ -27,28 +24,22 @@ type FlightWithChecklistRuns = Pick<
 };
 
 export function deriveAutoImportWindow(flight: FlightWithChecklistRuns) {
-  const preflightSignedAt =
-    flight.checklistRuns.find((run) => run.phase === "PREFLIGHT")?.signedAt ?? null;
-  const postflightSignedAt =
-    flight.checklistRuns.find((run) => run.phase === "POSTFLIGHT")?.signedAt ?? null;
+  // Use the known flight times (or planned times as a fallback) and search +/- 2 hours.
+  // Timestamps are stored in UTC, but represent local wall-clock times entered by the user,
+  // so we expand symmetrically around them rather than converting time zones.
+  const baseStart = flight.startTime ?? flight.plannedStartTime ?? new Date();
+  const baseEnd = flight.endTime ?? flight.plannedEndTime ?? baseStart;
 
-  const plannedStart = flight.plannedStartTime ?? flight.startTime;
-  const plannedEnd = flight.plannedEndTime ?? flight.endTime ?? plannedStart;
-
-  const searchStart = preflightSignedAt
-    ? new Date(preflightSignedAt.getTime() - TWO_HOURS_MS)
-    : new Date(plannedStart.getTime() - FOUR_HOURS_MS);
-  const searchEnd = postflightSignedAt
-    ? new Date(postflightSignedAt.getTime() + TWO_HOURS_MS)
-    : new Date(plannedEnd.getTime() + FOUR_HOURS_MS);
+  const searchStart = new Date(baseStart.getTime() - TWO_HOURS_MS);
+  const searchEnd = new Date(baseEnd.getTime() + TWO_HOURS_MS);
 
   return {
     searchStart,
     searchEnd,
-    referenceStart: preflightSignedAt ?? plannedStart,
-    referenceEnd: postflightSignedAt ?? plannedEnd,
-    preflightSignedAt,
-    postflightSignedAt
+    referenceStart: baseStart,
+    referenceEnd: baseEnd,
+    preflightSignedAt: null,
+    postflightSignedAt: null
   };
 }
 
@@ -73,20 +64,6 @@ function scoreCandidateForAutoMatch(
     candidate.startTime,
     candidate.endTime
   );
-
-  if (
-    window.preflightSignedAt &&
-    candidate.startTime.getTime() < window.preflightSignedAt.getTime() - ONE_HOUR_MS
-  ) {
-    score += OUTSIDE_WINDOW_PENALTY_MS;
-  }
-
-  if (
-    window.postflightSignedAt &&
-    candidate.endTime.getTime() > window.postflightSignedAt.getTime() + ONE_HOUR_MS
-  ) {
-    score += OUTSIDE_WINDOW_PENALTY_MS;
-  }
 
   return score;
 }
