@@ -14,6 +14,7 @@ import { ChecklistSection } from "@/app/components/flights/checklist-section";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 import { participantRoleOptions } from "@/app/lib/flights/participants";
 import { CostItemForm } from "@/app/components/flights/cost-item-form";
+import { getCostCategoryLabel } from "@/app/lib/costs/categories";
 
 export default async function FlightDetailPage({
   params,
@@ -196,7 +197,7 @@ export default async function FlightDetailPage({
   });
   const receiptCostItemLabel = (receipt: typeof flight.receiptDocuments[number]) =>
     receipt.costItem
-      ? `${receipt.costItem.category} · ${currencyFormatter.format(
+      ? `${getCostCategoryLabel(receipt.costItem.category)} · ${currencyFormatter.format(
           receipt.costItem.amountCents / 100
         )}`
       : "Unassigned";
@@ -695,7 +696,7 @@ export default async function FlightDetailPage({
                       <div className="flex flex-col gap-3 lg:flex-row md:items-start md:justify-between">
                         <div>
                           <p className="text-sm font-semibold text-slate-100">
-                            {item.category}
+                            {getCostCategoryLabel(item.category)}
                           </p>
                           <p className="text-xs text-slate-400">
                             {item.vendor ?? "Vendor not listed"} ·{" "}

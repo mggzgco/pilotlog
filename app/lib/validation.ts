@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { costCategoryValues } from "@/app/lib/costs/categories";
 
 export const passwordSchema = z
   .string()
@@ -63,11 +64,12 @@ export const flightSchema = z.object({
 });
 
 export const costSchema = z.object({
-  category: z.string().min(1),
+  category: z.enum(costCategoryValues),
   amount: z.string().min(1),
   vendor: z.string().optional(),
   notes: z.string().optional(),
-  date: z.string().min(1)
+  date: z.string().min(1),
+  flightId: z.string().min(1)
 });
 
 export const logbookSchema = z.object({
