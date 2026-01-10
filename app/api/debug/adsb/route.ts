@@ -7,13 +7,15 @@ import { defaultProviderName, getAdsbProvider } from "@/app/lib/adsb";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
+    // Default to the specific flight you provided:
+    // N246FB on 2026-01-08 at 12:42Z (FlightAware link: 20260108/1242Z/KLOM/KLOM).
     const tail = url.searchParams.get("tail") || "N246FB";
     const startParam = url.searchParams.get("start");
     const beforeHours = Number(url.searchParams.get("beforeHours") ?? "4");
     const afterHours = Number(url.searchParams.get("afterHours") ?? "4");
 
-    // Default to 2026-01-06 06:30 EST (11:30 UTC) if not provided
-    const defaultStart = new Date("2026-01-06T11:30:00Z");
+    // Default to 2026-01-08 12:42Z if not provided
+    const defaultStart = new Date("2026-01-08T12:42:00Z");
     const start = startParam ? new Date(startParam) : defaultStart;
     if (Number.isNaN(start.getTime())) {
       return NextResponse.json({ error: "Invalid start time" }, { status: 400 });
