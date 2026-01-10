@@ -12,6 +12,7 @@ export const ALLOWED_RECEIPT_MIME_TYPES: Record<string, string> = {
 };
 
 const safeExtensionPattern = /^[a-z0-9.]+$/i;
+const safePrefixPattern = /^[a-z0-9._-]+$/i;
 
 export function getReceiptExtension(contentType: string | null | undefined) {
   if (!contentType) {
@@ -42,7 +43,8 @@ export async function storeUpload(
       ? extension
       : ".bin";
   const rawPrefix = options?.prefix ?? "";
-  const safePrefix = safeExtensionPattern.test(rawPrefix) ? rawPrefix : "";
+  const safePrefix =
+    rawPrefix && safePrefixPattern.test(rawPrefix) ? rawPrefix : "";
   const name = `${safePrefix}${crypto.randomBytes(16).toString("hex")}${normalizedExtension}`;
   const fullPath = path.join(uploadDir, name);
   await fs.writeFile(fullPath, buffer);

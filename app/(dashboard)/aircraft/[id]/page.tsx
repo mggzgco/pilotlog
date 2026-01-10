@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
+import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 
 const phases = [
   { value: "PREFLIGHT", label: "Pre-flight" },
@@ -109,6 +110,45 @@ export default async function AircraftDetailPage({
             <div className="lg:col-span-2">
               <Button type="submit">Update type</Button>
             </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-slate-400">Aircraft photo</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {aircraft.photoStoragePath ? (
+            <div className="max-w-xl overflow-hidden rounded-lg border border-slate-800 bg-slate-950/30">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/aircraft/${aircraft.id}/photo`}
+                alt={`${aircraft.tailNumber} photo`}
+                className="h-64 w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
+              No photo uploaded yet.
+            </div>
+          )}
+
+          <form
+            action={`/api/aircraft/${aircraft.id}/photo/upload`}
+            method="post"
+            encType="multipart/form-data"
+            className="grid gap-3 lg:grid-cols-3"
+          >
+            <Input name="photo" type="file" accept="image/png,image/jpeg" required className="lg:col-span-2" />
+            <div className="flex items-end">
+              <FormSubmitButton type="submit" pendingText="Uploading...">
+                Upload photo
+              </FormSubmitButton>
+            </div>
+            <p className="lg:col-span-3 text-xs text-slate-500">
+              JPG/PNG up to 10MB. This photo will appear on flight details for this aircraft.
+            </p>
           </form>
         </CardContent>
       </Card>

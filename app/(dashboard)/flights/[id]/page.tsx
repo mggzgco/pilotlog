@@ -22,6 +22,11 @@ export default async function FlightDetailPage({
     where: { id: params.id, userId: user.id },
     include: {
       trackPoints: { orderBy: { recordedAt: "asc" } },
+      aircraft: {
+        include: {
+          aircraftType: { select: { name: true } }
+        }
+      },
       costItems: { select: { id: true, amountCents: true } },
       receiptDocuments: {
         where: { storagePath: { startsWith: "photo_" } },
@@ -53,6 +58,8 @@ export default async function FlightDetailPage({
     altitudePoints.length > 0
       ? Math.max(...altitudePoints.map((point) => point.altitudeFeet))
       : null;
+  const aircraftTypeLabel =
+    flight.aircraft?.aircraftType?.name ?? flight.aircraft?.model ?? "—";
   const costTotalCents = flight.costItems.reduce(
     (total, item) => total + item.amountCents,
     0
@@ -219,9 +226,28 @@ export default async function FlightDetailPage({
           <div className="grid gap-4 lg:grid-cols-3">
             <div>
               <p className="text-xs uppercase text-slate-400">Tail number</p>
-              <p className="text-lg font-semibold">
-                {flight.tailNumberSnapshot ?? flight.tailNumber}
-              </p>
+              <div className="mt-1 flex items-center gap-3">
+                {flight.aircraft?.photoStoragePath ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/aircraft/${flight.aircraft.id}/photo`}
+                    alt={`${flight.tailNumberSnapshot ?? flight.tailNumber} aircraft photo`}
+                    className="h-12 w-12 rounded-md border border-slate-800 object-cover"
+                  />
+                ) : (
+                  <div className="h-12 w-12 rounded-md border border-slate-800 bg-slate-950/40" />
+                )}
+                <div>
+                  <p className="text-lg font-semibold">
+                    {flight.tailNumberSnapshot ?? flight.tailNumber}
+                  </p>
+                  <p className="text-xs text-slate-400">{aircraftTypeLabel}</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Aircraft type</p>
+              <p className="text-lg font-semibold">{aircraftTypeLabel}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-slate-400">Planned time</p>

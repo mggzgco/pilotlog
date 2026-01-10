@@ -183,6 +183,10 @@ model Aircraft {
   aircraftTypeId                String?
   tailNumber                    String
   model                         String?
+  photoStoragePath              String?
+  photoOriginalFilename         String?
+  photoContentType              String?
+  photoSizeBytes                Int?
   preflightChecklistTemplateId  String?
   postflightChecklistTemplateId String?
   createdAt                     DateTime           @default(now())
