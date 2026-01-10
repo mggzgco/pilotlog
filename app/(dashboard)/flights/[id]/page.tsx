@@ -106,14 +106,73 @@ export default async function FlightDetailPage({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-semibold">Flight details</h2>
-          <FlightStatusBadge status={flight.status} />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-semibold">Flight details</h2>
+              <FlightStatusBadge status={flight.status} />
+            </div>
+            <p className="text-sm text-slate-400">
+              {flight.tailNumberSnapshot ?? flight.tailNumber} · {flight.origin} →{" "}
+              {flight.destination ?? "TBD"}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Quick links
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/flights/${flight.id}/match`}
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                ADS-B match
+              </Link>
+              <Link
+                href={`/import?flightId=${flight.id}`}
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                Manual import
+              </Link>
+              <Link
+                href={`/flights/${flight.id}/checklists`}
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                Checklists
+              </Link>
+              <Link
+                href={`/flights/${flight.id}/costs`}
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                Costs
+              </Link>
+              <Link
+                href={`/flights/${flight.id}/logbook`}
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                Logbook
+              </Link>
+              <Link
+                href="#stats"
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                Stats
+              </Link>
+              <Link
+                href="#notes"
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                Notes
+              </Link>
+              <Link
+                href="#photos"
+                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                Photos
+              </Link>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-slate-400">
-          {flight.tailNumberSnapshot ?? flight.tailNumber} · {flight.origin} →{" "}
-          {flight.destination ?? "TBD"}
-        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -152,7 +211,7 @@ export default async function FlightDetailPage({
         </Card>
       </div>
 
-      <Card>
+      <Card id="stats">
         <CardHeader>
           <p className="text-sm text-slate-400">Stats</p>
         </CardHeader>
@@ -261,51 +320,6 @@ export default async function FlightDetailPage({
       ) : null}
             </div>
 
-      <Card>
-        <CardHeader>
-          <p className="text-sm text-slate-400">Quick actions</p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link href={`/flights/${flight.id}/match`}>Import / attach ADS-B</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href={`/import?flightId=${flight.id}`}>Manual ADS-B import</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href={`/flights/${flight.id}/checklists`}>Checklists</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href={`/flights/${flight.id}/costs`}>Costs & receipts</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href={`/flights/${flight.id}/logbook`}>Logbook</Link>
-            </Button>
-            </div>
-          <div className="mt-4 grid gap-3 text-sm text-slate-300 lg:grid-cols-2">
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Checklists</p>
-              <p className="mt-1">
-                Preflight: <span className="text-slate-100">{checklistSummary.PREFLIGHT}</span>{" "}
-                · Postflight:{" "}
-                <span className="text-slate-100">{checklistSummary.POSTFLIGHT}</span>
-              </p>
-            </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
-              <p className="text-xs font-semibold uppercase text-slate-400">Costs</p>
-              <p className="mt-1">
-                Total:{" "}
-                <span className="text-slate-100">
-                  {costTotalCents > 0 ? currencyFormatter.format(costTotalCents / 100) : "—"}
-                </span>{" "}
-                · Receipts: <span className="text-slate-100">{receiptCount}</span>
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {(needsAdsB || needsLogbook || needsCosts || needsReceipts) && (
         <Card>
           <CardHeader>
@@ -411,7 +425,7 @@ export default async function FlightDetailPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card id="notes">
           <CardHeader>
             <p className="text-sm text-slate-400">Flight notes</p>
           </CardHeader>
@@ -435,7 +449,7 @@ export default async function FlightDetailPage({
         </CardContent>
       </Card>
 
-        <Card>
+        <Card id="photos">
         <CardHeader>
             <p className="text-sm text-slate-400">Flight photos</p>
         </CardHeader>
