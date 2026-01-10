@@ -516,50 +516,6 @@ export default async function FlightDetailPage({
       ) : null}
             </div>
 
-      {(needsAdsB || needsLogbook || needsCosts || needsReceipts) && (
-        <Card>
-          <CardHeader>
-            <p className="text-sm text-slate-400">Next steps</p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 text-sm text-slate-300">
-              {needsAdsB ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
-                  <span>Attach ADS-B track data (optional, but unlocks stats/map).</span>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`/flights/${flight.id}/match`}>Find match</Link>
-                    </Button>
-                  </div>
-              ) : null}
-              {needsLogbook ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
-                  <span>Create a logbook entry for the flight.</span>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`/flights/${flight.id}/logbook`}>Open logbook</Link>
-                  </Button>
-                </div>
-              ) : null}
-              {needsCosts ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
-                  <span>Add costs (fuel, rental, maintenance, etc.).</span>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`/flights/${flight.id}/costs`}>Add costs</Link>
-                  </Button>
-                </div>
-              ) : null}
-              {needsReceipts ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
-                  <span>Upload receipts and link them to cost items.</span>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`/flights/${flight.id}/costs`}>Upload receipts</Link>
-                  </Button>
-                    </div>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
         <CardHeader>
@@ -728,6 +684,50 @@ export default async function FlightDetailPage({
         </CardContent>
       </Card>
       </div>
+
+      {(needsAdsB || needsLogbook || needsCosts || needsReceipts) && (
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Next steps</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 text-sm text-slate-300">
+              {needsAdsB ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+                  <span>Attach ADS-B track data (optional, but unlocks stats/map).</span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/flights/${flight.id}/match`}>Find match</Link>
+                  </Button>
+                </div>
+              ) : null}
+              {needsLogbook ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
+                  <span>Create a logbook entry for the flight.</span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/flights/${flight.id}/logbook`}>Open logbook</Link>
+                  </Button>
+                </div>
+              ) : null}
+              {needsCosts ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
+                  <span>Add costs (fuel, rental, maintenance, etc.).</span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/flights/${flight.id}/costs`}>Add costs</Link>
+                  </Button>
+                </div>
+              ) : null}
+              {needsReceipts ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
+                  <span>Upload receipts and link them to cost items.</span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/flights/${flight.id}/costs`}>Upload receipts</Link>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
