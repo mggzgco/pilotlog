@@ -7,6 +7,7 @@ import { computeDistanceNm, computeDurationMinutes } from "@/app/lib/flights/com
 import { recordAuditEvent } from "@/app/lib/audit";
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 const AUTO_MATCH_THRESHOLD_MS = 20 * 60 * 1000;
 
 type FlightWithChecklistRuns = Pick<
@@ -24,14 +25,14 @@ type FlightWithChecklistRuns = Pick<
 };
 
 export function deriveAutoImportWindow(flight: FlightWithChecklistRuns) {
-// Use the known flight times (or planned times as a fallback) and search with a generous
-// +/- 4 hour window. We use the stored timestamps directly (already persisted as UTC),
-// avoiding local offset adjustments that can undercut the AeroAPI search window.
+  // Use the known flight times (or planned times as a fallback) and search with a generous
+  // +/- 4 hour window. We use the stored timestamps directly (already persisted as UTC),
+  // avoiding local offset adjustments that can undercut the AeroAPI search window.
   const baseStart = flight.startTime ?? flight.plannedStartTime ?? new Date();
   const baseEnd = flight.endTime ?? flight.plannedEndTime ?? baseStart;
 
-const searchStart = new Date(baseStart.getTime() - FOUR_HOURS_MS);
-const searchEnd = new Date(baseEnd.getTime() + FOUR_HOURS_MS);
+  const searchStart = new Date(baseStart.getTime() - FOUR_HOURS_MS);
+  const searchEnd = new Date(baseEnd.getTime() + FOUR_HOURS_MS);
 
   return {
     searchStart,
@@ -257,9 +258,46 @@ export async function triggerAutoImportForFlight({
 
     const window = deriveAutoImportWindow(flight);
     const providerClient = getAdsbProvider();
-    const candidates = dedupeImportCandidates(
-      await providerClient.searchFlights(tailNumber, window.searchStart, window.searchEnd)
-    );
+
+    const offsetMs =
+      (flight.startTime ?? flight.plannedStartTime ?? new Date()).getTimezoneOffset() *
+      60 *
+      1000;
+
+    const windows = [
+      // Primary +/-4h around stored times
+      { label: "primary-4h", start: window.searchStart, end: window.searchEnd },
+      // Offset +/-4h treating stored times as local wall-clock
+      {
+        label: "offset-4h",
+        start: new Date(window.referenceStart.getTime() + offsetMs - FOUR_HOURS_MS),
+        end: new Date(window.referenceEnd.getTime() + offsetMs + FOUR_HOURS_MS)
+      },
+      // Wide +/-24h around stored times
+      {
+        label: "primary-24h",
+        start: new Date(window.referenceStart.getTime() - TWENTY_FOUR_HOURS_MS),
+        end: new Date(window.referenceEnd.getTime() + TWENTY_FOUR_HOURS_MS)
+      },
+      // Wide offset +/-24h
+      {
+        label: "offset-24h",
+        start: new Date(window.referenceStart.getTime() + offsetMs - TWENTY_FOUR_HOURS_MS),
+        end: new Date(window.referenceEnd.getTime() + offsetMs + TWENTY_FOUR_HOURS_MS)
+      }
+    ];
+
+    const mergedCandidates = new Map<string, FlightCandidate>();
+    for (const w of windows) {
+      const found = await providerClient.searchFlights(tailNumber, w.start, w.end);
+      for (const f of dedupeImportCandidates(found)) {
+        mergedCandidates.set(f.providerFlightId, f);
+      }
+      if (mergedCandidates.size > 0) {
+        break;
+      }
+    }
+    const candidates = [...mergedCandidates.values()];
 
     if (candidates.length === 0) {
       await updateAutoImportStatus(flightId, "NOT_FOUND", null);

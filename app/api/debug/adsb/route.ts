@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdsbProvider } from "@/app/lib/adsb";
+import { defaultProviderName, getAdsbProvider } from "@/app/lib/adsb";
 
 // Debug-only endpoint to exercise the ADS-B provider with a specific tail/time range.
 // Example:
@@ -25,14 +25,56 @@ export async function GET(request: Request) {
     const windowEnd = new Date(start.getTime() + msAfter);
 
     const provider = getAdsbProvider();
-    const flights = await provider.searchFlights(tail, windowStart, windowEnd);
+
+    const offsetMs = start.getTimezoneOffset() * 60 * 1000;
+    const windows = [
+      { label: "primary", start: windowStart, end: windowEnd },
+      {
+        label: "offset",
+        start: new Date(windowStart.getTime() + offsetMs),
+        end: new Date(windowEnd.getTime() + offsetMs)
+      },
+      {
+        label: "primary-24h",
+        start: new Date(start.getTime() - 24 * 60 * 60 * 1000),
+        end: new Date(start.getTime() + 24 * 60 * 60 * 1000)
+      },
+      {
+        label: "offset-24h",
+        start: new Date(start.getTime() + offsetMs - 24 * 60 * 60 * 1000),
+        end: new Date(start.getTime() + offsetMs + 24 * 60 * 60 * 1000)
+      }
+    ];
+
+    const results: Array<{
+      label: string;
+      windowStart: string;
+      windowEnd: string;
+      count: number;
+    }> = [];
+    const mergedMap = new Map<string, Awaited<ReturnType<typeof provider.searchFlights>>[number]>();
+
+    for (const w of windows) {
+      const found = await provider.searchFlights(tail, w.start, w.end);
+      results.push({
+        label: w.label,
+        windowStart: w.start.toISOString(),
+        windowEnd: w.end.toISOString(),
+        count: found.length
+      });
+      for (const f of found) {
+        mergedMap.set(f.providerFlightId, f);
+      }
+    }
+
+    const merged = [...mergedMap.values()];
 
     return NextResponse.json({
       tail,
-      windowStart: windowStart.toISOString(),
-      windowEnd: windowEnd.toISOString(),
-      count: flights.length,
-      flights: flights.map((f) => ({
+      provider: defaultProviderName,
+      windows: results,
+      mergedCount: merged.length,
+      flights: merged.map((f) => ({
         providerFlightId: f.providerFlightId,
         tailNumber: f.tailNumber,
         startTime: f.startTime.toISOString(),
