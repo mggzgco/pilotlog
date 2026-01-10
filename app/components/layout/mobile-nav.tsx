@@ -6,10 +6,14 @@ import { Menu, X } from "lucide-react";
 import { navItems } from "@/app/components/layout/sidebar";
 import { Button } from "@/app/components/ui/button";
 import { usePathname } from "next/navigation";
+import { SidebarAccount } from "@/app/components/layout/sidebar-account";
+import { logoutAction } from "@/app/lib/actions/auth-actions";
 
 interface MobileNavProps {
   user: {
     name: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
     email: string;
     role: "USER" | "ADMIN";
   };
@@ -72,8 +76,16 @@ export function MobileNav({ user }: MobileNavProps) {
             })}
           </nav>
 
-          <div className="mt-8 text-xs text-slate-500 dark:text-slate-500">
-            Signed in as {user.name ?? user.email}
+          <div className="mt-8 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <SidebarAccount
+              user={{
+                name: user.name ?? null,
+                firstName: (user as any).firstName ?? null,
+                lastName: (user as any).lastName ?? null,
+                email: user.email
+              }}
+              onLogout={logoutAction}
+            />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

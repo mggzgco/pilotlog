@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plane, ClipboardList, Receipt, Radar, BarChart3 } from "lucide-react";
+import { SidebarAccount, SidebarAccountUser } from "@/app/components/layout/sidebar-account";
+import { logoutAction } from "@/app/lib/actions/auth-actions";
 
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
@@ -12,7 +14,7 @@ export const navItems = [
   { href: "/aircraft", label: "Aircraft", icon: Plane }
 ];
 
-export function Sidebar() {
+export function Sidebar({ user }: { user: SidebarAccountUser }) {
   // UX-001: persistent left navigation for core modules
   const pathname = usePathname();
   const isChecklistFocus = pathname?.startsWith("/checklists");
@@ -44,8 +46,8 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="text-xs text-slate-500 dark:text-slate-500">
-        Secure sessions
+      <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-800">
+        <SidebarAccount user={user} onLogout={logoutAction} />
       </div>
     </aside>
   );

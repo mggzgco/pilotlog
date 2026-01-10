@@ -1,5 +1,3 @@
-import { UserMenu } from "@/app/components/layout/user-menu";
-import { logoutAction } from "@/app/lib/actions/auth-actions";
 import { MobileNav } from "@/app/components/layout/mobile-nav";
 
 interface TopbarProps {
@@ -25,15 +23,6 @@ export function Topbar({ user }: TopbarProps) {
               Plan, import, and log every flight.
             </p>
           </div>
-        </div>
-        <div className="shrink-0">
-          <UserMenu
-            name={user.name}
-            firstName={user.firstName}
-            lastName={user.lastName}
-            email={user.email}
-            onLogout={logoutAction}
-          />
         </div>
       </div>
     </header>
