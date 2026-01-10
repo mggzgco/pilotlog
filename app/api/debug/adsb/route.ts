@@ -110,11 +110,11 @@ export async function GET(request: Request) {
         raw = {};
         const headers = { "x-apikey": apiKey, Authorization: `Bearer ${apiKey}` };
         const primaryUrl = new URL(`flights/${encodeURIComponent(tail)}`, apiBase);
-        primaryUrl.searchParams.set("start", Math.floor(windowStart.getTime() / 1000).toString());
-        primaryUrl.searchParams.set("end", Math.floor(windowEnd.getTime() / 1000).toString());
+        primaryUrl.searchParams.set("start", windowStart.toISOString());
+        primaryUrl.searchParams.set("end", windowEnd.toISOString());
         primaryUrl.searchParams.set("max_pages", "5");
 
-        const searchUrl = new URL("search/flights", apiBase);
+        const searchUrl = new URL("flights/search", apiBase);
         const searchQuery = `-idents ${tail} -begin ${epochStart} -end ${epochEnd}`;
         searchUrl.searchParams.set("query", searchQuery);
         searchUrl.searchParams.set("max_pages", "5");
@@ -175,7 +175,7 @@ export async function GET(request: Request) {
           `-ident ${tail}`
         ];
         for (const [idx, q] of searchVariants.entries()) {
-          const urlVariant = new URL("search/flights", apiBase);
+          const urlVariant = new URL("flights/search", apiBase);
           urlVariant.searchParams.set("query", q);
           urlVariant.searchParams.set("max_pages", "5");
           await probe(`search_direct_variant_${idx + 1}`, urlVariant, {
