@@ -84,11 +84,43 @@ function computeMaxGroundspeed(track: FlightTrackPoint[]) {
   return maxGroundspeed;
 }
 
+let cachedAeroApiKey: string | null | undefined;
+
+async function resolveAeroApiKey(): Promise<string | null> {
+  if (cachedAeroApiKey !== undefined) {
+    return cachedAeroApiKey;
+  }
+
+  const envKey =
+    process.env.AEROAPI_KEY?.trim() ||
+    process.env.AEROAPI_API_KEY?.trim() ||
+    process.env.FLIGHTAWARE_API_KEY?.trim();
+  if (envKey) {
+    cachedAeroApiKey = envKey;
+    return envKey;
+  }
+
+  const keyFile = process.env.AEROAPI_KEY_FILE?.trim();
+  if (!keyFile) {
+    return null;
+  }
+
+  const { readFile } = await import("fs/promises");
+  try {
+    const fileKey = (await readFile(keyFile, "utf8")).trim();
+    cachedAeroApiKey = fileKey || null;
+  } catch {
+    return null;
+  }
+
+  return cachedAeroApiKey ?? null;
+}
+
 async function fetchAeroApi<T>(
   path: string,
   params: Record<string, string | number | null | undefined> = {}
 ): Promise<T> {
-  const apiKey = process.env.AEROAPI_KEY?.trim();
+  const apiKey = await resolveAeroApiKey();
   if (!apiKey) {
     throw new AdsbProviderError("AeroAPI key is missing.");
   }

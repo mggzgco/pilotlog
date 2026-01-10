@@ -10,7 +10,7 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
-    "test": "vitest"
+    "test": "npx --yes vitest"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
