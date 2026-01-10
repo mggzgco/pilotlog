@@ -246,6 +246,7 @@ export default async function FlightDetailPage({
   const needsReceipts = !hasReceipts;
   const showCompletionPanel =
     isPostflightAccepted && (needsAdsB || needsLogbook || needsCosts || needsReceipts);
+  const showImportQuickAction = needsAdsB;
 
   return (
     <div className="space-y-6">
@@ -331,6 +332,30 @@ export default async function FlightDetailPage({
             Importing ADS-B…
           </div>
         </div>
+      ) : null}
+
+      {showImportQuickAction ? (
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Import ADS-B (optional)</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2">
+              <p className="text-sm text-slate-300">
+                Import a track now, even if you have not started the checklists. This is
+                handy for post-hoc flight entry.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild>
+                  <Link href={`/flights/${flight.id}/match`}>Select ADS-B match</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href={`/import?flightId=${flight.id}`}>Manual import</Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : null}
 
       {showAutoImportSuccess ? (
