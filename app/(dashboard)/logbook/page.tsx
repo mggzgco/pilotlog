@@ -7,6 +7,7 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { CreateLogbookEntryModal } from "@/app/components/logbook/create-logbook-entry-modal";
 import { LogbookRowMenu } from "@/app/components/logbook/logbook-row-menu";
+import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 
 const metrics = [
   { key: "totalTime", label: "Total" },
@@ -285,6 +286,10 @@ export default async function LogbookPage({
     return { id: flight.id, label };
   });
 
+  const filtersDefaultOpen = Boolean(
+    startDate || endDate || aircraftFilter || searchFilter || flightIdFilter || searchParams?.metrics
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -341,12 +346,8 @@ export default async function LogbookPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <p className="text-sm text-slate-600 dark:text-slate-400">Filters</p>
-        </CardHeader>
-        <CardContent>
-          <form method="get" className="grid gap-3 lg:grid-cols-4">
+      <CollapsibleCard title="Filters" defaultOpen={filtersDefaultOpen}>
+        <form method="get" className="grid gap-3 lg:grid-cols-4">
             <Input
               name="startDate"
               type="date"
@@ -406,9 +407,8 @@ export default async function LogbookPage({
                 <Link href="/logbook">Reset</Link>
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+        </form>
+      </CollapsibleCard>
 
       <Card>
         <CardHeader>

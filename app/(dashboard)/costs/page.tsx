@@ -6,6 +6,7 @@ import { createCostAction } from "@/app/lib/actions/cost-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
+import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 import {
   costCategoryOptions,
   costCategoryValues,
@@ -183,6 +184,9 @@ export default async function CostsPage({
     : new Date().toISOString().slice(0, 10);
 
   const receiptAccept = Object.keys(ALLOWED_RECEIPT_MIME_TYPES).join(",");
+  const filtersDefaultOpen = Boolean(
+    startDate || endDate || resolvedCategoryFilter || aircraftFilter || flightIdFilter
+  );
 
   return (
     <div className="space-y-6">
@@ -233,12 +237,8 @@ export default async function CostsPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <p className="text-sm text-slate-600 dark:text-slate-400">Filters</p>
-        </CardHeader>
-        <CardContent>
-          <form method="get" className="grid gap-3 lg:grid-cols-5">
+      <CollapsibleCard title="Filters" defaultOpen={filtersDefaultOpen}>
+        <form method="get" className="grid gap-3 lg:grid-cols-5">
             <Input
               name="startDate"
               type="date"
@@ -305,9 +305,8 @@ export default async function CostsPage({
                 <Link href="/costs">Reset</Link>
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+        </form>
+      </CollapsibleCard>
 
       <Card>
         <CardHeader>

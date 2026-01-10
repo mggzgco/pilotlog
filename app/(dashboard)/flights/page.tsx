@@ -7,6 +7,7 @@ import { Input } from "@/app/components/ui/input";
 import { EmptyState } from "@/app/components/ui/empty-state";
 import { FlightsTable } from "@/app/components/flights/flights-table";
 import { CreateFlightModal } from "@/app/components/flights/create-flight-modal";
+import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 import { Plane } from "lucide-react";
 
 type FlightsSearchParams = {
@@ -252,6 +253,15 @@ export default async function FlightsPage({
     label: entry.email ? `${entry.name} · ${entry.email}` : entry.name
   }));
 
+  const filtersDefaultOpen = Boolean(
+    search ||
+      startDate ||
+      endDate ||
+      statusFilter ||
+      aircraftId ||
+      (sort && sort !== "date_desc")
+  );
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -268,7 +278,7 @@ export default async function FlightsPage({
         />
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+      <CollapsibleCard title="Filters" defaultOpen={filtersDefaultOpen}>
         <form
           method="get"
           className="grid gap-3 md:grid-cols-2 lg:grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr] lg:items-end"
@@ -363,7 +373,7 @@ export default async function FlightsPage({
             </Button>
           </div>
         </form>
-      </div>
+      </CollapsibleCard>
 
       {flightRows.length === 0 ? (
         <EmptyState

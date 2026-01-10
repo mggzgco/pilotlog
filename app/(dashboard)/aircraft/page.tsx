@@ -3,15 +3,48 @@ import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
 import { CreateAircraftModal } from "@/app/components/aircraft/create-aircraft-modal";
 import { AircraftRowMenu } from "@/app/components/aircraft/aircraft-row-menu";
+import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 
-export default async function AircraftPage() {
+type AircraftSearchParams = {
+  search?: string;
+  category?: string;
+};
+
+export default async function AircraftPage({ searchParams }: { searchParams?: AircraftSearchParams }) {
   const user = await requireUser();
+
+  const search = (searchParams?.search ?? "").trim();
+  const category = (searchParams?.category ?? "").trim();
+  const allowedCategories = new Set([
+    "SINGLE_ENGINE_PISTON",
+    "MULTI_ENGINE_PISTON",
+    "SINGLE_ENGINE_TURBINE",
+    "MULTI_ENGINE_TURBINE",
+    "JET",
+    "GLIDER",
+    "HELICOPTER",
+    "OTHER"
+  ]);
+  const categoryFilter = allowedCategories.has(category) ? category : "";
 
   const [aircraft, aircraftTypes] = await Promise.all([
     prisma.aircraft.findMany({
-      where: { userId: user.id },
+      where: {
+        userId: user.id,
+        ...(categoryFilter ? { category: categoryFilter as any } : {}),
+        ...(search
+          ? {
+              OR: [
+                { tailNumber: { contains: search, mode: "insensitive" } },
+                { manufacturer: { contains: search, mode: "insensitive" } },
+                { model: { contains: search, mode: "insensitive" } }
+              ]
+            }
+          : {})
+      },
       include: {
         aircraftType: {
           include: {
@@ -80,6 +113,35 @@ export default async function AircraftPage() {
           </Button>
         </div>
       </div>
+
+      <CollapsibleCard title="Filters" defaultOpen={Boolean(search || categoryFilter)}>
+        <form method="get" className="grid gap-3 lg:grid-cols-3">
+          <Input name="search" placeholder="Search tail, manufacturer, model" defaultValue={search} />
+          <select
+            name="category"
+            defaultValue={categoryFilter}
+            className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
+          >
+            <option value="">All types</option>
+            <option value="SINGLE_ENGINE_PISTON">Single-engine piston</option>
+            <option value="MULTI_ENGINE_PISTON">Multi-engine piston</option>
+            <option value="SINGLE_ENGINE_TURBINE">Single-engine turbine</option>
+            <option value="MULTI_ENGINE_TURBINE">Multi-engine turbine</option>
+            <option value="JET">Jet</option>
+            <option value="HELICOPTER">Helicopter</option>
+            <option value="GLIDER">Glider</option>
+            <option value="OTHER">Other</option>
+          </select>
+          <div className="flex flex-wrap gap-2 lg:col-span-3">
+            <Button type="submit" variant="outline">
+              Apply filters
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/aircraft">Reset</Link>
+            </Button>
+          </div>
+        </form>
+      </CollapsibleCard>
 
       <Card>
         <CardHeader>
