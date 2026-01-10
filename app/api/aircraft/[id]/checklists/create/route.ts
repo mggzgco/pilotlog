@@ -12,6 +12,8 @@ type Payload = {
     personalOrder?: number;
     steps: Array<{
       title: string;
+      itemLabel?: string;
+      acceptanceCriteria?: string;
       instructions?: string;
       officialOrder?: number;
       personalOrder?: number;
@@ -60,6 +62,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const cleanedSteps = steps
         .map((step) => ({
           title: typeof step.title === "string" ? step.title.trim() : "",
+          itemLabel: typeof step.itemLabel === "string" ? step.itemLabel.trim() : "",
+          acceptanceCriteria:
+            typeof step.acceptanceCriteria === "string" ? step.acceptanceCriteria.trim() : "",
           instructions: typeof step.instructions === "string" ? step.instructions.trim() : "",
           officialOrder: Number.isFinite(step.officialOrder) ? Number(step.officialOrder) : null,
           personalOrder: Number.isFinite(step.personalOrder) ? Number(step.personalOrder) : null
@@ -143,6 +148,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
             personalOrder,
             order: personalOrder,
             title: step.title,
+            itemLabel: step.itemLabel || null,
+            acceptanceCriteria: step.acceptanceCriteria || null,
             details: step.instructions || null,
             required: true,
             inputType: "CHECK"

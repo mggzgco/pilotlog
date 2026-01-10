@@ -54,6 +54,8 @@ export default async function FlightChecklistsPage({
       officialOrder: item.officialOrder,
       personalOrder: item.personalOrder,
       title: item.title,
+      itemLabel: item.itemLabel,
+      acceptanceCriteria: item.acceptanceCriteria,
       details: item.details,
       required: item.required,
       inputType: item.inputType,

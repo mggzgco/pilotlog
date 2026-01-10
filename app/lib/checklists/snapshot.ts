@@ -57,6 +57,8 @@ export async function createChecklistRunSnapshot({
         officialOrder,
         personalOrder,
         title: item.title,
+        itemLabel: (item as any).itemLabel ?? null,
+        acceptanceCriteria: (item as any).acceptanceCriteria ?? null,
         details: item.details,
         required: item.required,
         inputType: item.inputType

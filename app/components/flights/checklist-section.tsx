@@ -53,6 +53,8 @@ export type ChecklistItemView = {
   officialOrder: number;
   personalOrder: number;
   title: string;
+  itemLabel?: string | null;
+  acceptanceCriteria?: string | null;
   details: string | null;
   required: boolean;
   inputType: ChecklistInputType;
@@ -682,17 +684,22 @@ export function ChecklistSection({
     );
 
     const displayRows: Array<{ item: ChecklistItemView; depth: 0 | 1; prefix?: string }> = [];
+    let topIndex = 0;
     for (const item of topLevelItems) {
-      displayRows.push({ item, depth: 0 });
+      topIndex += 1;
       if (item.kind === "SECTION") {
+        displayRows.push({ item, depth: 0, prefix: `${topIndex}` });
         const children = childrenByParent[item.id] ?? [];
         children.forEach((child, index) => {
           displayRows.push({
             item: child,
             depth: 1,
-            prefix: `${String.fromCharCode(97 + index)}.)`
+            prefix: `${topIndex}.${index + 1}`
           });
         });
+      } else {
+        // Root step (no section)
+        displayRows.push({ item, depth: 0, prefix: `${topIndex}` });
       }
     }
 
@@ -790,7 +797,7 @@ export function ChecklistSection({
                     className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3"
                   >
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-                      {item.title}
+                      {row.prefix ? `${row.prefix}. ${item.title}` : item.title}
                     </p>
                     {item.details ? (
                       <p className="mt-1 text-xs text-slate-400">{item.details}</p>
@@ -818,12 +825,13 @@ export function ChecklistSection({
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-lg font-semibold text-slate-100">
-                          {(() => {
-                            const prefix =
-                              row.prefix ?? (row.depth === 0 ? `${getSortKey(item)}.` : "");
-                            return prefix ? `${prefix} ${item.title}` : item.title;
-                          })()}
+                          {row.prefix ? `${row.prefix} ` : ""}{item.itemLabel?.trim() || item.title}
                         </p>
+                        {item.acceptanceCriteria ? (
+                          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-200">
+                            {item.acceptanceCriteria}
+                          </span>
+                        ) : null}
                         {item.required ? (
                           <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
                             Required

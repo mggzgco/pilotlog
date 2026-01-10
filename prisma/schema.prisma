@@ -394,6 +394,8 @@ model ChecklistTemplateItem {
   officialOrder Int            @default(0)
   personalOrder Int            @default(0)
   title      String
+  itemLabel  String?
+  acceptanceCriteria String?
   details    String?
   required   Boolean            @default(true)
   inputType  ChecklistInputType @default(CHECK)
@@ -434,6 +436,8 @@ model FlightChecklistItem {
   officialOrder  Int                @default(0)
   personalOrder  Int                @default(0)
   title          String
+  itemLabel      String?
+  acceptanceCriteria String?
   details        String?
   required       Boolean
   inputType      ChecklistInputType

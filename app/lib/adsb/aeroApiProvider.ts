@@ -276,6 +276,8 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
 
   // AeroAPI altitude units can vary by endpoint/account. We normalize by detecting
   // "hundreds of feet" style values (e.g. 34 => 3,400 ft) based on max altitude.
+  //
+  // Important: Keep this threshold in sync with any backward-compatible display fix.
   const maxRawAltitude = rawPoints.reduce<number>((max, point) => {
     const value = point.altitudeFeet;
     if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -283,7 +285,9 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
     }
     return Math.max(max, value);
   }, 0);
-  const altitudeScale = maxRawAltitude > 0 && maxRawAltitude <= 700 ? 100 : 1;
+  // Heuristic: treat values <= 250 as flight levels/hundreds-of-feet (FL250 => 25,000 ft).
+  // This avoids incorrectly scaling genuinely low-altitude flights in the hundreds of feet.
+  const altitudeScale = maxRawAltitude > 0 && maxRawAltitude <= 250 ? 100 : 1;
 
   if (altitudeScale === 1) {
     return rawPoints;
@@ -329,9 +333,9 @@ export class AeroApiAdsbProvider implements AdsbProvider {
       // 2) Secondary: live flights by ident if history empty
       if (flights.length === 0) {
         try {
-          const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
-            `/flights/${encodeURIComponent(normalizedTailNumber)}`,
-            {
+    const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
+      `/flights/${encodeURIComponent(normalizedTailNumber)}`,
+      {
               start: isoStart,
               end: isoEnd,
               max_pages: 5
@@ -374,12 +378,12 @@ export class AeroApiAdsbProvider implements AdsbProvider {
         }
       }
 
-      const candidates = await Promise.all(
-        flights.map(async (flight) => {
-          const faFlightId = flight.fa_flight_id ?? null;
+    const candidates = await Promise.all(
+      flights.map(async (flight) => {
+        const faFlightId = flight.fa_flight_id ?? null;
           if (!faFlightId) {
-            return null;
-          }
+          return null;
+        }
 
           const resolvedTimes = resolveFlightTimes(flight);
 
@@ -400,31 +404,31 @@ export class AeroApiAdsbProvider implements AdsbProvider {
           const inferredEnd =
             resolvedTimes.end ?? (trackPoints[trackPoints.length - 1]?.recordedAt ?? null);
           if (!inferredStart || !inferredEnd) {
-            return null;
-          }
+          return null;
+        }
 
           const durationMinutes = computeDurationMinutes(inferredStart, inferredEnd, trackPoints);
-          const distanceNm = computeDistanceNm(trackPoints);
+        const distanceNm = computeDistanceNm(trackPoints);
 
-          return {
-            providerFlightId: `${AEROAPI_PROVIDER_NAME}-${faFlightId}`,
-            tailNumber: normalizedTailNumber,
+        return {
+          providerFlightId: `${AEROAPI_PROVIDER_NAME}-${faFlightId}`,
+          tailNumber: normalizedTailNumber,
             startTime: inferredStart,
             endTime: inferredEnd,
-            durationMinutes,
-            distanceNm,
-            depLabel: resolveAirportLabel(flight.origin),
-            arrLabel: resolveAirportLabel(flight.destination),
-            stats: {
-              maxAltitudeFeet: computeMaxAltitude(trackPoints) ?? null,
-              maxGroundspeedKt: computeMaxGroundspeed(trackPoints) ?? null
-            },
-            track: trackPoints
-          } satisfies FlightCandidate;
-        })
-      );
+          durationMinutes,
+          distanceNm,
+          depLabel: resolveAirportLabel(flight.origin),
+          arrLabel: resolveAirportLabel(flight.destination),
+          stats: {
+            maxAltitudeFeet: computeMaxAltitude(trackPoints) ?? null,
+            maxGroundspeedKt: computeMaxGroundspeed(trackPoints) ?? null
+          },
+          track: trackPoints
+        } satisfies FlightCandidate;
+      })
+    );
 
-      return candidates.filter((candidate): candidate is FlightCandidate => candidate !== null);
+    return candidates.filter((candidate): candidate is FlightCandidate => candidate !== null);
     } catch (error) {
       if (error instanceof AdsbProviderError && error.status && error.status >= 500) {
         // Treat upstream 5xx as "no results" instead of crashing the app.

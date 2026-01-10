@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { AeroApiAdsbProvider } from "@/app/lib/adsb/aeroApiProvider";
+import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { handleApiError } from "@/src/lib/security/errors";
 
 export async function POST(
@@ -9,6 +10,20 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const csrf = validateRequestCsrf(request);
+    if (!csrf.ok) {
+      const origin = new URL(request.url).origin;
+      const referer = request.headers.get("referer");
+      const refererUrl = referer ? new URL(referer) : null;
+      const redirectUrl =
+        refererUrl && refererUrl.origin === origin
+          ? refererUrl
+          : new URL(`/flights/${params.id}`, request.url);
+      redirectUrl.searchParams.set("toast", csrf.error);
+      redirectUrl.searchParams.set("toastType", "error");
+      return NextResponse.redirect(redirectUrl, { status: 303 });
+    }
+
     const { user, session } = await getCurrentUser();
     if (!user || !session || user.status !== "ACTIVE") {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

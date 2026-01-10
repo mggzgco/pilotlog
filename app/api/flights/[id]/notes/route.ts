@@ -1,11 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
+import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrf = validateRequestCsrf(request);
+  if (!csrf.ok) {
+    const origin = new URL(request.url).origin;
+    const referer = request.headers.get("referer");
+    const refererUrl = referer ? new URL(referer) : null;
+    const redirectUrl =
+      refererUrl && refererUrl.origin === origin
+        ? refererUrl
+        : new URL(`/flights/${params.id}`, request.url);
+    redirectUrl.searchParams.set("toast", csrf.error);
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl, { status: 303 });
+  }
+
   const { user, session } = await getCurrentUser();
   if (!user || !session || user.status !== "ACTIVE") {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

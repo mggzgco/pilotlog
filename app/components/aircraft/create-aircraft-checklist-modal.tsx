@@ -14,6 +14,8 @@ type ChecklistPhase = "PREFLIGHT" | "POSTFLIGHT";
 type StepDraft = {
   id: string;
   title: string;
+  itemLabel: string;
+  acceptanceCriteria: string;
   instructions: string;
   officialOrder: number;
   personalOrder: number;
@@ -83,6 +85,8 @@ export function CreateAircraftChecklistModal({
           {
             id: newId(),
             title: "",
+            itemLabel: "",
+            acceptanceCriteria: "",
             instructions: "",
             officialOrder: 2,
             personalOrder: 2
@@ -117,6 +121,8 @@ export function CreateAircraftChecklistModal({
             {
               id: newId(),
               title: "",
+              itemLabel: "",
+              acceptanceCriteria: "",
               instructions: "",
               officialOrder: 2,
               personalOrder: 2
@@ -142,6 +148,8 @@ export function CreateAircraftChecklistModal({
             {
               id: newId(),
               title: "",
+              itemLabel: "",
+              acceptanceCriteria: "",
               instructions: "",
               officialOrder: 999,
               personalOrder: 0
@@ -182,6 +190,8 @@ export function CreateAircraftChecklistModal({
                   {
                     id: newId(),
                     title: "",
+                    itemLabel: "",
+                    acceptanceCriteria: "",
                     instructions: "",
                     officialOrder: 999,
                     personalOrder: 0
@@ -250,6 +260,8 @@ export function CreateAircraftChecklistModal({
               steps: section.steps
                 .map((step) => ({
                   title: step.title.trim(),
+                  itemLabel: step.itemLabel.trim(),
+                  acceptanceCriteria: step.acceptanceCriteria.trim(),
                   instructions: step.instructions.trim(),
                   officialOrder: step.officialOrder,
                   personalOrder: step.personalOrder
@@ -455,7 +467,47 @@ export function CreateAircraftChecklistModal({
                                         )
                                       )
                                     }
-                                    placeholder='e.g., "Battery 1 switch - ON"'
+                                    placeholder='Action (e.g., "Switch")'
+                                  />
+                                  <Input
+                                    value={step.itemLabel}
+                                    onChange={(e) =>
+                                      setSections((prev) =>
+                                        prev.map((s) =>
+                                          s.id !== section.id
+                                            ? s
+                                            : {
+                                                ...s,
+                                                steps: s.steps.map((st) =>
+                                                  st.id === step.id
+                                                    ? { ...st, itemLabel: e.target.value }
+                                                    : st
+                                                )
+                                              }
+                                        )
+                                      )
+                                    }
+                                    placeholder='Item (e.g., "BAT 1 Switch")'
+                                  />
+                                  <Input
+                                    value={step.acceptanceCriteria}
+                                    onChange={(e) =>
+                                      setSections((prev) =>
+                                        prev.map((s) =>
+                                          s.id !== section.id
+                                            ? s
+                                            : {
+                                                ...s,
+                                                steps: s.steps.map((st) =>
+                                                  st.id === step.id
+                                                    ? { ...st, acceptanceCriteria: e.target.value }
+                                                    : st
+                                                )
+                                              }
+                                        )
+                                      )
+                                    }
+                                    placeholder='Acceptance (e.g., "ON")'
                                   />
                                   <div className="flex items-center gap-2">
                                     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">

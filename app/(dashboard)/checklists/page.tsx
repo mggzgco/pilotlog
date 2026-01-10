@@ -4,11 +4,10 @@ import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
-  addChecklistTemplateItemAction,
   createChecklistTemplateAction,
-  moveChecklistTemplateItemAction,
   setChecklistTemplateDefaultAction
 } from "@/app/lib/actions/checklist-template-actions";
+import Link from "next/link";
 
 const phases = [
   { value: "PREFLIGHT", label: "Pre-flight" },
@@ -20,7 +19,7 @@ export default async function ChecklistsPage() {
 
   const templates = await prisma.checklistTemplate.findMany({
     where: { userId: user.id },
-    include: { items: { orderBy: { personalOrder: "asc" } } },
+    select: { id: true, name: true, phase: true, isDefault: true },
     orderBy: [{ phase: "asc" }, { createdAt: "desc" }]
   });
 
@@ -106,71 +105,24 @@ export default async function ChecklistsPage() {
                         {template.name}
                       </p>
                     </div>
-                    {template.isDefault ? (
-                      <span className="rounded-full bg-brand-600/20 px-3 py-1 text-xs text-brand-200">
-                        Default
-                      </span>
-                    ) : (
-                      <form action={setChecklistTemplateDefaultAction}>
-                        <input type="hidden" name="templateId" value={template.id} />
-                        <Button type="submit" variant="outline" size="sm">
-                          Set default
-                        </Button>
-                      </form>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {template.isDefault ? (
+                        <span className="rounded-full bg-brand-600/20 px-3 py-1 text-xs text-brand-200">
+                          Default
+                        </span>
+                      ) : (
+                        <form action={setChecklistTemplateDefaultAction}>
+                          <input type="hidden" name="templateId" value={template.id} />
+                          <Button type="submit" variant="outline" size="sm">
+                            Set default
+                          </Button>
+                        </form>
+                      )}
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/checklists/${template.id}`}>Edit</Link>
+                      </Button>
+                    </div>
                   </div>
-
-                  <div className="mt-4">
-                    <p className="text-xs uppercase text-slate-500">Items</p>
-                    {template.items.length === 0 ? (
-                      <p className="mt-2 text-sm text-slate-500">
-                        No items yet. Add checklist steps below.
-                      </p>
-                    ) : (
-                      <ol className="mt-2 space-y-2 text-sm text-slate-200">
-                        {template.items.map((item, index) => (
-                          <li
-                            key={item.id}
-                            className="flex items-center justify-between gap-3 rounded-md border border-slate-800 px-3 py-2"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs text-slate-500">
-                                {index + 1}.
-                              </span>
-                              <span>{item.title}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <form action={moveChecklistTemplateItemAction}>
-                                <input type="hidden" name="itemId" value={item.id} />
-                                <input type="hidden" name="direction" value="up" />
-                                <Button type="submit" size="sm" variant="ghost">
-                                  ↑
-                                </Button>
-                              </form>
-                              <form action={moveChecklistTemplateItemAction}>
-                                <input type="hidden" name="itemId" value={item.id} />
-                                <input type="hidden" name="direction" value="down" />
-                                <Button type="submit" size="sm" variant="ghost">
-                                  ↓
-                                </Button>
-                              </form>
-                            </div>
-                          </li>
-                        ))}
-                      </ol>
-                    )}
-                  </div>
-
-                  <form
-                    action={addChecklistTemplateItemAction}
-                    className="mt-4 flex flex-col gap-3 lg:flex-row"
-                  >
-                    <input type="hidden" name="templateId" value={template.id} />
-                    <Input name="title" placeholder="New checklist item" required />
-                    <Button type="submit" variant="outline">
-                      Add item
-                    </Button>
-                  </form>
                 </div>
               ))
             )}
