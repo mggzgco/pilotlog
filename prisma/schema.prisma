@@ -76,6 +76,7 @@ model User {
   flights            Flight[]
   people             Person[]
   aircraft           Aircraft[]
+  aircraftTypes      AircraftType[]
   logbook            LogbookEntry[]
   costItems          CostItem[]
   flightParticipants FlightParticipant[]
@@ -172,16 +173,42 @@ model Person {
 }
 
 model Aircraft {
-  id         String   @id @default(cuid())
-  userId     String
-  tailNumber String
-  model      String?
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flights    Flight[]
-  checklistTemplates ChecklistTemplate[]
+  id                            String             @id @default(cuid())
+  userId                        String
+  aircraftTypeId                String?
+  tailNumber                    String
+  model                         String?
+  preflightChecklistTemplateId  String?
+  postflightChecklistTemplateId String?
+  createdAt                     DateTime           @default(now())
+  user                          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aircraftType                  AircraftType?      @relation(fields: [aircraftTypeId], references: [id], onDelete: SetNull)
+  preflightChecklistTemplate    ChecklistTemplate? @relation("AircraftPreflightChecklist", fields: [preflightChecklistTemplateId], references: [id], onDelete: SetNull)
+  postflightChecklistTemplate   ChecklistTemplate? @relation("AircraftPostflightChecklist", fields: [postflightChecklistTemplateId], references: [id], onDelete: SetNull)
+  flights                       Flight[]
 
   @@unique([userId, tailNumber])
+  @@index([aircraftTypeId])
+  @@index([preflightChecklistTemplateId])
+  @@index([postflightChecklistTemplateId])
+}
+
+model AircraftType {
+  id                          String             @id @default(cuid())
+  userId                      String
+  name                        String
+  defaultPreflightTemplateId  String?
+  defaultPostflightTemplateId String?
+  createdAt                   DateTime           @default(now())
+  user                        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aircraft                    Aircraft[]
+  defaultPreflightTemplate    ChecklistTemplate? @relation("AircraftTypePreflightChecklist", fields: [defaultPreflightTemplateId], references: [id], onDelete: SetNull)
+  defaultPostflightTemplate   ChecklistTemplate? @relation("AircraftTypePostflightChecklist", fields: [defaultPostflightTemplateId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([defaultPreflightTemplateId])
+  @@index([defaultPostflightTemplateId])
 }
 
 model LogbookEntry {
@@ -285,18 +312,13 @@ model ChecklistTemplate {
   name              String
   phase             ChecklistPhase
   isDefault         Boolean               @default(false)
-  aircraftId        String?
-  aircraftTailNumber String?
   makeModel         String?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   user              User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
-  aircraft          Aircraft?             @relation(fields: [aircraftId], references: [id], onDelete: SetNull)
   items             ChecklistTemplateItem[]
 
   @@index([phase, isDefault])
-  @@index([aircraftTailNumber])
-  @@index([aircraftId])
 }
 
 model ChecklistTemplateItem {

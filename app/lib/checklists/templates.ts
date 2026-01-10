@@ -7,7 +7,6 @@ export type ChecklistTemplateWithItems = Prisma.ChecklistTemplateGetPayload<{
 
 type SelectTemplateInput = {
   userId: string;
-  tailNumber: string;
   aircraftId?: string | null;
   phase: ChecklistPhase;
   client?: Prisma.TransactionClient;
@@ -15,73 +14,48 @@ type SelectTemplateInput = {
 
 export async function selectChecklistTemplate({
   userId,
-  tailNumber,
   aircraftId,
   phase,
   client
 }: SelectTemplateInput): Promise<ChecklistTemplateWithItems | null> {
   const db = client ?? prisma;
-  const normalizedTail = tailNumber.trim();
+  const templateWithItems = (id: string) =>
+    db.checklistTemplate.findFirst({
+      where: { id },
+      include: { items: { orderBy: { order: "asc" } } }
+    });
 
   if (aircraftId) {
-    const userAircraftDefault = await db.checklistTemplate.findFirst({
-      where: {
-        userId,
-        phase,
-        aircraftId,
-        isDefault: true
-      },
-      include: { items: { orderBy: { order: "asc" } } }
+    const aircraft = await db.aircraft.findFirst({
+      where: { id: aircraftId, userId },
+      select: {
+        preflightChecklistTemplateId: true,
+        postflightChecklistTemplateId: true,
+        aircraftType: {
+          select: {
+            defaultPreflightTemplateId: true,
+            defaultPostflightTemplateId: true
+          }
+        }
+      }
     });
 
-    if (userAircraftDefault) {
-      return userAircraftDefault;
-    }
+    if (aircraft) {
+      const overrideId =
+        phase === "PREFLIGHT"
+          ? aircraft.preflightChecklistTemplateId
+          : aircraft.postflightChecklistTemplateId;
+      if (overrideId) {
+        return templateWithItems(overrideId);
+      }
 
-    const userAircraftTemplate = await db.checklistTemplate.findFirst({
-      where: {
-        userId,
-        phase,
-        aircraftId
-      },
-      orderBy: { updatedAt: "desc" },
-      include: { items: { orderBy: { order: "asc" } } }
-    });
-
-    if (userAircraftTemplate) {
-      return userAircraftTemplate;
-    }
-  }
-
-  if (normalizedTail) {
-    const userTailDefault = await db.checklistTemplate.findFirst({
-      where: {
-        userId,
-        phase,
-        aircraftId: null,
-        aircraftTailNumber: normalizedTail,
-        isDefault: true
-      },
-      include: { items: { orderBy: { order: "asc" } } }
-    });
-
-    if (userTailDefault) {
-      return userTailDefault;
-    }
-
-    const userTailTemplate = await db.checklistTemplate.findFirst({
-      where: {
-        userId,
-        phase,
-        aircraftId: null,
-        aircraftTailNumber: normalizedTail
-      },
-      orderBy: { updatedAt: "desc" },
-      include: { items: { orderBy: { order: "asc" } } }
-    });
-
-    if (userTailTemplate) {
-      return userTailTemplate;
+      const typeDefaultId =
+        phase === "PREFLIGHT"
+          ? aircraft.aircraftType?.defaultPreflightTemplateId
+          : aircraft.aircraftType?.defaultPostflightTemplateId;
+      if (typeDefaultId) {
+        return templateWithItems(typeDefaultId);
+      }
     }
   }
 
@@ -89,8 +63,6 @@ export async function selectChecklistTemplate({
     where: {
       userId,
       phase,
-      aircraftId: null,
-      aircraftTailNumber: null,
       isDefault: true
     },
     include: { items: { orderBy: { order: "asc" } } }
@@ -103,9 +75,7 @@ export async function selectChecklistTemplate({
   const userTemplate = await db.checklistTemplate.findFirst({
     where: {
       userId,
-      phase,
-      aircraftId: null,
-      aircraftTailNumber: null
+      phase
     },
     orderBy: { updatedAt: "desc" },
     include: { items: { orderBy: { order: "asc" } } }
@@ -119,7 +89,6 @@ export async function selectChecklistTemplate({
     where: {
       userId: null,
       phase,
-      aircraftId: null,
       isDefault: true
     },
     include: { items: { orderBy: { order: "asc" } } }
@@ -132,8 +101,7 @@ export async function selectChecklistTemplate({
   return db.checklistTemplate.findFirst({
     where: {
       userId: null,
-      phase,
-      aircraftId: null
+      phase
     },
     include: { items: { orderBy: { order: "asc" } } }
   });
