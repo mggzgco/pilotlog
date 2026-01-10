@@ -4,6 +4,7 @@ import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
+import { Prisma } from "@prisma/client";
 
 const emptyToNull = (value: unknown) =>
   value === "" || value === undefined ? null : value;
@@ -164,6 +165,19 @@ export async function POST(
     return NextResponse.redirect(redirectUrl, { status: 303 });
   } catch (error) {
     console.error("flight.update-logbook failed", error);
-    return redirectWithToast("Failed to save logbook.", "error");
+    const message = (() => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        return `Database error (${error.code}). Did you run migrations?`;
+      }
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        return "Database schema mismatch. Did you run migrations?";
+      }
+      const text = error instanceof Error ? error.message : String(error);
+      if (/column|does not exist|relation|table|migration/i.test(text)) {
+        return "Database schema mismatch. Run migrations and restart.";
+      }
+      return "Failed to save logbook.";
+    })();
+    return redirectWithToast(message, "error");
   }
 }

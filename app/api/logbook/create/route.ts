@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/app/lib/auth/session";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { logbookSchema } from "@/app/lib/validation";
 import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: Request) {
   const redirectWithToast = (message: string, toastType: "success" | "error") => {
@@ -126,7 +127,20 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("logbook.create failed", error);
-    return redirectWithToast("Failed to save logbook entry.", "error");
+    const message = (() => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        return `Database error (${error.code}). Did you run migrations?`;
+      }
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        return "Database schema mismatch. Did you run migrations?";
+      }
+      const text = error instanceof Error ? error.message : String(error);
+      if (/column|does not exist|relation|table|migration/i.test(text)) {
+        return "Database schema mismatch. Run migrations and restart.";
+      }
+      return "Failed to save logbook entry.";
+    })();
+    return redirectWithToast(message, "error");
   }
 }
 
