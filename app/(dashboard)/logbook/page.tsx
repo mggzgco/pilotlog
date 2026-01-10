@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/app/lib/db";
 import { getCurrentSession } from "@/app/lib/session";
-import { createLogbookEntryAction } from "@/app/lib/actions/logbook-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -396,7 +395,7 @@ export default async function LogbookPage({
           <p className="text-sm text-slate-600 dark:text-slate-400">Add logbook entry</p>
         </CardHeader>
         <CardContent>
-          <form action={createLogbookEntryAction} className="grid gap-3 lg:grid-cols-3">
+          <form action="/api/logbook/create" method="post" className="grid gap-3 lg:grid-cols-3">
             <select
               name="flightId"
               defaultValue={selectedFlight?.id ?? ""}
