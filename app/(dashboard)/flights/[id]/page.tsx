@@ -330,19 +330,19 @@ export default async function FlightDetailPage({
           <div className="grid gap-3 lg:grid-cols-6 lg:grid-rows-2">
             <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 lg:col-span-2 lg:row-span-2">
               <p className="text-xs font-semibold uppercase text-slate-400">Aircraft</p>
-              <div className="mt-2 flex items-center gap-3">
+              <div className="mt-3 flex items-start gap-4">
                 {flight.aircraft?.photoStoragePath ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`/api/aircraft/${flight.aircraft.id}/photo`}
                     alt={`${flight.tailNumberSnapshot ?? flight.tailNumber} aircraft photo`}
-                    className="h-12 w-12 rounded-md border border-slate-800 object-cover"
+                    className="h-32 w-32 rounded-lg border border-slate-800 object-cover"
                   />
                 ) : (
-                  <div className="h-12 w-12 rounded-md border border-slate-800 bg-slate-950/40" />
+                  <div className="h-32 w-32 rounded-lg border border-slate-800 bg-slate-950/40" />
                 )}
                 <div>
-                  <p className="text-lg font-semibold">
+                  <p className="text-xl font-semibold">
                     {flight.tailNumberSnapshot ?? flight.tailNumber}
                   </p>
                   <p className="text-xs text-slate-400">{aircraftTypeLabel}</p>
