@@ -2,21 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
-import {
-  assignAircraftChecklistAction,
-  createChecklistFromAircraftAction,
-  updateAircraftDetailsAction,
-  updateAircraftTypeAction
-} from "@/app/lib/actions/aircraft-actions";
+import { updateAircraftDetailsAction } from "@/app/lib/actions/aircraft-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
-
-const phases = [
-  { value: "PREFLIGHT", label: "Pre-flight" },
-  { value: "POSTFLIGHT", label: "Post-flight" }
-] as const;
+import { CreateAircraftChecklistModal } from "@/app/components/aircraft/create-aircraft-checklist-modal";
 
 const categoryOptions = [
   { value: "SINGLE_ENGINE_PISTON", label: "Single-engine piston" },
@@ -36,38 +27,77 @@ export default async function AircraftDetailPage({
 }) {
   const user = await requireUser();
 
-  const [aircraft, aircraftTypes, templates] = await Promise.all([
-    prisma.aircraft.findFirst({
-      where: { id: params.id, userId: user.id },
-      include: {
-        aircraftType: {
-          include: {
-            defaultPreflightTemplate: true,
-            defaultPostflightTemplate: true
-          }
-        },
-        preflightChecklistTemplate: true,
-        postflightChecklistTemplate: true
-      }
-    }),
-    prisma.aircraftType.findMany({
-      where: { userId: user.id },
-      orderBy: { name: "asc" }
-    }),
-    prisma.checklistTemplate.findMany({
-      where: { userId: user.id },
-      orderBy: { name: "asc" }
-    })
-  ]);
+  const aircraft = await prisma.aircraft.findFirst({
+    where: { id: params.id, userId: user.id },
+    include: {
+      preflightChecklistTemplate: { include: { items: { orderBy: { order: "asc" } } } },
+      postflightChecklistTemplate: { include: { items: { orderBy: { order: "asc" } } } }
+    }
+  });
 
   if (!aircraft) {
     notFound();
   }
 
-  const templatesByPhase = phases.map((phase) => ({
-    ...phase,
-    templates: templates.filter((template) => template.phase === phase.value)
-  }));
+  const renderChecklistTemplate = (
+    template:
+      | (typeof aircraft.preflightChecklistTemplate & { items?: Array<any> })
+      | null,
+    label: string
+  ) => {
+    if (!template) {
+      return (
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-400">
+          No {label} checklist assigned yet.
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {template.name}
+            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              {template.items?.length ?? 0} step{(template.items?.length ?? 0) === 1 ? "" : "s"}
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/checklists">Edit templates</Link>
+          </Button>
+        </div>
+
+        {(template.items?.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">No steps yet.</p>
+        ) : (
+          <ol className="mt-4 space-y-2 text-sm text-slate-900 dark:text-slate-100">
+            {template.items!.map((item: any, index: number) => (
+              <li
+                key={item.id}
+                className="rounded-md border border-slate-200 px-3 py-2 dark:border-slate-800"
+              >
+                <div className="flex gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {index + 1}.
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium">{item.title}</p>
+                    {item.details ? (
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                        {item.details}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -118,43 +148,36 @@ export default async function AircraftDetailPage({
               <Button type="submit">Save details</Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
 
-          <div className="border-t border-slate-800 pt-4" />
-
-          <form action={updateAircraftTypeAction} className="grid gap-4 lg:grid-cols-2">
-            <input type="hidden" name="aircraftId" value={aircraft.id} />
-            <label className="text-sm text-slate-300">
-              <span className="mb-1 block text-xs uppercase text-slate-500">
-                Checklist profile
-              </span>
-              <select
-                name="aircraftTypeId"
-                className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
-                defaultValue={aircraft.aircraftTypeId ?? ""}
-              >
-                <option value="">No profile selected</option>
-                {aircraftTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-                <option value="new">Create new type…</option>
-              </select>
-            </label>
-            <label className="text-sm text-slate-300">
-              <span className="mb-1 block text-xs uppercase text-slate-500">
-                Create new type…
-              </span>
-              <Input
-                name="newTypeName"
-                placeholder="e.g., SR20 G7"
-                autoComplete="off"
-              />
-            </label>
-            <div className="lg:col-span-2">
-              <Button type="submit">Update checklist profile</Button>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-600 dark:text-slate-400">Checklists</p>
+            <CreateAircraftChecklistModal aircraftId={aircraft.id} />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+              Pre-Flight
+            </p>
+            <div className="mt-2">
+              {renderChecklistTemplate(aircraft.preflightChecklistTemplate as any, "pre-flight")}
             </div>
-          </form>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+              Post-Flight
+            </p>
+            <div className="mt-2">
+              {renderChecklistTemplate(aircraft.postflightChecklistTemplate as any, "post-flight")}
+            </div>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Flights will only show checklists when a pre-flight and/or post-flight checklist is assigned to the aircraft.
+          </p>
         </CardContent>
       </Card>
 
@@ -194,133 +217,6 @@ export default async function AircraftDetailPage({
               JPG/PNG up to 10MB. This photo will appear on flight details for this aircraft.
             </p>
           </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <p className="text-sm text-slate-400">Checklist assignments</p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {templatesByPhase.map((phase) => {
-            const overrideTemplate =
-              phase.value === "PREFLIGHT"
-                ? aircraft.preflightChecklistTemplate
-                : aircraft.postflightChecklistTemplate;
-            const typeDefault =
-              phase.value === "PREFLIGHT"
-                ? aircraft.aircraftType?.defaultPreflightTemplate
-                : aircraft.aircraftType?.defaultPostflightTemplate;
-
-            return (
-              <div key={phase.value} className="rounded-lg border border-slate-800 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold text-slate-100">
-                      {phase.label}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Defaults are set on the aircraft type. Overrides apply only to this
-                      tail number.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <div className="space-y-2 rounded-md border border-slate-800 px-4 py-3">
-                    <p className="text-xs uppercase text-slate-500">Type default</p>
-                    <p className="text-sm text-slate-200">
-                      {typeDefault?.name ?? "Not assigned"}
-                    </p>
-                    {aircraft.aircraftType ? (
-                      <form action={assignAircraftChecklistAction} className="space-y-2">
-                        <input type="hidden" name="aircraftId" value={aircraft.id} />
-                        <input type="hidden" name="phase" value={phase.value} />
-                        <input type="hidden" name="scope" value="type" />
-                        <select
-                          name="templateId"
-                          className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
-                          defaultValue={typeDefault?.id ?? ""}
-                        >
-                          <option value="">No default</option>
-                          {phase.templates.map((template) => (
-                            <option key={template.id} value={template.id}>
-                              {template.name}
-                            </option>
-                          ))}
-                        </select>
-                        <Button type="submit" variant="outline" size="sm">
-                          Update type default
-                        </Button>
-                      </form>
-                    ) : (
-                      <p className="text-xs text-slate-500">
-                        Set an aircraft type to assign defaults.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 rounded-md border border-slate-800 px-4 py-3">
-                    <p className="text-xs uppercase text-slate-500">Tail override</p>
-                    <p className="text-sm text-slate-200">
-                      {overrideTemplate?.name ?? "No override"}
-                    </p>
-                    <form action={assignAircraftChecklistAction} className="space-y-2">
-                      <input type="hidden" name="aircraftId" value={aircraft.id} />
-                      <input type="hidden" name="phase" value={phase.value} />
-                      <input type="hidden" name="scope" value="aircraft" />
-                      <select
-                        name="templateId"
-                        className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
-                        defaultValue={overrideTemplate?.id ?? ""}
-                      >
-                        <option value="">No override</option>
-                        {phase.templates.map((template) => (
-                          <option key={template.id} value={template.id}>
-                            {template.name}
-                          </option>
-                        ))}
-                      </select>
-                      <Button type="submit" variant="outline" size="sm">
-                        Update override
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-
-                <form
-                  action={createChecklistFromAircraftAction}
-                  className="mt-4 grid gap-3 lg:grid-cols-[1.4fr_0.8fr_auto]"
-                >
-                  <input type="hidden" name="aircraftId" value={aircraft.id} />
-                  <input type="hidden" name="phase" value={phase.value} />
-                  <Input
-                    name="name"
-                    placeholder={`New ${phase.label} checklist`}
-                    required
-                  />
-                  <label className="text-sm text-slate-300">
-                    <span className="mb-1 block text-xs uppercase text-slate-500">
-                      Assign to
-                    </span>
-                    <select
-                      name="scope"
-                      className="h-11 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
-                      defaultValue={aircraft.aircraftType ? "type" : "aircraft"}
-                    >
-                      {aircraft.aircraftType && (
-                        <option value="type">Aircraft type default</option>
-                      )}
-                      <option value="aircraft">Tail override</option>
-                    </select>
-                  </label>
-                  <div className="flex items-end">
-                    <Button type="submit">Create checklist</Button>
-                  </div>
-                </form>
-              </div>
-            );
-          })}
         </CardContent>
       </Card>
     </div>
