@@ -283,6 +283,11 @@ export default async function LogbookPage({
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Track PIC/SIC, night, and IFR time.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/logbook/sync/logten">Sync with LogTen</Link>
+          </Button>
+        </div>
       </div>
 
       <Card>

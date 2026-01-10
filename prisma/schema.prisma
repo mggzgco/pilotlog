@@ -225,6 +225,9 @@ model LogbookEntry {
   userId         String
   flightId       String?
   date           DateTime
+  tailNumberSnapshot String?
+  origin         String?
+  destination    String?
   timeOut        String?
   timeIn         String?
   hobbsOut       Decimal? @db.Decimal(7, 2)
@@ -244,9 +247,17 @@ model LogbookEntry {
   dayLandings    Int?
   nightTakeoffs  Int?
   nightLandings  Int?
+  externalSource String?
+  externalId     String?
+  externalFingerprint String?
+  externalUpdatedAt DateTime?
   remarks        String?
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   flight         Flight?  @relation(fields: [flightId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([userId, tailNumberSnapshot])
+  @@unique([userId, externalSource, externalId])
 }
 
 model CostItem {
