@@ -2,13 +2,18 @@ export const costCategoryValues = [
   "rental",
   "instruction",
   "fuel",
+  "fuel_surcharge",
+  "tax",
   "fees",
   "other"
 ] as const;
 
 export const costCategoryOptions = costCategoryValues.map((value) => ({
   value,
-  label: value.charAt(0).toUpperCase() + value.slice(1)
+  label:
+    value === "fuel_surcharge"
+      ? "Fuel surcharge"
+      : value.charAt(0).toUpperCase() + value.slice(1)
 }));
 
 export const getCostCategoryLabel = (category: string) => {
