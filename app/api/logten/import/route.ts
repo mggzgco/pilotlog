@@ -55,6 +55,10 @@ export async function POST(request: Request) {
       sicTime: row.sicTime,
       dualReceivedTime: row.dualReceivedTime,
       soloTime: row.soloTime,
+      nightTime: row.nightTime,
+      xcTime: row.xcTime,
+      simulatedInstrumentTime: row.simulatedInstrumentTime,
+      instrumentTime: row.instrumentTime,
       groundTime: row.groundTime,
       simulatorTime: row.simulatorTime
     });

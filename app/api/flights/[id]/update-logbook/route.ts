@@ -138,6 +138,10 @@ export async function POST(
         sicTime: parsed.data.sicTime,
         dualReceivedTime: parsed.data.dualReceivedTime,
         soloTime: parsed.data.soloTime,
+        nightTime: parsed.data.nightTime,
+        xcTime: parsed.data.xcTime,
+        simulatedInstrumentTime: parsed.data.simulatedInstrumentTime,
+        instrumentTime: parsed.data.instrumentTime,
         groundTime: parsed.data.groundTime,
         simulatorTime: parsed.data.simulatorTime
       }),
