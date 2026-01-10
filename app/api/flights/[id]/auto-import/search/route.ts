@@ -72,13 +72,19 @@ export async function POST(
   }
 
   const provider = getAdsbProvider();
-  const flights = await provider.searchFlights(
-    tailNumber,
-    customStart ?? window.searchStart,
-    customEnd ?? window.searchEnd
-  );
-
-  const deduped = dedupeImportCandidates(flights);
+  let deduped: ReturnType<typeof dedupeImportCandidates>;
+  try {
+    const flights = await provider.searchFlights(
+      tailNumber,
+      customStart ?? window.searchStart,
+      customEnd ?? window.searchEnd
+    );
+    deduped = dedupeImportCandidates(flights);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "ADS-B provider request failed.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
   if (customStart && customEnd) {
     deduped.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
   } else {

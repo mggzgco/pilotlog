@@ -40,8 +40,15 @@ export async function POST(request: Request) {
   }
 
   const provider = getAdsbProvider();
-  const flights = await provider.searchFlights(parsed.data.tailNumber.trim(), start, end);
-  const deduped = dedupeImportCandidates(flights);
+  let deduped: ReturnType<typeof dedupeImportCandidates>;
+  try {
+    const flights = await provider.searchFlights(parsed.data.tailNumber.trim(), start, end);
+    deduped = dedupeImportCandidates(flights);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "ADS-B provider request failed.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 
   return NextResponse.json({
     provider: defaultProviderName,
