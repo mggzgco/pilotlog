@@ -18,18 +18,11 @@ const phases = [
 export default async function ChecklistsPage() {
   const user = await requireUser();
 
-  const [templates, aircraft] = await Promise.all([
-    prisma.checklistTemplate.findMany({
-      where: { userId: user.id },
-      include: { items: { orderBy: { order: "asc" } }, aircraft: true },
-      orderBy: [{ phase: "asc" }, { createdAt: "desc" }]
-    }),
-    prisma.aircraft.findMany({
-      where: { userId: user.id },
-      select: { tailNumber: true },
-      orderBy: { tailNumber: "asc" }
-    })
-  ]);
+  const templates = await prisma.checklistTemplate.findMany({
+    where: { userId: user.id },
+    include: { items: { orderBy: { order: "asc" } } },
+    orderBy: [{ phase: "asc" }, { createdAt: "desc" }]
+  });
 
   const templatesByPhase = phases.map((phase) => ({
     ...phase,
@@ -41,8 +34,8 @@ export default async function ChecklistsPage() {
       <div>
         <h2 className="text-2xl font-semibold">Checklist templates</h2>
         <p className="text-sm text-slate-400">
-          Build reusable pre-flight and post-flight checklists. Custom defaults override
-          the system templates during flight planning.
+          Build reusable pre-flight and post-flight checklists. Assign defaults on each
+          aircraft type or override them per tail number.
         </p>
       </div>
 
@@ -53,7 +46,7 @@ export default async function ChecklistsPage() {
         <CardContent>
           <form
             action={createChecklistTemplateAction}
-            className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto]"
+            className="grid gap-3 lg:grid-cols-[1.4fr_0.8fr_auto]"
           >
             <Input name="name" placeholder="Template name" required />
             <label className="text-sm text-slate-300">
@@ -70,16 +63,6 @@ export default async function ChecklistsPage() {
                 ))}
               </select>
             </label>
-            <label className="text-sm text-slate-300">
-              <span className="mb-1 block text-xs uppercase text-slate-500">
-                Tail number (optional)
-              </span>
-              <Input
-                name="tailNumber"
-                placeholder="Applies to all aircraft"
-                list="tail-numbers"
-              />
-            </label>
             <div className="flex items-end gap-3">
               <label className="flex items-center gap-2 text-sm text-slate-300">
                 <input
@@ -93,11 +76,6 @@ export default async function ChecklistsPage() {
               <Button type="submit">Create template</Button>
             </div>
           </form>
-          <datalist id="tail-numbers">
-            {aircraft.map((plane) => (
-              <option key={plane.tailNumber} value={plane.tailNumber} />
-            ))}
-          </datalist>
         </CardContent>
       </Card>
 
@@ -126,12 +104,6 @@ export default async function ChecklistsPage() {
                     <div>
                       <p className="text-base font-semibold text-slate-100">
                         {template.name}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Tail scope:{" "}
-                        {template.aircraft?.tailNumber ??
-                          template.aircraftTailNumber ??
-                          "All aircraft"}
                       </p>
                     </div>
                     {template.isDefault ? (

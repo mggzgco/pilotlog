@@ -118,14 +118,12 @@ export async function POST(request: Request) {
       selectChecklistTemplate({
         userId: user.id,
         aircraftId,
-        tailNumber,
         phase: "PREFLIGHT",
         client: tx
       }),
       selectChecklistTemplate({
         userId: user.id,
         aircraftId,
-        tailNumber,
         phase: "POSTFLIGHT",
         client: tx
       })
