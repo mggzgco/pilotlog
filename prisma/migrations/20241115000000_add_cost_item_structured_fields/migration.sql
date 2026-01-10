@@ -1,5 +1,5 @@
 ALTER TABLE "Cost"
-ADD COLUMN     "rateCents" INTEGER,
-ADD COLUMN     "quantityHours" DECIMAL(7, 2),
-ADD COLUMN     "fuelGallons" DECIMAL(7, 2),
-ADD COLUMN     "fuelPriceCents" INTEGER;
+ADD COLUMN IF NOT EXISTS "rateCents" INTEGER,
+ADD COLUMN IF NOT EXISTS "quantityHours" DECIMAL(7, 2),
+ADD COLUMN IF NOT EXISTS "fuelGallons" DECIMAL(7, 2),
+ADD COLUMN IF NOT EXISTS "fuelPriceCents" INTEGER;
