@@ -175,6 +175,10 @@ model CostItem {
   userId      String
   flightId    String?
   category    String
+  rateCents   Int?
+  quantityHours Decimal? @db.Decimal(7, 2)
+  fuelGallons Decimal? @db.Decimal(7, 2)
+  fuelPriceCents Int?
   amountCents Int
   vendor      String?
   notes       String?

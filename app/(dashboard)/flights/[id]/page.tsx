@@ -13,13 +13,14 @@ import { Receipt } from "lucide-react";
 import { ChecklistSection } from "@/app/components/flights/checklist-section";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 import { participantRoleOptions } from "@/app/lib/flights/participants";
+import { CostItemForm } from "@/app/components/flights/cost-item-form";
 
 export default async function FlightDetailPage({
   params,
   searchParams
 }: {
   params: { id: string };
-  searchParams?: { participantId?: string };
+  searchParams?: { participantId?: string; receiptCostItemId?: string };
 }) {
   const user = await requireUser();
 
@@ -28,7 +29,12 @@ export default async function FlightDetailPage({
     include: {
       trackPoints: { orderBy: { recordedAt: "asc" } },
       costItems: { orderBy: { date: "desc" } },
-      receiptDocuments: { orderBy: { createdAt: "desc" } },
+      receiptDocuments: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          costItem: { select: { id: true, category: true, amountCents: true } }
+        }
+      },
       participants: {
         include: { user: true },
         orderBy: { createdAt: "asc" }
@@ -177,6 +183,35 @@ export default async function FlightDetailPage({
       entry.name ||
       entry.email
   }));
+  const formatCurrencyInput = (amountCents: number | null) =>
+    amountCents === null ? "" : (amountCents / 100).toFixed(2);
+  const formatDecimalInput = (value: number | string | { toString(): string } | null) => {
+    if (value === null || value === undefined) {
+      return "";
+    }
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(2) : "";
+  };
+  const receiptFilter = searchParams?.receiptCostItemId ?? "all";
+  const receiptDocuments = flight.receiptDocuments.filter((receipt) => {
+    if (receiptFilter === "all") {
+      return true;
+    }
+    if (receiptFilter === "unassigned") {
+      return receipt.costItemId === null;
+    }
+    return receipt.costItemId === receiptFilter;
+  });
+  const receiptCostItemLabel = (receipt: typeof flight.receiptDocuments[number]) =>
+    receipt.costItem
+      ? `${receipt.costItem.category} · ${currencyFormatter.format(
+          receipt.costItem.amountCents / 100
+        )}`
+      : "Unassigned";
+  const receiptUploadDefaultCostItemId =
+    receiptFilter !== "all" && receiptFilter !== "unassigned"
+      ? receiptFilter
+      : "";
 
   return (
     <div className="space-y-6">
@@ -624,37 +659,18 @@ export default async function FlightDetailPage({
           <div className="grid gap-6">
             <div id="add-costs">
               <p className="text-xs uppercase text-slate-400">Add cost item</p>
-              <form
+              <CostItemForm
                 action={`/api/flights/${flight.id}/cost-items/create`}
-                method="post"
-                className="mt-3 grid gap-3 md:grid-cols-3"
-              >
-                <Input name="category" placeholder="Category" required />
-                <Input
-                  name="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="Amount"
-                  required
-                />
-                <Input
-                  name="date"
-                  type="date"
-                  required
-                  defaultValue={flight.startTime.toISOString().slice(0, 10)}
-                />
-                <Input name="vendor" placeholder="Vendor" />
-                <Input
-                  name="notes"
-                  placeholder="Notes"
-                  className="md:col-span-2"
-                />
-                <div className="md:col-span-3">
-                  <FormSubmitButton type="submit" pendingText="Saving cost item...">
-                    Save cost item
-                  </FormSubmitButton>
-                </div>
-              </form>
+                submitLabel="Save cost item"
+                pendingText="Saving cost item..."
+                defaultValues={{
+                  category: "",
+                  amount: "",
+                  date: flight.startTime.toISOString().slice(0, 10),
+                  vendor: "",
+                  notes: ""
+                }}
+              />
             </div>
 
             <div>
@@ -679,6 +695,18 @@ export default async function FlightDetailPage({
                             {item.vendor ?? "Vendor not listed"} ·{" "}
                             {item.date.toDateString()}
                           </p>
+                          {item.rateCents !== null && item.quantityHours !== null ? (
+                            <p className="text-xs text-slate-400">
+                              {currencyFormatter.format(item.rateCents / 100)} / hr ·{" "}
+                              {formatDecimalInput(item.quantityHours)} hrs
+                            </p>
+                          ) : null}
+                          {item.fuelGallons !== null && item.fuelPriceCents !== null ? (
+                            <p className="text-xs text-slate-400">
+                              {formatDecimalInput(item.fuelGallons)} gal ·{" "}
+                              {currencyFormatter.format(item.fuelPriceCents / 100)} / gal
+                            </p>
+                          ) : null}
                           <p className="text-sm text-slate-300">
                             {item.notes ?? "No notes"}
                           </p>
@@ -707,53 +735,24 @@ export default async function FlightDetailPage({
                         <summary className="cursor-pointer text-xs font-semibold uppercase text-slate-400">
                           Edit cost item
                         </summary>
-                        <form
+                        <CostItemForm
                           action={`/api/flights/${flight.id}/cost-items/create`}
-                          method="post"
-                          className="mt-3 grid gap-3 md:grid-cols-3"
-                        >
-                          <input type="hidden" name="costItemId" value={item.id} />
-                          <Input
-                            name="category"
-                            placeholder="Category"
-                            defaultValue={item.category}
-                            required
-                          />
-                          <Input
-                            name="amount"
-                            type="number"
-                            step="0.01"
-                            placeholder="Amount"
-                            defaultValue={(item.amountCents / 100).toFixed(2)}
-                            required
-                          />
-                          <Input
-                            name="date"
-                            type="date"
-                            defaultValue={item.date.toISOString().slice(0, 10)}
-                            required
-                          />
-                          <Input
-                            name="vendor"
-                            placeholder="Vendor"
-                            defaultValue={item.vendor ?? ""}
-                          />
-                          <Input
-                            name="notes"
-                            placeholder="Notes"
-                            className="md:col-span-2"
-                            defaultValue={item.notes ?? ""}
-                          />
-                          <div className="md:col-span-3">
-                            <FormSubmitButton
-                              type="submit"
-                              size="sm"
-                              pendingText="Updating..."
-                            >
-                              Update cost item
-                            </FormSubmitButton>
-                          </div>
-                        </form>
+                          submitLabel="Update cost item"
+                          pendingText="Updating..."
+                          submitSize="sm"
+                          defaultValues={{
+                            costItemId: item.id,
+                            category: item.category,
+                            amount: formatCurrencyInput(item.amountCents),
+                            date: item.date.toISOString().slice(0, 10),
+                            vendor: item.vendor ?? "",
+                            notes: item.notes ?? "",
+                            rate: formatCurrencyInput(item.rateCents),
+                            quantityHours: formatDecimalInput(item.quantityHours),
+                            fuelGallons: formatDecimalInput(item.fuelGallons),
+                            fuelPrice: formatCurrencyInput(item.fuelPriceCents)
+                          }}
+                        />
                       </details>
                     </div>
                   ))
@@ -763,12 +762,56 @@ export default async function FlightDetailPage({
 
             <div>
               <p className="text-xs uppercase text-slate-400">Receipts</p>
+              <form method="get" className="mt-3 flex flex-wrap items-center gap-3">
+                {selectedParticipantId ? (
+                  <input
+                    type="hidden"
+                    name="participantId"
+                    value={selectedParticipantId}
+                  />
+                ) : null}
+                <label
+                  htmlFor="receipt-cost-filter"
+                  className="text-xs font-semibold uppercase text-slate-400"
+                >
+                  Filter by cost item
+                </label>
+                <select
+                  id="receipt-cost-filter"
+                  name="receiptCostItemId"
+                  defaultValue={receiptFilter}
+                  className="h-10 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="all">All receipts</option>
+                  <option value="unassigned">Unassigned</option>
+                  {flight.costItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.category} · {currencyFormatter.format(item.amountCents / 100)}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" variant="outline" size="sm">
+                  Apply filter
+                </Button>
+              </form>
               <form
                 action={`/api/flights/${flight.id}/receipts/upload`}
                 method="post"
                 encType="multipart/form-data"
-                className="mt-3 grid gap-3 md:grid-cols-3"
+                className="mt-4 grid gap-3 md:grid-cols-3"
               >
+                <select
+                  name="costItemId"
+                  defaultValue={receiptUploadDefaultCostItemId}
+                  className="h-10 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">Link to cost item (optional)</option>
+                  {flight.costItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.category} · {currencyFormatter.format(item.amountCents / 100)}
+                    </option>
+                  ))}
+                </select>
                 <Input
                   id="receipt-upload"
                   name="receipts"
@@ -786,11 +829,19 @@ export default async function FlightDetailPage({
                 </div>
               </form>
 
-              {flight.receiptDocuments.length === 0 ? (
+              {receiptDocuments.length === 0 ? (
                 <EmptyState
                   icon={<Receipt className="h-6 w-6" />}
-                  title="No receipts uploaded"
-                  description="Upload receipts to keep every expense attached to this flight."
+                  title={
+                    flight.receiptDocuments.length === 0
+                      ? "No receipts uploaded"
+                      : "No receipts match this filter"
+                  }
+                  description={
+                    flight.receiptDocuments.length === 0
+                      ? "Upload receipts to keep every expense attached to this flight."
+                      : "Try a different cost item filter or upload more receipts."
+                  }
                   action={
                     <Button asChild>
                       <label htmlFor="receipt-upload">Upload receipts</label>
@@ -809,15 +860,19 @@ export default async function FlightDetailPage({
                     <thead className="bg-slate-900 text-xs uppercase text-slate-500">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium">Filename</th>
+                        <th className="px-4 py-3 text-left font-medium">Cost item</th>
                         <th className="px-4 py-3 text-left font-medium">Uploaded</th>
                         <th className="px-4 py-3 text-left font-medium">Size</th>
                         <th className="px-4 py-3 text-right font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                      {flight.receiptDocuments.map((receipt) => (
+                      {receiptDocuments.map((receipt) => (
                         <tr key={receipt.id} className="text-slate-200">
                           <td className="px-4 py-3">{receipt.originalFilename}</td>
+                          <td className="px-4 py-3 text-slate-400">
+                            {receiptCostItemLabel(receipt)}
+                          </td>
                           <td className="px-4 py-3 text-slate-400">
                             {receipt.createdAt.toLocaleString()}
                           </td>
