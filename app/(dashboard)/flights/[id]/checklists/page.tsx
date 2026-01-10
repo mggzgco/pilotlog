@@ -17,6 +17,13 @@ export default async function FlightChecklistsPage({
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
     include: {
+      aircraft: {
+        include: {
+          aircraftType: {
+            select: { defaultPreflightTemplateId: true, defaultPostflightTemplateId: true }
+          }
+        }
+      },
       checklistRuns: { include: { items: { orderBy: { order: "asc" } } } }
     }
   });
@@ -55,10 +62,21 @@ export default async function FlightChecklistsPage({
     }))
   });
 
-  const preflightRun =
-    flight.checklistRuns.find((run) => run.phase === "PREFLIGHT") ?? null;
-  const postflightRun =
-    flight.checklistRuns.find((run) => run.phase === "POSTFLIGHT") ?? null;
+  const assignedPreflightTemplateId =
+    flight.aircraft?.preflightChecklistTemplateId ??
+    flight.aircraft?.aircraftType?.defaultPreflightTemplateId ??
+    null;
+  const assignedPostflightTemplateId =
+    flight.aircraft?.postflightChecklistTemplateId ??
+    flight.aircraft?.aircraftType?.defaultPostflightTemplateId ??
+    null;
+
+  const preflightRun = assignedPreflightTemplateId
+    ? flight.checklistRuns.find((run) => run.phase === "PREFLIGHT") ?? null
+    : null;
+  const postflightRun = assignedPostflightTemplateId
+    ? flight.checklistRuns.find((run) => run.phase === "POSTFLIGHT") ?? null
+    : null;
 
   return (
     <div className="space-y-6">

@@ -35,7 +35,13 @@ export default async function FlightDetailPage({
       trackPoints: { orderBy: { recordedAt: "asc" } },
       aircraft: {
         include: {
-          aircraftType: { select: { name: true } }
+          aircraftType: {
+            select: {
+              name: true,
+              defaultPreflightTemplateId: true,
+              defaultPostflightTemplateId: true
+            }
+          }
         }
       },
       costItems: { select: { id: true, amountCents: true } },
@@ -198,6 +204,18 @@ export default async function FlightDetailPage({
     { PREFLIGHT: "NOT_AVAILABLE", POSTFLIGHT: "NOT_AVAILABLE" }
   );
 
+  const assignedPreflightTemplateId =
+    flight.aircraft?.preflightChecklistTemplateId ??
+    flight.aircraft?.aircraftType?.defaultPreflightTemplateId ??
+    null;
+  const assignedPostflightTemplateId =
+    flight.aircraft?.postflightChecklistTemplateId ??
+    flight.aircraft?.aircraftType?.defaultPostflightTemplateId ??
+    null;
+  const hasAnyAssignedChecklistTemplate = Boolean(
+    assignedPreflightTemplateId || assignedPostflightTemplateId
+  );
+
   const flightNotes =
     flight.statsJson &&
     typeof flight.statsJson === "object" &&
@@ -285,12 +303,14 @@ export default async function FlightDetailPage({
               >
                 Manual import
               </Link>
-              <Link
-                href={`/flights/${flight.id}/checklists`}
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                Checklists
-              </Link>
+              {hasAnyAssignedChecklistTemplate ? (
+                <Link
+                  href={`/flights/${flight.id}/checklists`}
+                  className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+                >
+                  Checklists
+                </Link>
+              ) : null}
               <Link
                 href={`/flights/${flight.id}/costs`}
                 className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"

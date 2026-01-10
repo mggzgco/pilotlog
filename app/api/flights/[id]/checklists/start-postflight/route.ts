@@ -10,11 +10,33 @@ export async function POST(
   const redirectUrl = new URL(`/flights/${params.id}`, request.url);
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
-    include: { checklistRuns: true }
+    include: {
+      aircraft: {
+        include: {
+          aircraftType: {
+            select: { defaultPostflightTemplateId: true }
+          }
+        }
+      },
+      checklistRuns: true
+    }
   });
 
   if (!flight) {
     redirectUrl.searchParams.set("toast", "Flight not found.");
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  const assignedPostflightTemplateId =
+    flight.aircraft?.postflightChecklistTemplateId ??
+    flight.aircraft?.aircraftType?.defaultPostflightTemplateId ??
+    null;
+  if (!assignedPostflightTemplateId) {
+    redirectUrl.searchParams.set(
+      "toast",
+      "No post-flight checklist assigned to this aircraft."
+    );
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }
