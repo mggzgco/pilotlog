@@ -30,7 +30,11 @@ function metersToFeet(value: number) {
 }
 
 function normalizeTailNumber(tailNumber: string) {
-  return tailNumber.trim().toUpperCase();
+  return tailNumber.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function compactTailNumber(tailNumber: string) {
+  return normalizeTailNumber(tailNumber).replace(/-/g, "");
 }
 
 function buildAuthHeader(): string | null {
@@ -118,17 +122,23 @@ function computeMaxAltitude(track: FlightTrackPoint[]) {
 
 async function resolveIcao24(tailNumber: string): Promise<string | null> {
   const normalized = normalizeTailNumber(tailNumber);
-  const aircraft = await fetchOpenSky<OpenSkyAircraft[]>(
+  const normalizedCompact = compactTailNumber(tailNumber);
+  let aircraft = await fetchOpenSky<OpenSkyAircraft[]>(
     "/metadata/aircraft/list",
     { reg: normalized }
   );
+  if ((!aircraft || aircraft.length === 0) && normalizedCompact !== normalized) {
+    aircraft = await fetchOpenSky<OpenSkyAircraft[]>("/metadata/aircraft/list", {
+      reg: normalizedCompact
+    });
+  }
   if (!aircraft || aircraft.length === 0) {
     return null;
   }
 
   const match = aircraft.find(
     (entry) =>
-      normalizeTailNumber(entry.reg ?? entry.registration ?? "") === normalized &&
+      compactTailNumber(entry.reg ?? entry.registration ?? "") === normalizedCompact &&
       entry.icao24
   );
   return match?.icao24 ?? aircraft[0]?.icao24 ?? null;

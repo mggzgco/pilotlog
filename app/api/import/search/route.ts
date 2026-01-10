@@ -32,6 +32,12 @@ export async function POST(request: Request) {
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return NextResponse.json({ error: "Invalid date range." }, { status: 400 });
   }
+  if (start > end) {
+    return NextResponse.json(
+      { error: "Start time must be before end time." },
+      { status: 400 }
+    );
+  }
 
   const provider = getAdsbProvider();
   const flights = await provider.searchFlights(parsed.data.tailNumber.trim(), start, end);
