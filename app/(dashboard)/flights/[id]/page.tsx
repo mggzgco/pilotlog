@@ -15,6 +15,8 @@ import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge"
 import { participantRoleOptions } from "@/app/lib/flights/participants";
 import { CostItemForm } from "@/app/components/flights/cost-item-form";
 import { getCostCategoryLabel } from "@/app/lib/costs/categories";
+import { CompleteFlightAction } from "@/app/components/flights/complete-flight-action";
+import { LogbookEntryForm } from "@/app/components/flights/logbook-entry-form";
 
 export default async function FlightDetailPage({
   params,
@@ -30,6 +32,7 @@ export default async function FlightDetailPage({
     include: {
       trackPoints: { orderBy: { recordedAt: "asc" } },
       costItems: { orderBy: { date: "desc" } },
+      logbookEntries: { select: { id: true } },
       receiptDocuments: {
         orderBy: { createdAt: "desc" },
         include: {
@@ -151,6 +154,7 @@ export default async function FlightDetailPage({
       ["IMPORTED", "COMPLETED"].includes(flight.status)
   );
   const hasLogbookEntry = Boolean(logbookEntry);
+  const hasAnyLogbookEntry = flight.logbookEntries.length > 0;
   const showLogbookPrompt = isImported && logbookEntry?.totalTime == null;
   const prefillTotalTime =
     logbookEntry?.totalTime?.toString() ??
@@ -167,6 +171,13 @@ export default async function FlightDetailPage({
     (selectedParticipant?.role === "SIC" && prefillTotalTime
       ? prefillTotalTime
       : "");
+  const logbookDefaultDate = logbookEntry?.date
+    ? logbookEntry.date.toISOString().slice(0, 10)
+    : flight.startTime.toISOString().slice(0, 10);
+  const logbookDefaultNightTime = logbookEntry?.nightTime?.toString() ?? "";
+  const logbookDefaultInstrumentTime =
+    logbookEntry?.instrumentTime?.toString() ?? "";
+  const logbookDefaultRemarks = logbookEntry?.remarks ?? "";
   const users = await prisma.user.findMany({
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     select: { id: true, firstName: true, lastName: true, name: true, email: true }
@@ -207,6 +218,34 @@ export default async function FlightDetailPage({
     receiptFilter !== "all" && receiptFilter !== "unassigned"
       ? receiptFilter
       : "";
+  const decisionLabel = (
+    run: (typeof flight.checklistRuns)[number] | null
+  ): "Accepted" | "Rejected" | "—" => {
+    if (!run || run.status !== "SIGNED") {
+      return "—";
+    }
+    if (run.decision === "REJECTED") {
+      return "Rejected";
+    }
+    if (run.decision === "ACCEPTED") {
+      return "Accepted";
+    }
+    const hasRejected = run.items.some(
+      (item) =>
+        item.required && item.inputType === "YES_NO" && item.valueYesNo === false
+    );
+    return hasRejected ? "Rejected" : "Accepted";
+  };
+  const postflightDecision = decisionLabel(postflightRun);
+  const isPostflightAccepted = postflightDecision === "Accepted";
+  const hasCosts = flight.costItems.length > 0;
+  const hasReceipts = flight.receiptDocuments.length > 0;
+  const needsAdsB = !isImported;
+  const needsLogbook = !hasAnyLogbookEntry;
+  const needsCosts = !hasCosts;
+  const needsReceipts = !hasReceipts;
+  const showCompletionPanel =
+    isPostflightAccepted && (needsAdsB || needsLogbook || needsCosts || needsReceipts);
 
   return (
     <div className="space-y-6">
@@ -417,6 +456,126 @@ export default async function FlightDetailPage({
         </CardContent>
       </Card>
 
+      {showCompletionPanel ? (
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Complete this Flight</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3">
+              {needsAdsB ? (
+                <CompleteFlightAction
+                  label="Import ADS-B"
+                  title="Import ADS-B data"
+                  description="Attach a track to finalize this flight."
+                >
+                  <p className="text-sm text-slate-300">
+                    Select the best ADS-B match for{" "}
+                    {flight.tailNumberSnapshot ?? flight.tailNumber} or upload
+                    manually.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild>
+                      <Link href={`/flights/${flight.id}/match`}>
+                        Select ADS-B match
+                      </Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <Link href={`/import?flightId=${flight.id}`}>
+                        Manual import
+                      </Link>
+                    </Button>
+                  </div>
+                </CompleteFlightAction>
+              ) : null}
+              {needsLogbook ? (
+                <CompleteFlightAction
+                  label="Log Hours"
+                  title="Log hours"
+                  description="Pre-filled with the selected participant and flight date."
+                >
+                  <LogbookEntryForm
+                    flightId={flight.id}
+                    participantId={selectedParticipant?.id ?? null}
+                    defaultDate={logbookDefaultDate}
+                    defaultTotalTime={prefillTotalTime}
+                    defaultPicTime={prefillPicTime}
+                    defaultSicTime={prefillSicTime}
+                    defaultNightTime={logbookDefaultNightTime}
+                    defaultInstrumentTime={logbookDefaultInstrumentTime}
+                    defaultRemarks={logbookDefaultRemarks}
+                    hasLogbookEntry={hasLogbookEntry}
+                  />
+                </CompleteFlightAction>
+              ) : null}
+              {needsCosts ? (
+                <CompleteFlightAction
+                  label="Add Costs"
+                  title="Add a cost item"
+                  description="Log expenses tied to this flight."
+                >
+                  <CostItemForm
+                    action={`/api/flights/${flight.id}/cost-items/create`}
+                    submitLabel="Save cost item"
+                    pendingText="Saving cost item..."
+                    defaultValues={{
+                      category: "",
+                      amount: "",
+                      date: flight.startTime.toISOString().slice(0, 10),
+                      vendor: "",
+                      notes: ""
+                    }}
+                  />
+                </CompleteFlightAction>
+              ) : null}
+              {needsReceipts ? (
+                <CompleteFlightAction
+                  label="Upload Receipts"
+                  title="Upload receipts"
+                  description="Attach receipts to the costs you logged."
+                >
+                  <form
+                    action={`/api/flights/${flight.id}/receipts/upload`}
+                    method="post"
+                    encType="multipart/form-data"
+                    className="grid gap-3 lg:grid-cols-3"
+                  >
+                    <select
+                      name="costItemId"
+                      defaultValue={receiptUploadDefaultCostItemId}
+                      className="h-11 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                    >
+                      <option value="">Link to cost item (optional)</option>
+                      {flight.costItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.category} ·{" "}
+                          {currencyFormatter.format(item.amountCents / 100)}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      id="receipt-upload-completion"
+                      name="receipts"
+                      type="file"
+                      accept=".pdf,image/png,image/jpeg"
+                      multiple
+                      required
+                      className="lg:col-span-2"
+                    />
+                    <div className="lg:col-span-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                      <FormSubmitButton type="submit" pendingText="Uploading...">
+                        Upload receipts
+                      </FormSubmitButton>
+                      <span>PDF, JPG, PNG up to 10MB each.</span>
+                    </div>
+                  </form>
+                </CompleteFlightAction>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <p className="text-sm text-slate-400">Participants</p>
@@ -587,77 +746,18 @@ export default async function FlightDetailPage({
               </Button>
             </form>
           ) : null}
-          <form
-            action={`/api/flights/${flight.id}/update-logbook`}
-            method="post"
-            className="grid gap-3 lg:grid-cols-3"
-          >
-            <input type="hidden" name="participantId" value={selectedParticipant?.id} />
-            <Input
-              name="date"
-              type="date"
-              required
-              defaultValue={
-                logbookEntry?.date
-                  ? logbookEntry.date.toISOString().slice(0, 10)
-                  : flight.startTime.toISOString().slice(0, 10)
-              }
-            />
-            <Input
-              name="totalTime"
-              type="number"
-              step="0.1"
-              placeholder="Total time"
-              defaultValue={prefillTotalTime}
-            />
-            <Input
-              name="picTime"
-              type="number"
-              step="0.1"
-              placeholder="PIC time"
-              defaultValue={prefillPicTime}
-            />
-            <Input
-              name="sicTime"
-              type="number"
-              step="0.1"
-              placeholder="SIC time"
-              defaultValue={prefillSicTime}
-            />
-            <Input
-              name="nightTime"
-              type="number"
-              step="0.1"
-              placeholder="Night time"
-              defaultValue={logbookEntry?.nightTime?.toString() ?? ""}
-            />
-            <Input
-              name="instrumentTime"
-              type="number"
-              step="0.1"
-              placeholder="Instrument time"
-              defaultValue={logbookEntry?.instrumentTime?.toString() ?? ""}
-            />
-            <div className="lg:col-span-3">
-              <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
-                Remarks
-              </label>
-              <textarea
-                name="remarks"
-                className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
-                placeholder="Logbook notes, tags, endorsements"
-                defaultValue={logbookEntry?.remarks ?? ""}
-              />
-            </div>
-            <div className="lg:col-span-3">
-              <FormSubmitButton
-                type="submit"
-                pendingText={hasLogbookEntry ? "Saving logbook..." : "Creating logbook..."}
-              >
-                {hasLogbookEntry ? "Save logbook" : "Create logbook entry"}
-              </FormSubmitButton>
-            </div>
-          </form>
+          <LogbookEntryForm
+            flightId={flight.id}
+            participantId={selectedParticipant?.id ?? null}
+            defaultDate={logbookDefaultDate}
+            defaultTotalTime={prefillTotalTime}
+            defaultPicTime={prefillPicTime}
+            defaultSicTime={prefillSicTime}
+            defaultNightTime={logbookDefaultNightTime}
+            defaultInstrumentTime={logbookDefaultInstrumentTime}
+            defaultRemarks={logbookDefaultRemarks}
+            hasLogbookEntry={hasLogbookEntry}
+          />
         </CardContent>
       </Card>
 

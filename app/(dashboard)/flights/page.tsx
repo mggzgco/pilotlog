@@ -129,6 +129,7 @@ export default async function FlightsPage({
       include: {
         costItems: { select: { id: true } },
         logbookEntries: { select: { id: true } },
+        receiptDocuments: { select: { id: true } },
         checklistRuns: {
           select: {
             phase: true,
@@ -184,6 +185,7 @@ export default async function FlightsPage({
     );
     const preflightDecision = decisionLabel(preflightRun);
     const postflightDecision = decisionLabel(postflightRun);
+    const isPostflightAccepted = postflightDecision === "Accepted";
     const isImported = Boolean(
       flight.importedProvider ||
         flight.providerFlightId ||
@@ -191,6 +193,7 @@ export default async function FlightsPage({
     );
     const hasLogbookEntry = flight.logbookEntries.length > 0;
     const hasCosts = flight.costItems.length > 0;
+    const hasReceipts = flight.receiptDocuments.length > 0;
     const checklistAvailable =
       preflightRun && preflightRun.status !== "NOT_AVAILABLE";
 
@@ -203,12 +206,18 @@ export default async function FlightsPage({
               label: "Start Postflight",
               action: `/api/flights/${flight.id}/checklists/start-postflight`
             }
-          : postflightDecision === "Accepted" && !isImported
+          : isPostflightAccepted && !isImported
             ? { type: "link", label: "Import ADS-B", href: `/flights/${flight.id}/match` }
-            : isImported && !hasLogbookEntry
+            : isPostflightAccepted && !hasLogbookEntry
               ? { type: "link", label: "Log Hours", href: `/flights/${flight.id}` }
-              : !hasCosts
+              : isPostflightAccepted && !hasCosts
                 ? { type: "link", label: "Add Costs", href: `/flights/${flight.id}` }
+                : isPostflightAccepted && !hasReceipts
+                  ? {
+                      type: "link",
+                      label: "Upload Receipts",
+                      href: `/flights/${flight.id}#receipt-upload`
+                    }
                 : { type: "link", label: "Open", href: `/flights/${flight.id}` };
 
     return {
