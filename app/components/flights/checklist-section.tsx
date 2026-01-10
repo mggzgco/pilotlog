@@ -828,7 +828,7 @@ export function ChecklistSection({
                           {row.prefix ? `${row.prefix} ` : ""}{item.itemLabel?.trim() || item.title}
                         </p>
                         {item.acceptanceCriteria ? (
-                          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-200">
+                          <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-xs font-semibold text-slate-200">
                             {item.acceptanceCriteria}
                           </span>
                         ) : null}

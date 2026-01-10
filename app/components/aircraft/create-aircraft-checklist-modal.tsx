@@ -13,10 +13,8 @@ type ChecklistPhase = "PREFLIGHT" | "POSTFLIGHT";
 
 type StepDraft = {
   id: string;
-  title: string;
   itemLabel: string;
   acceptanceCriteria: string;
-  instructions: string;
   officialOrder: number;
   personalOrder: number;
 };
@@ -84,10 +82,8 @@ export function CreateAircraftChecklistModal({
         steps: [
           {
             id: newId(),
-            title: "",
             itemLabel: "",
             acceptanceCriteria: "",
-            instructions: "",
             officialOrder: 2,
             personalOrder: 2
           }
@@ -101,7 +97,7 @@ export function CreateAircraftChecklistModal({
   const canSubmit = useMemo(() => {
     const trimmedName = name.trim();
     const hasAnyStepTitle = sections.some((section) =>
-      section.steps.some((step) => step.title.trim().length > 0)
+      section.steps.some((step) => step.itemLabel.trim().length > 0)
     );
     return trimmedName.length > 0 && hasAnyStepTitle;
   }, [name, sections]);
@@ -120,10 +116,8 @@ export function CreateAircraftChecklistModal({
           steps: [
             {
               id: newId(),
-              title: "",
               itemLabel: "",
               acceptanceCriteria: "",
-              instructions: "",
               officialOrder: 2,
               personalOrder: 2
             }
@@ -147,10 +141,8 @@ export function CreateAircraftChecklistModal({
           steps: [
             {
               id: newId(),
-              title: "",
               itemLabel: "",
               acceptanceCriteria: "",
-              instructions: "",
               officialOrder: 999,
               personalOrder: 0
             }
@@ -189,10 +181,8 @@ export function CreateAircraftChecklistModal({
                   ...section.steps,
                   {
                     id: newId(),
-                    title: "",
                     itemLabel: "",
                     acceptanceCriteria: "",
-                    instructions: "",
                     officialOrder: 999,
                     personalOrder: 0
                   }
@@ -259,14 +249,12 @@ export function CreateAircraftChecklistModal({
               personalOrder: section.personalOrder,
               steps: section.steps
                 .map((step) => ({
-                  title: step.title.trim(),
                   itemLabel: step.itemLabel.trim(),
                   acceptanceCriteria: step.acceptanceCriteria.trim(),
-                  instructions: step.instructions.trim(),
                   officialOrder: step.officialOrder,
                   personalOrder: step.personalOrder
                 }))
-                .filter((step) => step.title.length > 0)
+                .filter((step) => step.itemLabel.length > 0)
             }))
             .filter((section) => section.title.length > 0)
         })
@@ -449,66 +437,48 @@ export function CreateAircraftChecklistModal({
                                   <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                     Step
                                   </span>
-                                  <Input
-                                    value={step.title}
-                                    onChange={(e) =>
-                                      setSections((prev) =>
-                                        prev.map((s) =>
-                                          s.id !== section.id
-                                            ? s
-                                            : {
-                                                ...s,
-                                                steps: s.steps.map((st) =>
-                                                  st.id === step.id
-                                                    ? { ...st, title: e.target.value }
-                                                    : st
-                                                )
-                                              }
+                                  <div className="grid w-full gap-3 md:grid-cols-2">
+                                    <Input
+                                      value={step.itemLabel}
+                                      onChange={(e) =>
+                                        setSections((prev) =>
+                                          prev.map((s) =>
+                                            s.id !== section.id
+                                              ? s
+                                              : {
+                                                  ...s,
+                                                  steps: s.steps.map((st) =>
+                                                    st.id === step.id
+                                                      ? { ...st, itemLabel: e.target.value }
+                                                      : st
+                                                  )
+                                                }
+                                          )
                                         )
-                                      )
-                                    }
-                                    placeholder='Action (e.g., "Switch")'
-                                  />
-                                  <Input
-                                    value={step.itemLabel}
-                                    onChange={(e) =>
-                                      setSections((prev) =>
-                                        prev.map((s) =>
-                                          s.id !== section.id
-                                            ? s
-                                            : {
-                                                ...s,
-                                                steps: s.steps.map((st) =>
-                                                  st.id === step.id
-                                                    ? { ...st, itemLabel: e.target.value }
-                                                    : st
-                                                )
-                                              }
+                                      }
+                                      placeholder='Item (e.g., "BAT 1 Switch")'
+                                    />
+                                    <Input
+                                      value={step.acceptanceCriteria}
+                                      onChange={(e) =>
+                                        setSections((prev) =>
+                                          prev.map((s) =>
+                                            s.id !== section.id
+                                              ? s
+                                              : {
+                                                  ...s,
+                                                  steps: s.steps.map((st) =>
+                                                    st.id === step.id
+                                                      ? { ...st, acceptanceCriteria: e.target.value }
+                                                      : st
+                                                  )
+                                                }
+                                          )
                                         )
-                                      )
-                                    }
-                                    placeholder='Item (e.g., "BAT 1 Switch")'
-                                  />
-                                  <Input
-                                    value={step.acceptanceCriteria}
-                                    onChange={(e) =>
-                                      setSections((prev) =>
-                                        prev.map((s) =>
-                                          s.id !== section.id
-                                            ? s
-                                            : {
-                                                ...s,
-                                                steps: s.steps.map((st) =>
-                                                  st.id === step.id
-                                                    ? { ...st, acceptanceCriteria: e.target.value }
-                                                    : st
-                                                )
-                                              }
-                                        )
-                                      )
-                                    }
-                                    placeholder='Acceptance (e.g., "ON")'
-                                  />
+                                      }
+                                      placeholder='Acceptance criteria (e.g., "ON")'
+                                    />
+                                  </div>
                                   <div className="flex items-center gap-2">
                                     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                       Official
@@ -551,27 +521,7 @@ export function CreateAircraftChecklistModal({
                                   </div>
                                 </div>
 
-                                <textarea
-                                  value={step.instructions}
-                                  onChange={(e) =>
-                                    setSections((prev) =>
-                                      prev.map((s) =>
-                                        s.id !== section.id
-                                          ? s
-                                          : {
-                                              ...s,
-                                              steps: s.steps.map((st) =>
-                                                st.id === step.id
-                                                  ? { ...st, instructions: e.target.value }
-                                                  : st
-                                              )
-                                            }
-                                      )
-                                    )
-                                  }
-                                  placeholder="Instructions (optional)"
-                                  className="min-h-[70px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
-                                />
+                                {/* sub-steps only carry item + acceptance criteria */}
                               </div>
 
                               <div className="flex flex-col items-center gap-2">

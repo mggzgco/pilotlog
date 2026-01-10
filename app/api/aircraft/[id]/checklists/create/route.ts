@@ -11,10 +11,8 @@ type Payload = {
     officialOrder?: number;
     personalOrder?: number;
     steps: Array<{
-      title: string;
       itemLabel?: string;
       acceptanceCriteria?: string;
-      instructions?: string;
       officialOrder?: number;
       personalOrder?: number;
     }>;
@@ -61,15 +59,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const steps = Array.isArray(section.steps) ? section.steps : [];
       const cleanedSteps = steps
         .map((step) => ({
-          title: typeof step.title === "string" ? step.title.trim() : "",
           itemLabel: typeof step.itemLabel === "string" ? step.itemLabel.trim() : "",
           acceptanceCriteria:
             typeof step.acceptanceCriteria === "string" ? step.acceptanceCriteria.trim() : "",
-          instructions: typeof step.instructions === "string" ? step.instructions.trim() : "",
           officialOrder: Number.isFinite(step.officialOrder) ? Number(step.officialOrder) : null,
           personalOrder: Number.isFinite(step.personalOrder) ? Number(step.personalOrder) : null
         }))
-        .filter((step) => step.title.length > 0)
+        .filter((step) => step.itemLabel.length > 0)
         .slice(0, 200);
 
       return {
@@ -147,10 +143,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
             officialOrder,
             personalOrder,
             order: personalOrder,
-            title: step.title,
+            // For sub-steps we persist a stable title but the UI uses `itemLabel` + `acceptanceCriteria`.
+            title: step.itemLabel || "Step",
             itemLabel: step.itemLabel || null,
             acceptanceCriteria: step.acceptanceCriteria || null,
-            details: step.instructions || null,
+            details: null,
             required: true,
             inputType: "CHECK"
           }
