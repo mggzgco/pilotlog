@@ -14,6 +14,13 @@ type AeroApiFlightSummary = {
     | { code?: string | null; icao?: string | null; iata?: string | null }
     | string
     | null;
+  // AeroAPI commonly returns ISO8601 timestamps for flight lifecycle fields.
+  scheduled_off?: string | null;
+  scheduled_on?: string | null;
+  estimated_off?: string | null;
+  estimated_on?: string | null;
+  actual_off?: string | null;
+  actual_on?: string | null;
   departuretime?: number | null;
   arrivaltime?: number | null;
 };
@@ -46,7 +53,7 @@ function buildSearchQueries(ident: string, epochStart: number, epochEnd: number)
 }
 
 type AeroApiTrackPosition = {
-  timestamp?: number | null;
+  timestamp?: number | string | null;
   latitude?: number | null;
   longitude?: number | null;
   altitude?: number | null;
@@ -81,6 +88,36 @@ function resolveAirportLabel(value: AeroApiFlightSummary["origin"]) {
     return "Unknown";
   }
   return value.code ?? value.icao ?? value.iata ?? "Unknown";
+}
+
+function parseIsoOrEpoch(value: unknown): Date | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    // AeroAPI epoch values are seconds
+    return new Date(value * 1000);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const date = new Date(trimmed);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  return null;
+}
+
+function resolveFlightTimes(flight: AeroApiFlightSummary) {
+  const start =
+    parseIsoOrEpoch(flight.actual_off) ??
+    parseIsoOrEpoch(flight.estimated_off) ??
+    parseIsoOrEpoch(flight.scheduled_off) ??
+    parseIsoOrEpoch(flight.departuretime);
+  const end =
+    parseIsoOrEpoch(flight.actual_on) ??
+    parseIsoOrEpoch(flight.estimated_on) ??
+    parseIsoOrEpoch(flight.scheduled_on) ??
+    parseIsoOrEpoch(flight.arrivaltime);
+  return { start, end };
 }
 
 function computeMaxAltitude(track: FlightTrackPoint[]) {
@@ -180,8 +217,9 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
         return null;
       }
       const { timestamp, latitude, longitude, altitude, ground_speed, heading } = position;
+      const recordedAt = parseIsoOrEpoch(timestamp);
       if (
-        typeof timestamp !== "number" ||
+        !recordedAt ||
         typeof latitude !== "number" ||
         typeof longitude !== "number"
       ) {
@@ -189,7 +227,7 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
       }
 
       return {
-        recordedAt: new Date(timestamp * 1000),
+        recordedAt,
         latitude,
         longitude,
         altitudeFeet: typeof altitude === "number" ? altitude : null,
@@ -279,18 +317,11 @@ export class AeroApiAdsbProvider implements AdsbProvider {
       const candidates = await Promise.all(
         flights.map(async (flight) => {
           const faFlightId = flight.fa_flight_id ?? null;
-          const departureEpoch = flight.departuretime ?? null;
-          const arrivalEpoch = flight.arrivaltime ?? null;
-
-          if (!faFlightId || !departureEpoch || !arrivalEpoch) {
+          if (!faFlightId) {
             return null;
           }
 
-          const startTime = new Date(departureEpoch * 1000);
-          const endTime = new Date(arrivalEpoch * 1000);
-          if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-            return null;
-          }
+          const resolvedTimes = resolveFlightTimes(flight);
 
           const trackResponse =
             (await fetchAeroApi<AeroApiTrackResponse>(
@@ -303,14 +334,23 @@ export class AeroApiAdsbProvider implements AdsbProvider {
             ).catch(() => null));
 
           const trackPoints = buildTrackPoints(trackResponse);
-          const durationMinutes = computeDurationMinutes(startTime, endTime, trackPoints);
+          // If AeroAPI didn't provide usable times, infer from track when possible.
+          const inferredStart =
+            resolvedTimes.start ?? (trackPoints[0]?.recordedAt ?? null);
+          const inferredEnd =
+            resolvedTimes.end ?? (trackPoints[trackPoints.length - 1]?.recordedAt ?? null);
+          if (!inferredStart || !inferredEnd) {
+            return null;
+          }
+
+          const durationMinutes = computeDurationMinutes(inferredStart, inferredEnd, trackPoints);
           const distanceNm = computeDistanceNm(trackPoints);
 
           return {
             providerFlightId: `${AEROAPI_PROVIDER_NAME}-${faFlightId}`,
             tailNumber: normalizedTailNumber,
-            startTime,
-            endTime,
+            startTime: inferredStart,
+            endTime: inferredEnd,
             durationMinutes,
             distanceNm,
             depLabel: resolveAirportLabel(flight.origin),
