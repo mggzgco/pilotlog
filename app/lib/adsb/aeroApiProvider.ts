@@ -212,26 +212,48 @@ export class AeroApiAdsbProvider implements AdsbProvider {
     const normalizedTailNumber = normalizeTailNumber(tailNumber);
     const epochStart = Math.floor(start.getTime() / 1000);
     const epochEnd = Math.floor(end.getTime() / 1000);
+    const isoStart = start.toISOString();
+    const isoEnd = end.toISOString();
 
-    // 1) Primary: /flights/{ident}
+    // 1) Primary: historical flights by registration (AeroAPI-recommended for past dates)
     let flights: AeroApiFlightSummary[] = [];
     try {
-      const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
-        `/flights/${encodeURIComponent(normalizedTailNumber)}`,
+      const historyResponse = await fetchAeroApi<AeroApiFlightResponse>(
+        `/history/flights/${encodeURIComponent(normalizedTailNumber)}`,
         {
-          start: epochStart,
-          end: epochEnd,
+          ident_type: "registration",
+          start: isoStart,
+          end: isoEnd,
           max_pages: 5
         }
       );
-      flights = flightsResponse.flights ?? [];
+      flights = historyResponse.flights ?? [];
     } catch (error) {
       if (!(error instanceof AdsbProviderError && error.status === 404)) {
         throw error;
       }
     }
 
-    // 2) Fallback: /search/flights with ident filter if primary returned none
+    // 2) Secondary: live flights by ident if history empty
+    if (flights.length === 0) {
+      try {
+        const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
+          `/flights/${encodeURIComponent(normalizedTailNumber)}`,
+          {
+            start: epochStart,
+            end: epochEnd,
+            max_pages: 5
+          }
+        );
+        flights = flightsResponse.flights ?? [];
+      } catch (error) {
+        if (!(error instanceof AdsbProviderError && error.status === 404)) {
+          throw error;
+        }
+      }
+    }
+
+    // 3) Fallback: /search/flights with ident filter if nothing yet
     if (flights.length === 0) {
       try {
         const queries = buildSearchQueries(normalizedTailNumber, epochStart, epochEnd);
@@ -276,9 +298,15 @@ export class AeroApiAdsbProvider implements AdsbProvider {
           return null;
         }
 
-        const trackResponse = await fetchAeroApi<AeroApiTrackResponse>(
-          `/flight/${encodeURIComponent(faFlightId)}/track`
-        ).catch(() => null);
+        const trackResponse =
+          (await fetchAeroApi<AeroApiTrackResponse>(
+            `/history/flights/${encodeURIComponent(faFlightId)}/track`,
+            { include_estimated_positions: true }
+          ).catch(() => null)) ??
+          (await fetchAeroApi<AeroApiTrackResponse>(
+            `/flights/${encodeURIComponent(faFlightId)}/track`,
+            { include_estimated_positions: true }
+          ).catch(() => null));
 
         const trackPoints = buildTrackPoints(trackResponse);
         const durationMinutes = computeDurationMinutes(startTime, endTime, trackPoints);
