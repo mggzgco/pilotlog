@@ -12,11 +12,14 @@ import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { Receipt } from "lucide-react";
 import { ChecklistSection } from "@/app/components/flights/checklist-section";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
+import { participantRoleOptions } from "@/app/lib/flights/participants";
 
 export default async function FlightDetailPage({
-  params
+  params,
+  searchParams
 }: {
   params: { id: string };
+  searchParams?: { participantId?: string };
 }) {
   const user = await requireUser();
 
@@ -24,9 +27,12 @@ export default async function FlightDetailPage({
     where: { id: params.id, userId: user.id },
     include: {
       trackPoints: { orderBy: { recordedAt: "asc" } },
-      logbookEntries: { orderBy: { date: "desc" } },
       costItems: { orderBy: { date: "desc" } },
       receiptDocuments: { orderBy: { createdAt: "desc" } },
+      participants: {
+        include: { user: true },
+        orderBy: { createdAt: "asc" }
+      },
       checklistRuns: {
         include: { items: { orderBy: { order: "asc" } } }
       }
@@ -37,11 +43,38 @@ export default async function FlightDetailPage({
     notFound();
   }
 
-  let logbookEntry = flight.logbookEntries[0] ?? null;
-  if (!logbookEntry) {
+  let participants = flight.participants;
+  if (participants.length === 0) {
+    const ownerParticipant = await prisma.flightParticipant.create({
+      data: {
+        flightId: flight.id,
+        userId: user.id,
+        role: "PIC"
+      },
+      include: { user: true }
+    });
+    participants = [ownerParticipant];
+  }
+
+  const defaultParticipant =
+    participants.find((participant) => participant.userId === user.id) ??
+    participants[0] ??
+    null;
+  const selectedParticipantId =
+    searchParams?.participantId ?? defaultParticipant?.id ?? null;
+  const selectedParticipant =
+    participants.find((participant) => participant.id === selectedParticipantId) ??
+    defaultParticipant;
+
+  let logbookEntry = selectedParticipant
+    ? await prisma.logbookEntry.findFirst({
+        where: { flightId: flight.id, userId: selectedParticipant.userId }
+      })
+    : null;
+  if (!logbookEntry && selectedParticipant) {
     logbookEntry = await prisma.logbookEntry.create({
       data: {
-        userId: user.id,
+        userId: selectedParticipant.userId,
         flightId: flight.id,
         date: flight.plannedStartTime ?? flight.startTime
       }
@@ -123,6 +156,27 @@ export default async function FlightDetailPage({
     (showLogbookPrompt && flight.durationMinutes !== null
       ? (flight.durationMinutes / 60).toFixed(1)
       : "");
+  const prefillPicTime =
+    logbookEntry?.picTime?.toString() ??
+    (selectedParticipant?.role === "PIC" && prefillTotalTime
+      ? prefillTotalTime
+      : "");
+  const prefillSicTime =
+    logbookEntry?.sicTime?.toString() ??
+    (selectedParticipant?.role === "SIC" && prefillTotalTime
+      ? prefillTotalTime
+      : "");
+  const users = await prisma.user.findMany({
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    select: { id: true, firstName: true, lastName: true, name: true, email: true }
+  });
+  const participantOptions = users.map((entry) => ({
+    id: entry.id,
+    label:
+      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
+      entry.name ||
+      entry.email
+  }));
 
   return (
     <div className="space-y-6">
@@ -334,6 +388,126 @@ export default async function FlightDetailPage({
 
       <Card>
         <CardHeader>
+          <p className="text-sm text-slate-400">Participants</p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              {participants.map((participant) => (
+                <div
+                  key={participant.id}
+                  className="rounded-lg border border-slate-800 p-4"
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-100">
+                        {participant.user.name ||
+                          [participant.user.firstName, participant.user.lastName]
+                            .filter(Boolean)
+                            .join(" ") ||
+                          participant.user.email}
+                      </p>
+                      <p className="text-xs text-slate-400">{participant.user.email}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <form
+                        action={`/api/flights/${flight.id}/participants/update-role`}
+                        method="post"
+                        className="flex items-center gap-2"
+                      >
+                        <input
+                          type="hidden"
+                          name="participantId"
+                          value={participant.id}
+                        />
+                        <select
+                          name="role"
+                          defaultValue={participant.role}
+                          className="rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                        >
+                          {participantRoleOptions.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </select>
+                        <FormSubmitButton
+                          type="submit"
+                          size="sm"
+                          variant="outline"
+                          pendingText="Saving..."
+                        >
+                          Update role
+                        </FormSubmitButton>
+                      </form>
+                      {participant.userId !== user.id ? (
+                        <form
+                          action={`/api/flights/${flight.id}/participants/remove`}
+                          method="post"
+                        >
+                          <input
+                            type="hidden"
+                            name="participantId"
+                            value={participant.id}
+                          />
+                          <FormSubmitButton
+                            type="submit"
+                            size="sm"
+                            variant="outline"
+                            pendingText="Removing..."
+                          >
+                            Remove
+                          </FormSubmitButton>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <form
+              action={`/api/flights/${flight.id}/participants/add`}
+              method="post"
+              className="grid gap-3 md:grid-cols-3"
+            >
+              <select
+                name="userId"
+                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                required
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Select a user
+                </option>
+                {participantOptions.map((participant) => (
+                  <option key={participant.id} value={participant.id}>
+                    {participant.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="role"
+                className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                defaultValue="SIC"
+              >
+                {participantRoleOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+              <div className="md:col-span-3">
+                <FormSubmitButton type="submit" pendingText="Adding participant...">
+                  Add participant
+                </FormSubmitButton>
+              </div>
+            </form>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <p className="text-sm text-slate-400">Logbook entry</p>
         </CardHeader>
         <CardContent>
@@ -343,11 +517,40 @@ export default async function FlightDetailPage({
               time has been prefilled from ADS-B when available.
             </div>
           ) : null}
+          {participants.length > 1 ? (
+            <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold uppercase text-slate-400">
+                  Logbook participant
+                </label>
+                <select
+                  name="participantId"
+                  defaultValue={selectedParticipant?.id}
+                  className="rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                >
+                  {participants.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {participant.user.name ||
+                        [participant.user.firstName, participant.user.lastName]
+                          .filter(Boolean)
+                          .join(" ") ||
+                        participant.user.email}{" "}
+                      ({participant.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button type="submit" variant="outline">
+                View logbook
+              </Button>
+            </form>
+          ) : null}
           <form
             action={`/api/flights/${flight.id}/update-logbook`}
             method="post"
             className="grid gap-3 md:grid-cols-3"
           >
+            <input type="hidden" name="participantId" value={selectedParticipant?.id} />
             <Input
               name="date"
               type="date"
@@ -370,14 +573,14 @@ export default async function FlightDetailPage({
               type="number"
               step="0.1"
               placeholder="PIC time"
-              defaultValue={logbookEntry?.picTime?.toString() ?? ""}
+              defaultValue={prefillPicTime}
             />
             <Input
               name="sicTime"
               type="number"
               step="0.1"
               placeholder="SIC time"
-              defaultValue={logbookEntry?.sicTime?.toString() ?? ""}
+              defaultValue={prefillSicTime}
             />
             <Input
               name="nightTime"

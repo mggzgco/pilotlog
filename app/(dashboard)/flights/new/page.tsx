@@ -9,6 +9,17 @@ export default async function NewPlannedFlightPage() {
     where: { userId: user.id },
     orderBy: { tailNumber: "asc" }
   });
+  const users = await prisma.user.findMany({
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    select: { id: true, firstName: true, lastName: true, name: true, email: true }
+  });
+  const participantOptions = users.map((entry) => ({
+    id: entry.id,
+    label:
+      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
+      entry.name ||
+      entry.email
+  }));
 
   return (
     <div className="space-y-6">
@@ -24,7 +35,10 @@ export default async function NewPlannedFlightPage() {
           <p className="text-sm text-slate-400">Planned flight details</p>
         </CardHeader>
         <CardContent>
-          <PlanFlightForm aircraftOptions={aircraft} />
+          <PlanFlightForm
+            aircraftOptions={aircraft}
+            participantOptions={participantOptions}
+          />
         </CardContent>
       </Card>
     </div>
