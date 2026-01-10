@@ -17,7 +17,9 @@ type PlanFlightFormProps = {
 };
 
 export function PlanFlightForm({ aircraftOptions }: PlanFlightFormProps) {
+  const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [tailNumber, setTailNumber] = useState("");
+  const [unassignedConfirmed, setUnassignedConfirmed] = useState(false);
 
   const aircraftById = useMemo(() => {
     return new Map(aircraftOptions.map((aircraft) => [aircraft.id, aircraft]));
@@ -29,40 +31,72 @@ export function PlanFlightForm({ aircraftOptions }: PlanFlightFormProps) {
       method="post"
       className="grid gap-4 md:grid-cols-2"
     >
-      {aircraftOptions.length > 0 ? (
-        <div className="md:col-span-2">
-          <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
-            Aircraft selection
-          </label>
-          <select
-            name="aircraftId"
-            className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+      <div className="md:col-span-2 space-y-3">
+        {aircraftOptions.length > 0 ? (
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+              Aircraft selection
+            </label>
+            <select
+              name="aircraftId"
+              className="w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              required={!unassignedConfirmed}
+              value={selectedAircraftId}
+              onChange={(event) => {
+                const nextId = event.target.value;
+                setSelectedAircraftId(nextId);
+                if (nextId) {
+                  const selected = aircraftById.get(nextId);
+                  setTailNumber(selected?.tailNumber ?? "");
+                  setUnassignedConfirmed(false);
+                } else {
+                  setTailNumber("");
+                }
+              }}
+            >
+              <option value="">Select an aircraft</option>
+              {aircraftOptions.map((aircraft) => (
+                <option key={aircraft.id} value={aircraft.id}>
+                  {aircraft.tailNumber}
+                  {aircraft.model ? ` · ${aircraft.model}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
+        <label className="flex items-center gap-2 text-sm text-slate-300">
+          <input
+            type="checkbox"
+            name="unassigned"
+            className="h-4 w-4 rounded border-slate-600 bg-slate-950"
+            checked={unassignedConfirmed}
+            disabled={Boolean(selectedAircraftId)}
+            required={!selectedAircraftId}
             onChange={(event) => {
-              const selected = aircraftById.get(event.target.value);
-              setTailNumber(selected?.tailNumber ?? "");
+              const confirmed = event.target.checked;
+              setUnassignedConfirmed(confirmed);
+              if (confirmed) {
+                setSelectedAircraftId("");
+                setTailNumber("");
+              }
             }}
-          >
-            <option value="">Select an aircraft</option>
-            {aircraftOptions.map((aircraft) => (
-              <option key={aircraft.id} value={aircraft.id}>
-                {aircraft.tailNumber}
-                {aircraft.model ? ` · ${aircraft.model}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : null}
+          />
+          Confirm this flight has no aircraft profile assigned yet
+        </label>
+      </div>
 
       <div>
         <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
-          Tail number (required)
+          Tail number
         </label>
         <Input
           name="tailNumber"
           value={tailNumber}
           onChange={(event) => setTailNumber(event.target.value)}
           placeholder="N12345"
-          required
+          readOnly={Boolean(selectedAircraftId)}
+          required={!selectedAircraftId}
         />
       </div>
       <div>

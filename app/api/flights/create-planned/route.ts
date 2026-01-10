@@ -9,6 +9,7 @@ import { recordAuditEvent } from "@/app/lib/audit";
 const plannedFlightSchema = z.object({
   tailNumber: z.string().optional(),
   aircraftId: z.string().optional(),
+  unassigned: z.string().optional(),
   plannedStartTime: z.string().optional(),
   plannedEndTime: z.string().optional(),
   departureLabel: z.string().optional(),
@@ -29,14 +30,29 @@ export async function POST(request: Request) {
 
   const tailNumberInput = String(parsed.data.tailNumber ?? "").trim();
   const aircraftId = parsed.data.aircraftId ? String(parsed.data.aircraftId) : null;
+  const unassigned = parsed.data.unassigned === "on";
+
+  if (!aircraftId && !unassigned) {
+    redirectUrl.searchParams.set(
+      "toast",
+      "Select an aircraft or confirm the flight is unassigned."
+    );
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
 
   let tailNumber = tailNumberInput;
-  if (!tailNumber && aircraftId) {
+  if (aircraftId) {
     const aircraft = await prisma.aircraft.findFirst({
       where: { id: aircraftId, userId: user.id },
       select: { tailNumber: true }
     });
-    tailNumber = aircraft?.tailNumber ?? "";
+    if (!aircraft) {
+      redirectUrl.searchParams.set("toast", "Selected aircraft was not found.");
+      redirectUrl.searchParams.set("toastType", "error");
+      return NextResponse.redirect(redirectUrl);
+    }
+    tailNumber = aircraft.tailNumber;
   }
 
   if (!tailNumber) {
@@ -74,6 +90,7 @@ export async function POST(request: Request) {
         userId: user.id,
         tailNumber,
         tailNumberSnapshot: tailNumber,
+        aircraftId,
         origin: departureLabel || "TBD",
         destination: arrivalLabel || null,
         plannedStartTime: plannedStart,
@@ -86,12 +103,14 @@ export async function POST(request: Request) {
     const [preflightTemplate, postflightTemplate] = await Promise.all([
       selectChecklistTemplate({
         userId: user.id,
+        aircraftId,
         tailNumber,
         phase: "PREFLIGHT",
         client: tx
       }),
       selectChecklistTemplate({
         userId: user.id,
+        aircraftId,
         tailNumber,
         phase: "POSTFLIGHT",
         client: tx
@@ -125,6 +144,7 @@ export async function POST(request: Request) {
     entityType: "Flight",
     entityId: flight.id,
     metadata: {
+      aircraftId,
       tailNumber,
       plannedStartTime: plannedStart?.toISOString() ?? null,
       plannedEndTime: plannedEnd?.toISOString() ?? null

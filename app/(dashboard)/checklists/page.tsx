@@ -21,7 +21,7 @@ export default async function ChecklistsPage() {
   const [templates, aircraft] = await Promise.all([
     prisma.checklistTemplate.findMany({
       where: { userId: user.id },
-      include: { items: { orderBy: { order: "asc" } } },
+      include: { items: { orderBy: { order: "asc" } }, aircraft: true },
       orderBy: [{ phase: "asc" }, { createdAt: "desc" }]
     }),
     prisma.aircraft.findMany({
@@ -128,7 +128,10 @@ export default async function ChecklistsPage() {
                         {template.name}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Tail scope: {template.aircraftTailNumber ?? "All aircraft"}
+                        Tail scope:{" "}
+                        {template.aircraft?.tailNumber ??
+                          template.aircraftTailNumber ??
+                          "All aircraft"}
                       </p>
                     </div>
                     {template.isDefault ? (
