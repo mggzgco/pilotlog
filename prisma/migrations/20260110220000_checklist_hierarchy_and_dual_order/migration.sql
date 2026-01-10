@@ -24,9 +24,15 @@ SET
   "personalOrder" = "order"
 WHERE "officialOrder" = 0 AND "personalOrder" = 0;
 
-ALTER TABLE "ChecklistTemplateItem"
-  ADD CONSTRAINT IF NOT EXISTS "ChecklistTemplateItem_parentId_fkey"
-  FOREIGN KEY ("parentId") REFERENCES "ChecklistTemplateItem"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "ChecklistTemplateItem"
+    ADD CONSTRAINT "ChecklistTemplateItem_parentId_fkey"
+    FOREIGN KEY ("parentId") REFERENCES "ChecklistTemplateItem"("id")
+    ON DELETE SET NULL
+    ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TABLE "FlightChecklistItem"
   ADD COLUMN IF NOT EXISTS "kind" "ChecklistItemKind" NOT NULL DEFAULT 'STEP',
@@ -41,7 +47,13 @@ SET
   "personalOrder" = "order"
 WHERE "officialOrder" = 0 AND "personalOrder" = 0;
 
-ALTER TABLE "FlightChecklistItem"
-  ADD CONSTRAINT IF NOT EXISTS "FlightChecklistItem_parentId_fkey"
-  FOREIGN KEY ("parentId") REFERENCES "FlightChecklistItem"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "FlightChecklistItem"
+    ADD CONSTRAINT "FlightChecklistItem_parentId_fkey"
+    FOREIGN KEY ("parentId") REFERENCES "FlightChecklistItem"("id")
+    ON DELETE SET NULL
+    ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
