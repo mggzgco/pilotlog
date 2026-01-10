@@ -535,7 +535,12 @@ export default async function FlightDetailPage({
 
       <Card>
         <CardHeader>
-          <p className="text-sm text-slate-400">Logbook entry</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-400">Logbook entry</p>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/logbook?flightId=${flight.id}`}>Log Hours</Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {showLogbookPrompt ? (
@@ -652,7 +657,7 @@ export default async function FlightDetailPage({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="costs">
         <CardHeader>
           <p className="text-sm text-slate-400">Costs & receipts</p>
         </CardHeader>

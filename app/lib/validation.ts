@@ -72,6 +72,7 @@ export const costSchema = z.object({
 
 export const logbookSchema = z.object({
   date: z.string().min(1),
+  flightId: z.string().optional(),
   totalTime: z.string().optional(),
   picTime: z.string().optional(),
   sicTime: z.string().optional(),
