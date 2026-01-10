@@ -5,19 +5,24 @@ import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/app/lib/utils";
+import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 
 type SortKey = "date" | "duration" | "cost";
 type SortDirection = "asc" | "desc";
 
 export interface FlightRow {
   id: string;
-  startTime: string;
+  sortTime: string;
+  displayTime: string;
   tailNumber: string;
+  tailNumberSnapshot?: string | null;
   origin: string;
   destination: string | null;
   durationMinutes: number | null;
   distanceNm: number | null;
   costTotalCents: number;
+  status: string;
+  isImported: boolean;
 }
 
 interface FlightsTableProps {
@@ -45,7 +50,7 @@ export function FlightsTable({ flights }: FlightsTableProps) {
       if (sortKey === "cost") {
         return flight.costTotalCents ?? -1;
       }
-      return new Date(flight.startTime).getTime();
+      return new Date(flight.sortTime).getTime();
     };
 
     return [...flights].sort((a, b) => {
@@ -101,6 +106,7 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                 Date {sortIcon("date")}
               </button>
             </th>
+            <th className="px-4 py-3 text-left font-medium">Status</th>
             <th className="px-4 py-3 text-left font-medium">Tail</th>
             <th className="px-4 py-3 text-left font-medium">Route</th>
             <th
@@ -124,17 +130,34 @@ export function FlightsTable({ flights }: FlightsTableProps) {
           {sortedFlights.map((flight) => (
             <tr key={flight.id} className="text-slate-200 hover:bg-slate-900/60">
               <td className="px-4 py-3 text-slate-400">
-                {new Date(flight.startTime).toLocaleDateString()}
+                {new Date(flight.displayTime).toLocaleDateString()}
               </td>
-              <td className="px-4 py-3">{flight.tailNumber}</td>
               <td className="px-4 py-3">
-                {flight.origin} → {flight.destination ?? "TBD"}
+                <FlightStatusBadge status={flight.status} />
+              </td>
+              <td className="px-4 py-3">
+                {flight.tailNumberSnapshot ?? flight.tailNumber}
+              </td>
+              <td className="px-4 py-3">
+                {flight.destination ? (
+                  <>
+                    {flight.origin} → {flight.destination}
+                  </>
+                ) : (
+                  <span className="text-slate-400">
+                    {flight.origin} → —
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3 text-right text-slate-400">
-                {flight.durationMinutes ?? "--"} mins
+                {flight.isImported && flight.durationMinutes !== null
+                  ? `${flight.durationMinutes} mins`
+                  : "—"}
               </td>
               <td className="px-4 py-3 text-right text-slate-400">
-                {flight.distanceNm ?? "--"} nm
+                {flight.isImported && flight.distanceNm !== null
+                  ? `${flight.distanceNm} nm`
+                  : "—"}
               </td>
               <td className="px-4 py-3 text-right text-slate-400">
                 {flight.costTotalCents > 0
