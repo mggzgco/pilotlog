@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
+import { FlightRowMenu } from "@/app/components/flights/flight-row-menu";
 
 export interface FlightRow {
   id: string;
@@ -46,7 +46,7 @@ export function FlightsTable({ flights }: FlightsTableProps) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+    <div className="h-full rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
       <div className="overflow-x-auto overflow-y-visible">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
@@ -150,31 +150,7 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                         <Link href={flight.nextAction.href}>{flight.nextAction.label}</Link>
                       </Button>
                     )}
-                    <details className="relative">
-                      <summary className="list-none cursor-pointer rounded-md border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-2 w-44 rounded-md border border-slate-200 bg-white py-2 text-sm text-slate-900 shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
-                        {flight.menuItems.map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className="block px-3 py-2 transition hover:bg-slate-50 dark:hover:bg-slate-900"
-                          >
-                            {item.label}
-                          </Link>
-                        ))}
-                        <div className="my-1 border-t border-slate-200 dark:border-slate-800" />
-                        <form action={`/api/flights/${flight.id}/delete`} method="post">
-                          <button
-                            type="submit"
-                            className="block w-full px-3 py-2 text-left text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
-                          >
-                            Delete flight
-                          </button>
-                        </form>
-                      </div>
-                    </details>
+                    <FlightRowMenu flightId={flight.id} menuItems={flight.menuItems} />
                   </div>
                 </td>
               </tr>

@@ -253,7 +253,7 @@ export default async function FlightsPage({
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold">Flights</h2>
@@ -390,7 +390,9 @@ export default async function FlightsPage({
           }
         />
       ) : (
-        <FlightsTable flights={flightRows} />
+        <div className="flex-1">
+          <FlightsTable flights={flightRows} />
+        </div>
       )}
     </div>
   );
