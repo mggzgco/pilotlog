@@ -191,6 +191,10 @@ export async function GET(request: Request) {
             note: "/search/flights variant"
           });
         }
+
+        // Aircraft info (type, owner) if available
+        const aircraftUrl = new URL(`aircraft/${encodeURIComponent(tail)}`, apiBase);
+        await probe("aircraft_direct", aircraftUrl, { note: "/aircraft (registration lookup)" });
       }
     }
 
