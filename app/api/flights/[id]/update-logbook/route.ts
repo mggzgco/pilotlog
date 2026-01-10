@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
+import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 
 const emptyToNull = (value: unknown) =>
   value === "" || value === undefined ? null : value;
@@ -34,6 +35,18 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const redirectWithToast = (message: string, toastType: "success" | "error") => {
+    const redirectUrl = new URL(`/flights/${params.id}/logbook`, request.url);
+    redirectUrl.searchParams.set("toast", message);
+    redirectUrl.searchParams.set("toastType", toastType);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
+  };
+
+  const csrf = validateRequestCsrf(request);
+  if (!csrf.ok) {
+    return redirectWithToast(csrf.error, "error");
+  }
+
   const user = await requireUser();
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
@@ -41,23 +54,20 @@ export async function POST(
   });
 
   if (!flight) {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return redirectWithToast("Not found.", "error");
   }
 
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
   const participantId = formData.get("participantId");
   if (!participantId || typeof participantId !== "string") {
-    return NextResponse.json(
-      { error: "Participant selection is required." },
-      { status: 400 }
-    );
+    return redirectWithToast("Participant selection is required.", "error");
   }
   const participant = await prisma.flightParticipant.findFirst({
     where: { id: participantId, flightId: flight.id }
   });
   if (!participant) {
-    return NextResponse.json({ error: "Participant not found." }, { status: 404 });
+    return redirectWithToast("Participant not found.", "error");
   }
   const toNumber = (value: FormDataEntryValue | undefined) =>
     value === "" || value === undefined ? undefined : Number(value);
@@ -85,7 +95,7 @@ export async function POST(
   });
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid logbook data." }, { status: 400 });
+    return redirectWithToast("Invalid logbook data.", "error");
   }
 
   const existingEntry = await prisma.logbookEntry.findFirst({
@@ -150,9 +160,9 @@ export async function POST(
     });
   }
 
-  const redirectUrl = new URL(`/flights/${flight.id}`, request.url);
+  const redirectUrl = new URL(`/flights/${flight.id}/logbook`, request.url);
   redirectUrl.searchParams.set("participantId", participant.id);
   redirectUrl.searchParams.set("toast", "Logbook updated.");
   redirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(redirectUrl, { status: 303 });
 }
