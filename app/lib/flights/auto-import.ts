@@ -25,19 +25,24 @@ type FlightWithChecklistRuns = Pick<
 
 export function deriveAutoImportWindow(flight: FlightWithChecklistRuns) {
   // Use the known flight times (or planned times as a fallback) and search +/- 2 hours.
-  // Timestamps are stored in UTC, but represent local wall-clock times entered by the user,
-  // so we expand symmetrically around them rather than converting time zones.
+  // Timestamps are stored as UTC but entered as local wall-clock times. Convert the stored
+  // times to their intended local wall-clock UTC equivalents by subtracting the local
+  // timezone offset, then build the +/- 2 hour window around those values.
   const baseStart = flight.startTime ?? flight.plannedStartTime ?? new Date();
   const baseEnd = flight.endTime ?? flight.plannedEndTime ?? baseStart;
+  const offsetMs = baseStart.getTimezoneOffset() * 60 * 1000;
 
-  const searchStart = new Date(baseStart.getTime() - TWO_HOURS_MS);
-  const searchEnd = new Date(baseEnd.getTime() + TWO_HOURS_MS);
+  const startUtc = baseStart.getTime() - offsetMs;
+  const endUtc = baseEnd.getTime() - offsetMs;
+
+  const searchStart = new Date(startUtc - TWO_HOURS_MS);
+  const searchEnd = new Date(endUtc + TWO_HOURS_MS);
 
   return {
     searchStart,
     searchEnd,
-    referenceStart: baseStart,
-    referenceEnd: baseEnd,
+    referenceStart: new Date(startUtc),
+    referenceEnd: new Date(endUtc),
     preflightSignedAt: null,
     postflightSignedAt: null
   };
