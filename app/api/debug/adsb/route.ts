@@ -99,6 +99,8 @@ export async function GET(request: Request) {
         note?: string;
         durationMs?: number;
         responseSnippet?: string;
+        responseHeaders?: Record<string, string>;
+        statusText?: string;
       }
     > | null = null;
     if (defaultProviderName === aeroApiProviderName) {
@@ -142,15 +144,21 @@ export async function GET(request: Request) {
             }
             const flights = Array.isArray((parsed as any).flights) ? (parsed as any).flights : [];
             const durationMs = Math.round(performance.now() - started);
+            const safeHeaders: Record<string, string> = {};
+            res.headers.forEach((value, key) => {
+              safeHeaders[key] = value;
+            });
             raw![label] = {
               status: res.status,
+              statusText: res.statusText,
               count: flights.length,
               sampleId: flights[0]?.fa_flight_id ?? flights[0]?.ident ?? null,
               url: url.toString(),
               query: opts.query,
               note: opts.note,
               durationMs,
-              responseSnippet: text.slice(0, 500)
+              responseSnippet: text.slice(0, 500),
+              responseHeaders: safeHeaders
             };
           } catch (error) {
             const durationMs = Math.round(performance.now() - started);
@@ -189,6 +197,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       tail,
       provider: defaultProviderName,
+      keyPresent: Boolean(process.env.AEROAPI_KEY?.trim()),
       windowEpoch: { start: epochStart, end: epochEnd },
       windows: results,
       mergedCount: merged.length,
