@@ -5,7 +5,11 @@ CREATE TYPE "UserStatus" AS ENUM ('PENDING', 'ACTIVE', 'DISABLED');
 ALTER TABLE "User" ADD COLUMN     "phone" TEXT;
 ALTER TABLE "User" ADD COLUMN     "status" "UserStatus" NOT NULL DEFAULT 'PENDING';
 
-UPDATE "User" SET "status" = CASE WHEN "approved" = true THEN 'ACTIVE' ELSE 'PENDING' END;
+UPDATE "User"
+SET "status" = CASE
+  WHEN "approved" = true THEN 'ACTIVE'::"UserStatus"
+  ELSE 'PENDING'::"UserStatus"
+END;
 
 ALTER TABLE "User" DROP COLUMN "approved";
 
