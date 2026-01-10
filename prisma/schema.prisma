@@ -88,6 +88,7 @@ model Session {
 model Flight {
   id                  String               @id @default(cuid())
   userId              String
+  aircraftId          String?
   tailNumber          String
   tailNumberSnapshot  String?
   origin              String
@@ -107,6 +108,7 @@ model Flight {
   autoImportLastError String?
   createdAt           DateTime             @default(now())
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aircraft            Aircraft?            @relation(fields: [aircraftId], references: [id], onDelete: SetNull)
   logbookEntries      LogbookEntry[]
   costItems           CostItem[]
   trackPoints         TrackPoint[]
@@ -114,6 +116,7 @@ model Flight {
   receiptDocuments    ReceiptDocument[]
 
   @@unique([userId, importedProvider, providerFlightId])
+  @@index([aircraftId])
 }
 
 model Aircraft {
@@ -123,6 +126,8 @@ model Aircraft {
   model      String?
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights    Flight[]
+  checklistTemplates ChecklistTemplate[]
 
   @@unique([userId, tailNumber])
 }
@@ -224,15 +229,18 @@ model ChecklistTemplate {
   name              String
   phase             ChecklistPhase
   isDefault         Boolean               @default(false)
+  aircraftId        String?
   aircraftTailNumber String?
   makeModel         String?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   user              User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  aircraft          Aircraft?             @relation(fields: [aircraftId], references: [id], onDelete: SetNull)
   items             ChecklistTemplateItem[]
 
   @@index([phase, isDefault])
   @@index([aircraftTailNumber])
+  @@index([aircraftId])
 }
 
 model ChecklistTemplateItem {

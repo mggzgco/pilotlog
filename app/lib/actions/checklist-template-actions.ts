@@ -17,6 +17,13 @@ export async function createChecklistTemplateAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const matchedAircraft = tailNumber
+    ? await prisma.aircraft.findFirst({
+        where: { userId: user.id, tailNumber },
+        select: { id: true }
+      })
+    : null;
+  const aircraftId = matchedAircraft?.id ?? null;
 
   await prisma.$transaction(async (tx) => {
     if (isDefault) {
@@ -24,6 +31,7 @@ export async function createChecklistTemplateAction(formData: FormData) {
         where: {
           userId: user.id,
           phase: phase as "PREFLIGHT" | "POSTFLIGHT",
+          aircraftId,
           aircraftTailNumber: tailNumber || null,
           isDefault: true
         },
@@ -36,6 +44,7 @@ export async function createChecklistTemplateAction(formData: FormData) {
         userId: user.id,
         name,
         phase: phase as "PREFLIGHT" | "POSTFLIGHT",
+        aircraftId,
         aircraftTailNumber: tailNumber || null,
         isDefault
       }
@@ -147,6 +156,7 @@ export async function setChecklistTemplateDefaultAction(formData: FormData) {
       where: {
         userId: user.id,
         phase: template.phase,
+        aircraftId: template.aircraftId,
         aircraftTailNumber: template.aircraftTailNumber,
         isDefault: true
       },
