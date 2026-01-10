@@ -46,7 +46,7 @@ export default async function ChecklistsPage() {
         <CardContent>
           <form
             action={createChecklistTemplateAction}
-            className="grid gap-3 lg:grid-cols-[1.4fr_0.8fr_auto]"
+            className="grid gap-3 lg:grid-cols-[1.4fr_0.8fr_auto] lg:items-end"
           >
             <Input name="name" placeholder="Template name" required />
             <label className="text-sm text-slate-300">
@@ -63,7 +63,7 @@ export default async function ChecklistsPage() {
                 ))}
               </select>
             </label>
-            <div className="flex items-end gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 lg:justify-end">
               <label className="flex items-center gap-2 text-sm text-slate-300">
                 <input
                   type="checkbox"
