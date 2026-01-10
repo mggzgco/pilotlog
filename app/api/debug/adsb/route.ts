@@ -11,11 +11,11 @@ export async function GET(request: Request) {
     // N246FB on 2026-01-08 at 12:42Z (FlightAware link: 20260108/1242Z/KLOM/KLOM).
     const tail = url.searchParams.get("tail") || "N246FB";
     const startParam = url.searchParams.get("start");
-    const beforeHours = Number(url.searchParams.get("beforeHours") ?? "4");
-    const afterHours = Number(url.searchParams.get("afterHours") ?? "4");
+    const beforeHours = Number(url.searchParams.get("beforeHours") ?? "12");
+    const afterHours = Number(url.searchParams.get("afterHours") ?? "12");
 
-    // Default to 2026-01-08 12:42Z if not provided
-    const defaultStart = new Date("2026-01-08T12:42:00Z");
+    // Default to 2026-01-08 12:00Z (07:00 EST) if not provided
+    const defaultStart = new Date("2026-01-08T12:00:00Z");
     const start = startParam ? new Date(startParam) : defaultStart;
     if (Number.isNaN(start.getTime())) {
       return NextResponse.json({ error: "Invalid start time" }, { status: 400 });
@@ -53,19 +53,31 @@ export async function GET(request: Request) {
       windowStart: string;
       windowEnd: string;
       count: number;
+      error?: string;
     }> = [];
     const mergedMap = new Map<string, Awaited<ReturnType<typeof provider.searchFlights>>[number]>();
 
     for (const w of windows) {
-      const found = await provider.searchFlights(tail, w.start, w.end);
-      results.push({
-        label: w.label,
-        windowStart: w.start.toISOString(),
-        windowEnd: w.end.toISOString(),
-        count: found.length
-      });
-      for (const f of found) {
-        mergedMap.set(f.providerFlightId, f);
+      try {
+        const found = await provider.searchFlights(tail, w.start, w.end);
+        results.push({
+          label: w.label,
+          windowStart: w.start.toISOString(),
+          windowEnd: w.end.toISOString(),
+          count: found.length
+        });
+        for (const f of found) {
+          mergedMap.set(f.providerFlightId, f);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        results.push({
+          label: w.label,
+          windowStart: w.start.toISOString(),
+          windowEnd: w.end.toISOString(),
+          count: 0,
+          error: message
+        });
       }
     }
 
