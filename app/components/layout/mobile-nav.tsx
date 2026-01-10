@@ -2,9 +2,10 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { navItems } from "@/app/components/layout/sidebar";
 import { Button } from "@/app/components/ui/button";
+import { usePathname } from "next/navigation";
 
 interface MobileNavProps {
   user: {
@@ -15,13 +16,20 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ user }: MobileNavProps) {
+  const pathname = usePathname();
+  const isChecklistFocus = pathname?.startsWith("/checklists");
+
+  if (isChecklistFocus) {
+    return null;
+  }
+
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
         <Button
           size="sm"
           variant="outline"
-          className="md:hidden"
+          className="lg:hidden"
           aria-label="Open navigation"
         >
           <Menu className="h-4 w-4" />
@@ -62,17 +70,6 @@ export function MobileNav({ user }: MobileNavProps) {
                 </Dialog.Close>
               );
             })}
-            {user.role === "ADMIN" && (
-              <Dialog.Close asChild>
-                <Link
-                  href="/admin/approvals"
-                  className="mt-4 flex items-center gap-3 rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Approvals
-                </Link>
-              </Dialog.Close>
-            )}
           </nav>
 
           <div className="mt-8 text-xs text-slate-500">

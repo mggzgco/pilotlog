@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   return (
     <ToastProvider>
       <div className="flex min-h-screen bg-slate-950 text-slate-100">
-        <Sidebar user={user} />
+        <Sidebar />
         <div className="flex flex-1 flex-col">
           <Topbar user={user} />
           <main className="flex-1 bg-slate-950 p-6">
