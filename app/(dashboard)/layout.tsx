@@ -18,8 +18,8 @@ export default async function DashboardLayout({
         <Sidebar />
         <div className="flex flex-1 flex-col">
           <Topbar user={user} />
-          <main className="flex-1 bg-slate-950 p-6">
-            <div className="mx-auto max-w-6xl space-y-6">{children}</div>
+          <main className="app-main flex-1 bg-slate-950 p-4 sm:p-6">
+            <div className="mx-auto w-full max-w-6xl space-y-6">{children}</div>
           </main>
         </div>
       </div>

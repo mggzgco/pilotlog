@@ -13,8 +13,8 @@ const buttonVariants = cva(
         ghost: "hover:bg-slate-800"
       },
       size: {
-        default: "h-10 px-4",
-        sm: "h-9 px-3",
+        default: "h-11 px-4",
+        sm: "h-11 px-3",
         lg: "h-11 px-6"
       }
     },

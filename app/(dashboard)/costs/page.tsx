@@ -30,13 +30,13 @@ export default async function CostsPage() {
         </CardHeader>
         <CardContent>
           {/* COST-004: capture cost details and receipt */}
-          <form action={createCostAction} className="grid gap-3 md:grid-cols-3">
+          <form action={createCostAction} className="grid gap-3 lg:grid-cols-3">
             <Input name="category" placeholder="Category" required />
             <Input name="amount" placeholder="Amount" type="number" step="0.01" required />
             <Input name="date" type="date" required />
             <Input name="vendor" placeholder="Vendor" />
-            <Input name="notes" placeholder="Notes" className="md:col-span-2" />
-            <div className="md:col-span-3">
+            <Input name="notes" placeholder="Notes" className="lg:col-span-2" />
+            <div className="lg:col-span-3">
               <Button type="submit">Save expense</Button>
             </div>
           </form>

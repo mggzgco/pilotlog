@@ -22,7 +22,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden w-64 flex-col border-r border-slate-800 bg-slate-950 p-6 lg:flex">
+    <aside className="app-sidebar hidden w-64 flex-col border-r border-slate-800 bg-slate-950 p-6 lg:flex">
       <div className="mb-8">
         <div className="text-sm uppercase tracking-[0.2em] text-slate-400">Flight Training</div>
         <div className="text-2xl font-semibold">Super App</div>

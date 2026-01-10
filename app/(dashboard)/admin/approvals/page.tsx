@@ -34,7 +34,7 @@ export default async function ApprovalsPage() {
             {pending.map((pendingUser) => (
               <div
                 key={pendingUser.id}
-                className="flex flex-col gap-3 rounded-lg border border-slate-800 p-4 md:flex-row md:items-center md:justify-between"
+                className="flex flex-col gap-3 rounded-lg border border-slate-800 p-4 lg:flex-row md:items-center md:justify-between"
               >
                 <div>
                   <p className="text-lg font-semibold">{pendingUser.name ?? "—"}</p>

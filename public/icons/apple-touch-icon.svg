@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="32" fill="#0f172a" />
+  <path d="M45 102l45-34 45 34v18H45z" fill="#38bdf8" />
+  <path d="M90 42l56 42-7 9-49-36-49 36-7-9z" fill="#e2e8f0" />
+  <text x="90" y="148" text-anchor="middle" fill="#e2e8f0" font-size="18" font-family="Arial, sans-serif">PilotLog</text>
+</svg>

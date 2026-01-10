@@ -86,11 +86,11 @@ export function CostItemForm({
     (showFuelFields && fuelGallons.trim() && fuelPrice.trim());
 
   return (
-    <form action={action} method="post" className="mt-3 grid gap-3 md:grid-cols-3">
+    <form action={action} method="post" className="mt-3 grid gap-3 lg:grid-cols-3">
       {defaultValues?.costItemId ? (
         <input type="hidden" name="costItemId" value={defaultValues.costItemId} />
       ) : null}
-      <div className="md:col-span-3">
+      <div className="lg:col-span-3">
         <Input
           name="category"
           placeholder="Category"
@@ -160,10 +160,10 @@ export function CostItemForm({
       <Input
         name="notes"
         placeholder="Notes"
-        className="md:col-span-2"
+        className="lg:col-span-2"
         defaultValue={defaultValues?.notes}
       />
-      <div className="md:col-span-3">
+      <div className="lg:col-span-3">
         <FormSubmitButton
           type="submit"
           size={submitSize}
