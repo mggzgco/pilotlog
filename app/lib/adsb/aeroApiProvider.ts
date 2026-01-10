@@ -160,9 +160,8 @@ async function fetchAeroApi<T>(
   try {
     response = await fetch(url.toString(), {
       headers: {
-        // FlightAware AeroAPI accepts either x-apikey or Authorization: Bearer
-        "x-apikey": apiKey,
-        Authorization: `Bearer ${apiKey}`
+        // AeroAPI v4+ authenticates via x-apikey only
+        "x-apikey": apiKey
       }
     });
   } catch (error) {

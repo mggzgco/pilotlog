@@ -110,7 +110,7 @@ export async function GET(request: Request) {
       const apiBase = apiBaseRaw.endsWith("/") ? apiBaseRaw : `${apiBaseRaw}/`;
       if (apiKey) {
         raw = {};
-        const headers = { "x-apikey": apiKey, Authorization: `Bearer ${apiKey}` };
+        const headers = { "x-apikey": apiKey };
         const primaryUrl = new URL(`flights/${encodeURIComponent(tail)}`, apiBase);
         primaryUrl.searchParams.set("start", windowStart.toISOString());
         primaryUrl.searchParams.set("end", windowEnd.toISOString());
