@@ -24,7 +24,8 @@ Chart.register(
 
 type AltitudePoint = {
   recordedAt: string;
-  altitudeFeet: number;
+  altitudeFeet: number | null;
+  groundspeedKt?: number | null;
 };
 
 export function AltitudeChart({ points }: { points: AltitudePoint[] }) {
@@ -57,7 +58,18 @@ export function AltitudeChart({ points }: { points: AltitudePoint[] }) {
             backgroundColor: "rgba(56, 189, 248, 0.2)",
             tension: 0.3,
             pointRadius: 0,
-            fill: true
+            fill: true,
+            yAxisID: "yAltitude"
+          },
+          {
+            label: "Ground speed (kt)",
+            data: points.map((point) => point.groundspeedKt ?? null),
+            borderColor: "#f59e0b",
+            backgroundColor: "rgba(245, 158, 11, 0.12)",
+            tension: 0.3,
+            pointRadius: 0,
+            fill: false,
+            yAxisID: "ySpeed"
           }
         ]
       },
@@ -69,12 +81,25 @@ export function AltitudeChart({ points }: { points: AltitudePoint[] }) {
             ticks: { color: "#94a3b8" },
             grid: { color: "rgba(148, 163, 184, 0.2)" }
           },
-          y: {
+          yAltitude: {
+            type: "linear",
+            position: "left",
             ticks: { color: "#94a3b8" },
             grid: { color: "rgba(148, 163, 184, 0.2)" },
             title: {
               display: true,
               text: "Feet",
+              color: "#94a3b8"
+            }
+          },
+          ySpeed: {
+            type: "linear",
+            position: "right",
+            ticks: { color: "#94a3b8" },
+            grid: { drawOnChartArea: false },
+            title: {
+              display: true,
+              text: "Knots",
               color: "#94a3b8"
             }
           }

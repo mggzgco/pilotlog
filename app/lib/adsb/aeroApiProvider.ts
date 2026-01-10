@@ -58,6 +58,8 @@ type AeroApiTrackPosition = {
   longitude?: number | null;
   altitude?: number | null;
   ground_speed?: number | null;
+  groundspeed?: number | null;
+  groundspeed_kt?: number | null;
   heading?: number | null;
 };
 
@@ -216,7 +218,17 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
       if (!position || typeof position !== "object") {
         return null;
       }
-      const { timestamp, latitude, longitude, altitude, ground_speed, heading } = position;
+      const anyPosition = position as Record<string, unknown>;
+      const timestamp = anyPosition.timestamp as unknown;
+      const latitude = anyPosition.latitude as unknown;
+      const longitude = anyPosition.longitude as unknown;
+      const altitude = anyPosition.altitude as unknown;
+      const heading = anyPosition.heading as unknown;
+      const groundSpeed =
+        (anyPosition.ground_speed as unknown) ??
+        (anyPosition.groundspeed as unknown) ??
+        (anyPosition.groundspeed_kt as unknown) ??
+        null;
       const recordedAt = parseIsoOrEpoch(timestamp);
       if (
         !recordedAt ||
@@ -231,7 +243,7 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
         latitude,
         longitude,
         altitudeFeet: typeof altitude === "number" ? altitude : null,
-        groundspeedKt: typeof ground_speed === "number" ? ground_speed : null,
+        groundspeedKt: typeof groundSpeed === "number" ? groundSpeed : null,
         headingDeg: typeof heading === "number" ? heading : null
       } satisfies FlightTrackPoint;
     })

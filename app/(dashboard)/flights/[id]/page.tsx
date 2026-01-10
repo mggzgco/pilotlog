@@ -48,10 +48,15 @@ export default async function FlightDetailPage({
     notFound();
   }
 
-  const altitudePoints = flight.trackPoints
+  const plotPointsRaw = flight.trackPoints.map((point) => ({
+    recordedAt: point.recordedAt.toISOString(),
+    altitudeFeet: point.altitudeFeet,
+    groundspeedKt: point.groundspeedKt
+  }));
+  const altitudePoints = plotPointsRaw
     .filter((point) => point.altitudeFeet !== null)
     .map((point) => ({
-      recordedAt: point.recordedAt.toISOString(),
+      recordedAt: point.recordedAt,
       altitudeFeet: point.altitudeFeet as number
     }));
   const maxAltitudeRaw =
@@ -68,6 +73,16 @@ export default async function FlightDetailPage({
       : altitudePoints.map((point) => ({
           ...point,
           altitudeFeet: Math.round(point.altitudeFeet * altitudeDisplayScale)
+        }));
+  const plotPointsDisplay =
+    altitudeDisplayScale === 1
+      ? plotPointsRaw
+      : plotPointsRaw.map((point) => ({
+          ...point,
+          altitudeFeet:
+            typeof point.altitudeFeet === "number"
+              ? Math.round(point.altitudeFeet * altitudeDisplayScale)
+              : null
         }));
   const maxAltitude =
     altitudePointsDisplay.length > 0
@@ -249,7 +264,7 @@ export default async function FlightDetailPage({
           </CardHeader>
           <CardContent>
             {altitudePointsDisplay.length > 1 ? (
-              <AltitudeChart points={altitudePointsDisplay} />
+              <AltitudeChart points={plotPointsDisplay} />
             ) : (
               <EmptyState
                 title="No altitude profile yet"
