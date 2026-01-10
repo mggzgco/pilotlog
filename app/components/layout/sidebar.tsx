@@ -18,7 +18,6 @@ export const navItems = [
 export function Sidebar({ user }: { user: SidebarAccountUser }) {
   // UX-001: persistent left navigation for core modules
   const pathname = usePathname();
-  const isChecklistFocus = pathname?.startsWith("/checklists");
   const storageKey = "pilotlog.sidebarCollapsed";
   const [collapsed, setCollapsed] = useState(false);
 
@@ -41,10 +40,6 @@ export function Sidebar({ user }: { user: SidebarAccountUser }) {
   }, [collapsed]);
 
   const title = useMemo(() => (collapsed ? "PilotLog" : "Flight training"), [collapsed]);
-
-  if (isChecklistFocus) {
-    return null;
-  }
 
   return (
     <aside

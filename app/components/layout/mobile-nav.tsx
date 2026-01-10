@@ -21,11 +21,6 @@ interface MobileNavProps {
 
 export function MobileNav({ user }: MobileNavProps) {
   const pathname = usePathname();
-  const isChecklistFocus = pathname?.startsWith("/checklists");
-
-  if (isChecklistFocus) {
-    return null;
-  }
 
   return (
     <Dialog.Root>
