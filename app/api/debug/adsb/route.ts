@@ -26,6 +26,8 @@ export async function GET(request: Request) {
     const msAfter = afterHours * 60 * 60 * 1000;
     const windowStart = new Date(start.getTime() - msBefore);
     const windowEnd = new Date(start.getTime() + msAfter);
+    const epochStart = Math.floor(windowStart.getTime() / 1000);
+    const epochEnd = Math.floor(windowEnd.getTime() / 1000);
 
     const provider = getAdsbProvider();
 
@@ -87,7 +89,15 @@ export async function GET(request: Request) {
     // Direct AeroAPI raw probes (only when using AeroAPI provider)
     let raw: Record<
       string,
-      { status?: number; error?: string; count?: number; sampleId?: string | null }
+      {
+        status?: number;
+        error?: string;
+        count?: number;
+        sampleId?: string | null;
+        url?: string;
+        query?: string;
+        note?: string;
+      }
     > | null = null;
     if (defaultProviderName === aeroApiProviderName) {
       const apiKey = process.env.AEROAPI_KEY?.trim();
@@ -101,15 +111,17 @@ export async function GET(request: Request) {
         primaryUrl.searchParams.set("max_pages", "5");
 
         const searchUrl = new URL("/search/flights", apiBase);
-        searchUrl.searchParams.set(
-          "query",
-          `-idents ${tail} -begin ${Math.floor(windowStart.getTime() / 1000)} -end ${Math.floor(
-            windowEnd.getTime() / 1000
-          )}`
-        );
+        const searchQuery = `-idents ${tail} -begin ${epochStart} -end ${epochEnd}`;
+        searchUrl.searchParams.set("query", searchQuery);
         searchUrl.searchParams.set("max_pages", "5");
 
-        const probe = async (label: string, url: URL) => {
+        const historyUrl = new URL(`/history/flights/${encodeURIComponent(tail)}`, apiBase);
+        historyUrl.searchParams.set("ident_type", "registration");
+        historyUrl.searchParams.set("start", windowStart.toISOString());
+        historyUrl.searchParams.set("end", windowEnd.toISOString());
+        historyUrl.searchParams.set("max_pages", "5");
+
+        const probe = async (label: string, url: URL, opts: { note?: string; query?: string } = {}) => {
           try {
             const res = await fetch(url.toString(), { headers });
             const json = await res.json().catch(() => ({}));
@@ -117,23 +129,47 @@ export async function GET(request: Request) {
             raw![label] = {
               status: res.status,
               count: flights.length,
-              sampleId: flights[0]?.fa_flight_id ?? flights[0]?.ident ?? null
+              sampleId: flights[0]?.fa_flight_id ?? flights[0]?.ident ?? null,
+              url: url.toString(),
+              query: opts.query,
+              note: opts.note
             };
           } catch (error) {
             raw![label] = {
-              error: error instanceof Error ? error.message : "Unknown error"
+              error: error instanceof Error ? error.message : "Unknown error",
+              url: url.toString(),
+              query: opts.query,
+              note: opts.note
             };
           }
         };
 
-        await probe("primary_direct", primaryUrl);
-        await probe("search_direct", searchUrl);
+        await probe("history_direct", historyUrl, { note: "registration history" });
+        await probe("primary_direct", primaryUrl, { note: "/flights ident lookup" });
+        await probe("search_direct", searchUrl, { query: searchQuery, note: "/search/flights ident query" });
+
+        // Extra ident variants for search
+        const searchVariants = [
+          `-ident ${tail} -begin ${epochStart} -end ${epochEnd}`,
+          `-idents ${tail}`,
+          `-ident ${tail}`
+        ];
+        for (const [idx, q] of searchVariants.entries()) {
+          const urlVariant = new URL("/search/flights", apiBase);
+          urlVariant.searchParams.set("query", q);
+          urlVariant.searchParams.set("max_pages", "5");
+          await probe(`search_direct_variant_${idx + 1}`, urlVariant, {
+            query: q,
+            note: "/search/flights variant"
+          });
+        }
       }
     }
 
     return NextResponse.json({
       tail,
       provider: defaultProviderName,
+      windowEpoch: { start: epochStart, end: epochEnd },
       windows: results,
       mergedCount: merged.length,
       flights: merged.map((f) => ({
