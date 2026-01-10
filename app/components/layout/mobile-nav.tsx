@@ -12,8 +12,8 @@ import { logoutAction } from "@/app/lib/actions/auth-actions";
 interface MobileNavProps {
   user: {
     name: string | null;
-    firstName?: string | null;
-    lastName?: string | null;
+    firstName: string | null;
+    lastName: string | null;
     email: string;
     role: "USER" | "ADMIN";
   };
@@ -80,11 +80,12 @@ export function MobileNav({ user }: MobileNavProps) {
             <SidebarAccount
               user={{
                 name: user.name ?? null,
-                firstName: (user as any).firstName ?? null,
-                lastName: (user as any).lastName ?? null,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 email: user.email
               }}
               onLogout={logoutAction}
+              collapsed={false}
             />
           </div>
         </Dialog.Content>

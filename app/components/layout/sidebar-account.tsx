@@ -15,6 +15,7 @@ export type SidebarAccountUser = {
 type SidebarAccountProps = {
   user: SidebarAccountUser;
   onLogout: () => void;
+  collapsed?: boolean;
 };
 
 function initialsForUser(user: SidebarAccountUser) {
@@ -32,7 +33,7 @@ function displayNameForUser(user: SidebarAccountUser) {
   return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.name || "Pilot";
 }
 
-export function SidebarAccount({ user, onLogout }: SidebarAccountProps) {
+export function SidebarAccount({ user, onLogout, collapsed = false }: SidebarAccountProps) {
   const initials = initialsForUser(user);
   const displayName = displayNameForUser(user);
 
@@ -43,18 +44,21 @@ export function SidebarAccount({ user, onLogout }: SidebarAccountProps) {
           type="button"
           className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 dark:focus-visible:ring-offset-slate-950"
           aria-label="Open account menu"
+          title={collapsed ? `${displayName} · ${user.email}` : undefined}
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white shadow-lg shadow-brand-600/20">
             {initials}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-              {displayName}
+          {!collapsed ? (
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {displayName}
+              </div>
+              <div className="truncate text-xs text-slate-600 dark:text-slate-400">
+                {user.email}
+              </div>
             </div>
-            <div className="truncate text-xs text-slate-600 dark:text-slate-400">
-              {user.email}
-            </div>
-          </div>
+          ) : null}
         </button>
       </DropdownMenu.Trigger>
 
@@ -62,7 +66,7 @@ export function SidebarAccount({ user, onLogout }: SidebarAccountProps) {
         <DropdownMenu.Content
           className="z-50 w-60 rounded-lg border border-slate-200 bg-white p-2 text-sm text-slate-900 shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
           side="top"
-          align="start"
+          align={collapsed ? "center" : "start"}
           sideOffset={10}
           collisionPadding={12}
         >
