@@ -107,7 +107,8 @@ export async function POST(request: Request) {
           endTime,
           durationMinutes: durationMinutes ? Math.round(durationMinutes) : null,
           distanceNm: distanceNm ? Math.round(distanceNm) : null,
-          status: "IMPORTED",
+          // ADS-B import includes an end time, so the flight is confirmed landed.
+          status: "COMPLETED",
           importedProvider: provider,
           providerFlightId: candidate.providerFlightId,
           statsJson: candidate.stats ?? null

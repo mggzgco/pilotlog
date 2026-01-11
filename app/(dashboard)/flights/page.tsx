@@ -134,7 +134,7 @@ export default async function FlightsPage({
       orderBy,
       include: {
         costItems: { select: { id: true } },
-        logbookEntries: { select: { id: true } },
+        logbookEntries: { select: { id: true, status: true } },
         receiptDocuments: { select: { id: true } },
         stops: { orderBy: { order: "asc" }, select: { label: true } },
         checklistRuns: {
@@ -198,6 +198,14 @@ export default async function FlightsPage({
         flight.providerFlightId ||
         ["IMPORTED", "COMPLETED"].includes(flight.status)
     );
+    const hasClosedLogbookEntry = flight.logbookEntries.some(
+      (entry) => entry.status === "CLOSED"
+    );
+    const isLandedFromAdsb = Boolean(
+      flight.importedProvider && flight.providerFlightId && flight.endTime
+    );
+    const derivedStatus: FlightStatus =
+      isLandedFromAdsb || hasClosedLogbookEntry ? "COMPLETED" : flight.status;
     const hasLogbookEntry = flight.logbookEntries.length > 0;
     const hasCosts = flight.costItems.length > 0;
     const hasReceipts = flight.receiptDocuments.length > 0;
@@ -205,7 +213,7 @@ export default async function FlightsPage({
       preflightRun && preflightRun.status !== "NOT_AVAILABLE";
 
     const nextAction =
-      flight.status === "PLANNED" && checklistAvailable && preflightDecision === "—"
+      derivedStatus === "PLANNED" && checklistAvailable && preflightDecision === "—"
         ? { type: "link", label: "Start Preflight", href: `/flights/${flight.id}` }
         : preflightDecision === "Accepted" && postflightDecision === "—"
           ? {
@@ -239,7 +247,7 @@ export default async function FlightsPage({
         stops: flight.stops,
         destination: flight.destination
       }),
-      status: flight.status,
+      status: derivedStatus,
       preflightDecision,
       postflightDecision,
       adsbStatus: isImported ? "Imported" : "—",

@@ -121,7 +121,13 @@ export async function POST(
       await tx.flight.update({
         where: { id: flight.id },
         data: {
-          statsJson: match.stats ?? null
+          startTime: match.startTime,
+          endTime: match.endTime,
+          durationMinutes: match.durationMinutes ? Math.round(match.durationMinutes) : null,
+          distanceNm: match.distanceNm ? Math.round(match.distanceNm) : null,
+          statsJson: match.stats ?? null,
+          // If we have an endTime from ADS-B, treat as landed/completed.
+          status: "COMPLETED"
         }
       });
     });

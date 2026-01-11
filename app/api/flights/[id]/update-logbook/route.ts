@@ -143,6 +143,14 @@ export async function POST(
           data: { ...data, userId: participant.userId, flightId: flight.id }
         });
 
+    // If the logbook entry is closed, mark the flight completed.
+    if (saved.status === "CLOSED") {
+      await prisma.flight.update({
+        where: { id: flight.id },
+        data: { status: "COMPLETED" }
+      });
+    }
+
     const redirectUrl = new URL(`/flights/${flight.id}/logbook`, request.url);
     redirectUrl.searchParams.set("participantId", participant.id);
     redirectUrl.searchParams.set("toast", `Logbook updated. (${saved.id.slice(0, 6)})`);

@@ -94,6 +94,7 @@ export async function POST(request: Request) {
     };
 
     let savedId: string | null = null;
+    let savedStatus: "OPEN" | "CLOSED" = status;
     if (entryId) {
       const existingById = await prisma.logbookEntry.findFirst({
         where: { id: entryId, userId: user.id }
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
       }
       const updated = await prisma.logbookEntry.update({ where: { id: entryId }, data });
       savedId = updated.id;
+      savedStatus = updated.status;
     } else if (linkedFlightId) {
       const existingEntry = await prisma.logbookEntry.findFirst({
         where: { userId: user.id, flightId: linkedFlightId }
@@ -122,13 +124,24 @@ export async function POST(request: Request) {
       if (existingEntry) {
         const updated = await prisma.logbookEntry.update({ where: { id: existingEntry.id }, data });
         savedId = updated.id;
+        savedStatus = updated.status;
       } else {
         const created = await prisma.logbookEntry.create({ data });
         savedId = created.id;
+        savedStatus = created.status;
       }
     } else {
       const created = await prisma.logbookEntry.create({ data });
       savedId = created.id;
+      savedStatus = created.status;
+    }
+
+    // If a logbook entry tied to a flight is closed, mark the flight completed.
+    if (linkedFlightId && savedStatus === "CLOSED") {
+      await prisma.flight.update({
+        where: { id: linkedFlightId },
+        data: { status: "COMPLETED" }
+      });
     }
 
     return redirectWithToast(
