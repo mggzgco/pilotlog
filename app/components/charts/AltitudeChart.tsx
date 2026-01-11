@@ -35,7 +35,8 @@ export function AltitudeChart({ points }: { points: AltitudePoint[] }) {
       points.map((point) =>
         new Date(point.recordedAt).toLocaleTimeString([], {
           hour: "2-digit",
-          minute: "2-digit"
+          minute: "2-digit",
+          hour12: false
         })
       ),
     [points]

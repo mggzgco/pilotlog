@@ -79,8 +79,20 @@ export function CreateLogbookEntryModal({
             </select>
 
             <Input name="date" type="date" required defaultValue={defaultDate} />
-            <Input name="timeOut" type="time" placeholder="Time out" />
-            <Input name="timeIn" type="time" placeholder="Time in" />
+            <Input
+              name="timeOut"
+              type="text"
+              inputMode="text"
+              placeholder="Time out (HH:MM)"
+              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+            />
+            <Input
+              name="timeIn"
+              type="text"
+              inputMode="text"
+              placeholder="Time in (HH:MM)"
+              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+            />
             <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" />
             <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" />
             <Input name="totalTime" type="number" step="0.1" placeholder="Total time" />

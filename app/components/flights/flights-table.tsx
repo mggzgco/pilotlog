@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 import { FlightRowMenu } from "@/app/components/flights/flight-row-menu";
+import { formatDateTime24 } from "@/app/lib/utils";
 
 export interface FlightRow {
   id: string;
@@ -73,7 +74,7 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                     href={`/flights/${flight.id}`}
                     className="block -mx-4 -my-3 px-4 py-3"
                   >
-                    {new Date(flight.displayTime).toLocaleString()}
+                    {formatDateTime24(new Date(flight.displayTime))}
                   </Link>
                 </td>
                 <td className="px-4 py-3">

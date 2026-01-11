@@ -72,8 +72,22 @@ export function LogbookEntryForm({
         <option value="CLOSED">Closed</option>
       </select>
       <Input name="date" type="date" required defaultValue={defaultDate} />
-      <Input name="timeOut" type="time" placeholder="Time out" defaultValue={defaultTimeOut} />
-      <Input name="timeIn" type="time" placeholder="Time in" defaultValue={defaultTimeIn} />
+      <Input
+        name="timeOut"
+        type="text"
+        inputMode="text"
+        placeholder="Time out (HH:MM)"
+        pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+        defaultValue={defaultTimeOut}
+      />
+      <Input
+        name="timeIn"
+        type="text"
+        inputMode="text"
+        placeholder="Time in (HH:MM)"
+        pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+        defaultValue={defaultTimeIn}
+      />
       <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" defaultValue={defaultHobbsOut} />
       <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" defaultValue={defaultHobbsIn} />
       <Input

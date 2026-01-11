@@ -7,6 +7,7 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FlightMap } from "@/app/components/maps/flight-map";
 import { useToast } from "@/app/components/ui/toast-provider";
+import { formatDateTime24 } from "@/app/lib/utils";
 
 interface FlightTrackPointResponse {
   recordedAt: string;
@@ -271,7 +272,7 @@ export function ImportClient({ flightId }: ImportClientProps) {
                         {flight.depLabel} → {flight.arrLabel}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {new Date(flight.startTime).toLocaleString()}
+                        {formatDateTime24(new Date(flight.startTime))}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {flight.durationMinutes ?? "--"} mins

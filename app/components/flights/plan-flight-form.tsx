@@ -204,8 +204,10 @@ export function PlanFlightForm({
         </label>
         <Input
           name="plannedStartClock"
-          type="time"
-          step={60}
+          type="text"
+          inputMode="text"
+          placeholder="HH:MM"
+          pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
         />
       </div>
       <div>
@@ -220,8 +222,10 @@ export function PlanFlightForm({
         </label>
         <Input
           name="plannedEndClock"
-          type="time"
-          step={60}
+          type="text"
+          inputMode="text"
+          placeholder="HH:MM"
+          pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
         />
       </div>
       <div className="lg:col-span-2">

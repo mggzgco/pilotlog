@@ -10,6 +10,7 @@ import { formatFlightRouteLabel } from "@/app/lib/flights/route";
 import { flightHasLandingOverDistanceNm } from "@/app/lib/airports/xc";
 import { CostPieChart, type CostPieSlice } from "@/app/components/charts/CostPieChart";
 import { PlanFlightModal } from "@/app/components/flights/plan-flight-modal";
+import { formatDateTime24, formatTime24 } from "@/app/lib/utils";
 import { ArrowRight, Calendar, Radar, TriangleAlert, Wallet } from "lucide-react";
 
 function formatDuration(durationMinutes: number | null) {
@@ -603,10 +604,7 @@ export default async function DashboardPage() {
                       </p>
                       <div className="space-y-2">
                         {flights.map((flight) => {
-                          const when = (flight.plannedStartTime ?? flight.startTime).toLocaleTimeString(
-                            undefined,
-                            { hour: "numeric", minute: "2-digit" }
-                          );
+                          const when = formatTime24(flight.plannedStartTime ?? flight.startTime);
                           const tail = flight.tailNumberSnapshot ?? flight.tailNumber;
                           const hasAdsb = Boolean(flight.importedProvider);
                           return (
@@ -859,7 +857,7 @@ export default async function DashboardPage() {
                     {flight.origin} → {flight.destination ?? "TBD"}
                   </p>
                   <p className="mt-1 truncate text-xs text-slate-500">
-                    {(flight.startTime ?? new Date()).toLocaleString()} · {flight.tailNumber}
+                    {formatDateTime24(flight.startTime ?? new Date())} · {flight.tailNumber}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3 text-sm text-slate-600 dark:text-slate-400">

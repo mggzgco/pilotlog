@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { formatDateTime24 } from "@/app/lib/utils";
 
 const ChecklistInputType = {
   CHECK: "CHECK",
@@ -698,10 +699,10 @@ export function ChecklistSection({
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {run.status === ChecklistRunStatus.SIGNED
                 ? `${run.decision === "REJECTED" ? "Rejected" : run.decision === "ACCEPTED" ? "Accepted" : "Signed"}${
-                    run.signedAt ? ` · ${new Date(run.signedAt).toLocaleString()}` : ""
+                    run.signedAt ? ` · ${formatDateTime24(new Date(run.signedAt))}` : ""
                   }`
                 : run.startedAt
-                  ? `Started · ${new Date(run.startedAt).toLocaleString()}`
+                  ? `Started · ${formatDateTime24(new Date(run.startedAt))}`
                   : "Not started"}
               {run.signatureName ? ` · Signed by ${run.signatureName}` : ""}
             </p>
@@ -831,7 +832,7 @@ export function ChecklistSection({
                       ) : null}
                       {item.completedAt ? (
                         <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
-                          Completed {new Date(item.completedAt).toLocaleString()}
+                          Completed {formatDateTime24(new Date(item.completedAt))}
                         </p>
                       ) : null}
                     </div>

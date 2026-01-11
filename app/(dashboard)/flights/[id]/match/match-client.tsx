@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
+import { formatDateTime24 } from "@/app/lib/utils";
 import { FlightMap } from "@/app/components/maps/flight-map";
 import { useToast } from "@/app/components/ui/toast-provider";
 
@@ -116,7 +117,7 @@ export function MatchClient({ flightId, provider, candidates }: MatchClientProps
                         {flight.depLabel} → {flight.arrLabel}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {new Date(flight.startTime).toLocaleString()}
+                        {formatDateTime24(new Date(flight.startTime))}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {flight.durationMinutes ?? "--"} mins

@@ -257,8 +257,10 @@ export function CreateFlightModal({
                   />
                   <Input
                     name="plannedStartClock"
-                    type="time"
-                    step={60}
+                    type="text"
+                    inputMode="text"
+                    placeholder="HH:MM"
+                    pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
                     required
                     value={plannedStartClock}
                     onChange={(event) => setPlannedStartClock(event.target.value)}
@@ -277,8 +279,10 @@ export function CreateFlightModal({
                   />
                   <Input
                     name="plannedEndClock"
-                    type="time"
-                    step={60}
+                    type="text"
+                    inputMode="text"
+                    placeholder="HH:MM"
+                    pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
                     value={plannedEndClock}
                     onChange={(event) => setPlannedEndClock(event.target.value)}
                     className="mt-2"

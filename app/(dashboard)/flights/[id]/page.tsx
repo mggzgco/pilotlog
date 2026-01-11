@@ -11,6 +11,7 @@ import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge"
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { Input } from "@/app/components/ui/input";
 import { formatFlightRouteLabel } from "@/app/lib/flights/route";
+import { formatDateTime24 } from "@/app/lib/utils";
 
 const formatPersonName = (person: {
   name?: string | null;
@@ -430,12 +431,12 @@ export default async function FlightDetailPage({
               <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Planned</p>
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {flight.plannedStartTime
-                  ? flight.plannedStartTime.toLocaleString()
+                  ? formatDateTime24(flight.plannedStartTime)
                   : "—"}
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 {flight.plannedEndTime
-                  ? `End ${flight.plannedEndTime.toLocaleString()}`
+                  ? `End ${formatDateTime24(flight.plannedEndTime)}`
                   : "No planned end time"}
               </p>
             </div>
@@ -443,12 +444,12 @@ export default async function FlightDetailPage({
             <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
               <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Imported</p>
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {isImported ? flight.startTime.toLocaleString() : "—"}
+                {isImported ? formatDateTime24(flight.startTime) : "—"}
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 {isImported
                   ? flight.endTime
-                    ? `End ${flight.endTime.toLocaleString()}`
+                    ? `End ${formatDateTime24(flight.endTime)}`
                     : "No imported end time"
                   : "—"}
               </p>

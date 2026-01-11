@@ -10,6 +10,7 @@ import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { CostItemForm } from "@/app/components/flights/cost-item-form";
 import { getCostCategoryLabel } from "@/app/lib/costs/categories";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
+import { formatDateTime24 } from "@/app/lib/utils";
 import { Receipt } from "lucide-react";
 
 export default async function FlightCostsPage({
@@ -359,7 +360,7 @@ export default async function FlightCostsPage({
                         {receiptCostItemLabel(receipt)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {receipt.createdAt.toLocaleString()}
+                        {formatDateTime24(receipt.createdAt)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatBytes(receipt.sizeBytes ?? null)}

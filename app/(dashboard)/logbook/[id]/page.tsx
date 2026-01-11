@@ -170,8 +170,22 @@ export default async function LogbookEntryDetailPage({
               required
               defaultValue={entry.date.toISOString().slice(0, 10)}
             />
-            <Input name="timeOut" type="time" placeholder="Time out" defaultValue={entry.timeOut ?? ""} />
-            <Input name="timeIn" type="time" placeholder="Time in" defaultValue={entry.timeIn ?? ""} />
+            <Input
+              name="timeOut"
+              type="text"
+              inputMode="text"
+              placeholder="Time out (HH:MM)"
+              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+              defaultValue={entry.timeOut ?? ""}
+            />
+            <Input
+              name="timeIn"
+              type="text"
+              inputMode="text"
+              placeholder="Time in (HH:MM)"
+              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+              defaultValue={entry.timeIn ?? ""}
+            />
             <Input
               name="hobbsOut"
               type="number"
