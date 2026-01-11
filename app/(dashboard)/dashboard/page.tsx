@@ -7,6 +7,7 @@ import { FlightMap } from "@/app/components/maps/flight-map";
 import { getLatestFlightWithTrackPoints, getRecentFlights } from "@/app/lib/flights/queries";
 import { EmptyState } from "@/app/components/ui/empty-state";
 import { formatFlightRouteLabel } from "@/app/lib/flights/route";
+import { flightHasLandingOverDistanceNm } from "@/app/lib/airports/xc";
 import { ArrowRight, Calendar, Radar, TriangleAlert, Wallet } from "lucide-react";
 
 function formatDuration(durationMinutes: number | null) {
@@ -83,9 +84,18 @@ export default async function DashboardPage() {
         select: {
           totalTime: true,
           picTime: true,
+          dualReceivedTime: true,
           nightTime: true,
           instrumentTime: true,
-          flight: { select: { durationMinutes: true, distanceNm: true } }
+          xcTime: true,
+          flight: {
+            select: {
+              durationMinutes: true,
+              originAirport: { select: { latitude: true, longitude: true } },
+              destinationAirport: { select: { latitude: true, longitude: true } },
+              stops: { select: { airport: { select: { latitude: true, longitude: true } } } }
+            }
+          }
         }
       }),
       prisma.logbookEntry.findMany({
@@ -93,9 +103,18 @@ export default async function DashboardPage() {
         select: {
           totalTime: true,
           picTime: true,
+          dualReceivedTime: true,
           nightTime: true,
           instrumentTime: true,
-          flight: { select: { durationMinutes: true, distanceNm: true } }
+          xcTime: true,
+          flight: {
+            select: {
+              durationMinutes: true,
+              originAirport: { select: { latitude: true, longitude: true } },
+              destinationAirport: { select: { latitude: true, longitude: true } },
+              stops: { select: { airport: { select: { latitude: true, longitude: true } } } }
+            }
+          }
         }
       }),
       prisma.logbookEntry.findMany({
@@ -103,9 +122,18 @@ export default async function DashboardPage() {
         select: {
           totalTime: true,
           picTime: true,
+          dualReceivedTime: true,
           nightTime: true,
           instrumentTime: true,
-          flight: { select: { durationMinutes: true, distanceNm: true } }
+          xcTime: true,
+          flight: {
+            select: {
+              durationMinutes: true,
+              originAirport: { select: { latitude: true, longitude: true } },
+              destinationAirport: { select: { latitude: true, longitude: true } },
+              stops: { select: { airport: { select: { latitude: true, longitude: true } } } }
+            }
+          }
         }
       }),
       prisma.costItem.aggregate({
@@ -147,13 +175,25 @@ export default async function DashboardPage() {
     entries: Array<{
       totalTime: unknown;
       picTime: unknown;
+      dualReceivedTime: unknown;
       nightTime: unknown;
       instrumentTime: unknown;
-      flight: { durationMinutes: number | null; distanceNm: number | null } | null;
+      xcTime: unknown;
+      flight:
+        | {
+            durationMinutes: number | null;
+            originAirport: { latitude: number | null; longitude: number | null } | null;
+            destinationAirport: { latitude: number | null; longitude: number | null } | null;
+            stops: Array<{
+              airport: { latitude: number | null; longitude: number | null } | null;
+            }>;
+          }
+        | null;
     }>
   ) => {
     const totals = {
       total: 0,
+      dual: 0,
       pic: 0,
       night: 0,
       instrument: 0,
@@ -166,11 +206,14 @@ export default async function DashboardPage() {
           ? totalRaw
           : (entry.flight?.durationMinutes ?? 0) / 60;
       totals.total += total;
+      totals.dual += Number(entry.dualReceivedTime) || 0;
       totals.pic += Number(entry.picTime) || 0;
       totals.night += Number(entry.nightTime) || 0;
       totals.instrument += Number(entry.instrumentTime) || 0;
-      const nm = entry.flight?.distanceNm ?? null;
-      if (nm !== null && nm >= 50) {
+      const explicitXc = Number(entry.xcTime) || 0;
+      if (explicitXc > 0) {
+        totals.xc += explicitXc;
+      } else if (entry.flight && flightHasLandingOverDistanceNm(entry.flight, 50)) {
         totals.xc += total;
       }
     }
@@ -510,22 +553,30 @@ export default async function DashboardPage() {
                     {row.totals.total.toFixed(1)}h
                   </p>
                   <div className="mt-3 grid gap-2 text-sm">
-                    <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
-                      <span className="text-slate-600 dark:text-slate-400">PIC</span>
-                      <span>{row.totals.pic.toFixed(1)}h</span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
-                      <span className="text-slate-600 dark:text-slate-400">IFR</span>
-                      <span>{row.totals.instrument.toFixed(1)}h</span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
-                      <span className="text-slate-600 dark:text-slate-400">Night</span>
-                      <span>{row.totals.night.toFixed(1)}h</span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
-                      <span className="text-slate-600 dark:text-slate-400">XC (≥50nm)</span>
-                      <span>{row.totals.xc.toFixed(1)}h</span>
-                    </div>
+                    {(() => {
+                      const buckets = [
+                        { key: "dual", label: "Dual", value: row.totals.dual },
+                        { key: "pic", label: "PIC", value: row.totals.pic },
+                        { key: "ifr", label: "IFR", value: row.totals.instrument },
+                        { key: "night", label: "Night", value: row.totals.night },
+                        { key: "xc", label: "XC (landing ≥50nm)", value: row.totals.xc }
+                      ];
+                      const nonZero = buckets
+                        .filter((b) => b.value >= 0.05)
+                        .sort((a, b) => b.value - a.value);
+                      const display = (nonZero.length > 0 ? nonZero : buckets).slice(0, 4);
+                      return display.map((bucket) => (
+                        <div
+                          key={bucket.key}
+                          className="flex items-center justify-between text-slate-700 dark:text-slate-200"
+                        >
+                          <span className="text-slate-600 dark:text-slate-400">
+                            {bucket.label}
+                          </span>
+                          <span>{bucket.value.toFixed(1)}h</span>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
               ))}

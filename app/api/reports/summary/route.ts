@@ -43,7 +43,9 @@ export async function GET(request: Request) {
         flight: {
           select: {
             durationMinutes: true,
-            distanceNm: true
+            originAirport: { select: { latitude: true, longitude: true } },
+            destinationAirport: { select: { latitude: true, longitude: true } },
+            stops: { select: { airport: { select: { latitude: true, longitude: true } } } }
           }
         }
       }

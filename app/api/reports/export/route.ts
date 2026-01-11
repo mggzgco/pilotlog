@@ -51,6 +51,9 @@ export async function GET(request: Request) {
     },
     orderBy: { startTime: "desc" },
     include: {
+      originAirport: { select: { latitude: true, longitude: true } },
+      destinationAirport: { select: { latitude: true, longitude: true } },
+      stops: { select: { airport: { select: { latitude: true, longitude: true } } } },
       logbookEntries: true,
       costItems: {
         where: dateFilter ? { date: dateFilter } : undefined

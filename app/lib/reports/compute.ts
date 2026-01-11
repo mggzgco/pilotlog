@@ -1,12 +1,22 @@
 import type { CostItem, Flight, LogbookEntry } from "@prisma/client";
+import { flightHasLandingOverDistanceNm } from "@/app/lib/airports/xc";
 
 type LogbookEntryWithFlight = LogbookEntry & {
-  flight?: Pick<Flight, "durationMinutes" | "distanceNm"> | null;
+  flight?:
+    | (Pick<Flight, "durationMinutes"> & {
+        originAirport?: { latitude: number | null; longitude: number | null } | null;
+        destinationAirport?: { latitude: number | null; longitude: number | null } | null;
+        stops?: Array<{ airport?: { latitude: number | null; longitude: number | null } | null }>;
+      })
+    | null;
 };
 
 type FlightWithDetails = Flight & {
   logbookEntries: LogbookEntry[];
   costItems: CostItem[];
+  originAirport?: { latitude: number | null; longitude: number | null } | null;
+  destinationAirport?: { latitude: number | null; longitude: number | null } | null;
+  stops?: Array<{ airport?: { latitude: number | null; longitude: number | null } | null }>;
 };
 
 export type ReportSummary = {
@@ -64,11 +74,8 @@ function totalTimeForEntry(entry: LogbookEntryWithFlight) {
 }
 
 function xcTimeForEntry(entry: LogbookEntryWithFlight, totalTime: number) {
-  const distanceNm = entry.flight?.distanceNm ?? null;
-  if (distanceNm !== null && distanceNm >= 50) {
-    return totalTime;
-  }
-  return 0;
+  if (!entry.flight) return 0;
+  return flightHasLandingOverDistanceNm(entry.flight, 50) ? totalTime : 0;
 }
 
 export function computeReportSummary(
@@ -132,11 +139,12 @@ export function computeReportFlightRows(
         const totalTime = toNumber(entry.totalTime);
         acc.totalTime += totalTime;
         acc.picTime += toNumber(entry.picTime);
-        acc.dualReceivedTime += toNumber(entry.sicTime);
+        acc.dualReceivedTime += toNumber((entry as any).dualReceivedTime ?? entry.sicTime);
         acc.nightTime += toNumber(entry.nightTime);
+        acc.explicitXcTime += toNumber((entry as any).xcTime);
         return acc;
       },
-      { totalTime: 0, picTime: 0, dualReceivedTime: 0, nightTime: 0 }
+      { totalTime: 0, picTime: 0, dualReceivedTime: 0, nightTime: 0, explicitXcTime: 0 }
     );
 
     if (totals.totalTime === 0 && flight.durationMinutes) {
@@ -144,9 +152,11 @@ export function computeReportFlightRows(
     }
 
     const xcTime =
-      flight.distanceNm !== null && flight.distanceNm >= 50
-        ? totals.totalTime
-        : 0;
+      totals.explicitXcTime > 0
+        ? totals.explicitXcTime
+        : flightHasLandingOverDistanceNm(flight, 50)
+          ? totals.totalTime
+          : 0;
 
     const costByCategory: Record<string, number> = {};
     let costTotalCents = 0;
