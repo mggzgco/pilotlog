@@ -103,6 +103,7 @@ model User {
   sessions           Session[]
   flights            Flight[]
   people             Person[]
+  linkedInPeople     Person[]               @relation("PersonLinkedUser")
   aircraft           Aircraft[]
   aircraftTypes      AircraftType[]
   logbook            LogbookEntry[]
@@ -237,12 +238,15 @@ model Person {
   userId    String
   name      String
   email     String?
+  linkedUserId String?
   phone     String?
   createdAt DateTime                   @default(now())
   user      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedUser User?                     @relation("PersonLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
   flights   FlightPersonParticipant[]
 
   @@index([userId])
+  @@index([linkedUserId])
 }
 
 model Aircraft {

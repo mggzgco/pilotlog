@@ -17,13 +17,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid person details." }, { status: 400 });
   }
 
+  const email = parsed.data.email?.trim().toLowerCase() || null;
+  const linkedUser = email
+    ? await prisma.user.findUnique({
+        where: { email },
+        select: { id: true }
+      })
+    : null;
+
   const created = await prisma.person.create({
     data: {
       userId: user.id,
       name: parsed.data.name.trim(),
-      email: parsed.data.email?.trim() || null
+      email,
+      linkedUserId: linkedUser?.id ?? null
     },
-    select: { id: true, name: true, email: true }
+    select: { id: true, name: true, email: true, linkedUserId: true }
   });
 
   return NextResponse.json(created, { status: 201 });

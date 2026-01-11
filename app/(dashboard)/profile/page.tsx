@@ -5,9 +5,53 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { TimeZoneSelect } from "@/app/components/ui/timezone-select";
 import { CreatePersonModal } from "@/app/components/people/create-person-modal";
+import { EditPersonModal } from "@/app/components/people/edit-person-modal";
 
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
+  // Auto-link any existing People rows whose email matches an existing User account.
+  // This keeps linking "automatic" even if the person was created before the user signed up.
+  const peopleNeedingLink = await prisma.person.findMany({
+    where: { userId: sessionUser.id, email: { not: null }, linkedUserId: null },
+    select: { id: true, email: true }
+  });
+  if (peopleNeedingLink.length > 0) {
+    const emails = Array.from(
+      new Set(
+        peopleNeedingLink
+          .map((p) => p.email?.trim().toLowerCase())
+          .filter((e): e is string => Boolean(e))
+      )
+    );
+    if (emails.length > 0) {
+      const matchingUsers = await prisma.user.findMany({
+        where: { email: { in: emails } },
+        select: { id: true, email: true }
+      });
+      const byEmail = new Map(matchingUsers.map((u) => [u.email, u.id]));
+      const updates = peopleNeedingLink
+        .map((p) => {
+          const normalized = p.email?.trim().toLowerCase() ?? "";
+          const userId = byEmail.get(normalized);
+          if (!userId) return null;
+          return { personId: p.id, linkedUserId: userId };
+        })
+        .filter(
+          (u): u is { personId: string; linkedUserId: string } => u !== null
+        );
+      if (updates.length > 0) {
+        await prisma.$transaction(
+          updates.map((u) =>
+            prisma.person.update({
+              where: { id: u.personId },
+              data: { linkedUserId: u.linkedUserId }
+            })
+          )
+        );
+      }
+    }
+  }
+
   const [user, people] = await Promise.all([
     prisma.user.findUnique({
     where: { id: sessionUser.id },
@@ -26,7 +70,7 @@ export default async function ProfilePage() {
     prisma.person.findMany({
       where: { userId: sessionUser.id },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true }
+      select: { id: true, name: true, email: true, linkedUserId: true }
     })
   ]);
 
@@ -121,6 +165,8 @@ export default async function ProfilePage() {
                   <tr>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Linked</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -131,6 +177,20 @@ export default async function ProfilePage() {
                       </td>
                       <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                         {person.email ?? "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {person.linkedUserId ? (
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-200">
+                            Linked
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            —
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <EditPersonModal person={{ id: person.id, name: person.name, email: person.email }} />
                       </td>
                     </tr>
                   ))}
