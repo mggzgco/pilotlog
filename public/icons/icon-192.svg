@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
   <rect width="192" height="192" rx="32" fill="#0f172a" />
-  <path d="M48 108l48-36 48 36v20H48z" fill="#38bdf8" />
-  <path d="M96 44l60 44-8 10-52-38-52 38-8-10z" fill="#e2e8f0" />
-  <text x="96" y="156" text-anchor="middle" fill="#e2e8f0" font-size="20" font-family="Arial, sans-serif">PilotLog</text>
+  <!-- track -->
+  <path d="M38 122c22-4 30-30 52-34 24-4 32 24 56 18 18-4 26-24 36-44" fill="none" stroke="#38bdf8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <!-- dot -->
+  <circle cx="38" cy="122" r="7" fill="#e2e8f0" opacity="0.95"/>
+  <!-- plane -->
+  <path d="M140 54l16 6-16 6-6 14-5-2 2-12-10-4-6 2-2-2 6-5 10-4-2-12 5-2z" fill="#e2e8f0"/>
 </svg>

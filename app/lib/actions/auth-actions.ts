@@ -26,7 +26,7 @@ import {
   resetPassword as performPasswordReset
 } from "@/app/lib/auth/password-reset";
 
-export type AuthFormState = { error: string | undefined; success?: string };
+export type AuthFormState = { error?: string; success?: string };
 
 function getClientIp() {
   const forwarded = headers().get("x-forwarded-for");
@@ -36,7 +36,7 @@ function getClientIp() {
   return headers().get("x-real-ip") ?? "unknown";
 }
 
-export async function registerAction(formData: FormData) {
+export async function registerAction(formData: FormData): Promise<AuthFormState> {
   const csrf = validateCsrf();
   if (!csrf.ok) {
     return { error: csrf.error };
@@ -118,7 +118,7 @@ export async function registerAction(formData: FormData) {
   redirect("/login?registered=1");
 }
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(formData: FormData): Promise<AuthFormState> {
   const csrf = validateCsrf();
   if (!csrf.ok) {
     return { error: csrf.error };
@@ -238,7 +238,7 @@ export async function logoutAction() {
   redirect("/login");
 }
 
-export async function forgotPasswordAction(formData: FormData) {
+export async function forgotPasswordAction(formData: FormData): Promise<AuthFormState> {
   const raw = Object.fromEntries(formData.entries());
   const parsed = forgotPasswordSchema.safeParse(raw);
   if (!parsed.success) {
@@ -247,13 +247,13 @@ export async function forgotPasswordAction(formData: FormData) {
 
   const { email } = parsed.data;
   const result = await requestPasswordReset({ email, ipAddress: getClientIp() });
-  if (result.error) {
+  if ("error" in result) {
     return { error: result.error };
   }
-  return { error: undefined, success: result.success };
+  return { success: result.success };
 }
 
-export async function resetPasswordAction(formData: FormData) {
+export async function resetPasswordAction(formData: FormData): Promise<AuthFormState> {
   const raw = Object.fromEntries(formData.entries());
   const parsed = resetPasswordSchema.safeParse(raw);
   if (!parsed.success) {
@@ -271,27 +271,27 @@ export async function resetPasswordAction(formData: FormData) {
 export async function registerFormAction(
   _prevState: AuthFormState,
   formData: FormData
-) {
+): Promise<AuthFormState> {
   return registerAction(formData);
 }
 
 export async function loginFormAction(
   _prevState: AuthFormState,
   formData: FormData
-) {
+): Promise<AuthFormState> {
   return loginAction(formData);
 }
 
 export async function forgotPasswordFormAction(
   _prevState: AuthFormState,
   formData: FormData
-) {
+): Promise<AuthFormState> {
   return forgotPasswordAction(formData);
 }
 
 export async function resetPasswordFormAction(
   _prevState: AuthFormState,
   formData: FormData
-) {
+): Promise<AuthFormState> {
   return resetPasswordAction(formData);
 }

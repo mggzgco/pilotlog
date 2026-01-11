@@ -8,6 +8,7 @@ import { Button } from "@/app/components/ui/button";
 import { usePathname } from "next/navigation";
 import { SidebarAccount } from "@/app/components/layout/sidebar-account";
 import { logoutAction } from "@/app/lib/actions/auth-actions";
+import { FlightTraksMark } from "@/app/components/branding/flighttraks-mark";
 
 interface MobileNavProps {
   user: any;
@@ -32,11 +33,14 @@ export function MobileNav({ user }: MobileNavProps) {
         <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm dark:bg-slate-950/70" />
         <Dialog.Content className="fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                PilotLog
+            <div className="flex items-center gap-3">
+              <FlightTraksMark className="h-9 w-9" />
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  FlightTraks
+                </div>
+                <div className="text-lg font-semibold tracking-tight">FlightTraks</div>
               </div>
-              <div className="text-lg font-semibold tracking-tight">Flight training</div>
             </div>
             <Dialog.Close asChild>
               <button

@@ -294,7 +294,7 @@ export function PlanFlightForm({
         </div>
         {userParticipants.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Add instructors/students/PIC/SIC who have PilotLog accounts.
+            Add instructors/students/PIC/SIC who have FlightTraks accounts.
           </p>
         ) : (
           <div className="mt-2 grid gap-3 lg:grid-cols-2">

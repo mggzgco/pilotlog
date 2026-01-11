@@ -1,6 +1,6 @@
 {
-  "name": "PilotLog",
-  "short_name": "PilotLog",
+  "name": "FlightTraks",
+  "short_name": "FlightTraks",
   "description": "Flight tracking, logbook, and cost management.",
   "start_url": "/",
   "display": "standalone",

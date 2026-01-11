@@ -34,7 +34,7 @@ function getTransport() {
 }
 
 export async function sendApprovalEmail(payload: ApprovalEmailInput) {
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "no-reply@pilotlog.app";
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "no-reply@flighttraks.app";
   if (!from) {
     throw new Error("SMTP_FROM is not configured.");
   }
@@ -62,18 +62,18 @@ export async function sendApprovalEmail(payload: ApprovalEmailInput) {
 }
 
 export async function sendPasswordResetEmail(payload: PasswordResetEmailInput) {
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "no-reply@pilotlog.app";
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "no-reply@flighttraks.app";
   if (!from) {
     throw new Error("SMTP_FROM is not configured.");
   }
 
   const transporter = getTransport();
 
-  const subject = "Reset your PilotLog password";
+  const subject = "Reset your FlightTraks password";
   const text = [
     `Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},`,
     "",
-    "We received a request to reset your PilotLog password.",
+    "We received a request to reset your FlightTraks password.",
     "Use the link below to set a new password. This link expires in 60 minutes.",
     "",
     payload.resetUrl,

@@ -8,9 +8,11 @@ import { ChecklistSection } from "@/app/components/flights/checklist-section";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 
 export default async function FlightChecklistsPage({
-  params
+  params,
+  searchParams
 }: {
   params: { id: string };
+  searchParams?: { tab?: string };
 }) {
   const user = await requireUser();
 
@@ -84,6 +86,11 @@ export default async function FlightChecklistsPage({
     ? flight.checklistRuns.find((run) => run.phase === "POSTFLIGHT") ?? null
     : null;
 
+  const defaultTab =
+    typeof searchParams?.tab === "string" && searchParams.tab.toLowerCase() === "postflight"
+      ? "POSTFLIGHT"
+      : "PREFLIGHT";
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -112,6 +119,7 @@ export default async function FlightChecklistsPage({
             flightStatus={flight.status}
             aircraftId={flight.aircraftId}
             defaultSignatureName={defaultSignatureName}
+            defaultTab={defaultTab}
             preflightRun={preflightRun ? toChecklistRunView(preflightRun) : null}
             postflightRun={postflightRun ? toChecklistRunView(postflightRun) : null}
           />

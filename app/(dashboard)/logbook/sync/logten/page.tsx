@@ -10,7 +10,7 @@ export default function LogTenSyncPage() {
         <div>
           <h2 className="text-2xl font-semibold">LogTen Sync</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Compare PilotLog to a LogTen export file, then import/export missing entries.
+            Compare FlightTraks to a LogTen export file, then import/export missing entries.
           </p>
         </div>
         <Button variant="outline" asChild>

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     logtenByFingerprint.set(row.fingerprint, row);
   }
 
-  // Load pilotlog entries in a broad date window (LogTen exports can include mixed ranges)
+  // Load FlightTraks entries in a broad date window (LogTen exports can include mixed ranges)
   const pilotlogEntries = await prisma.logbookEntry.findMany({
     where: { userId: user.id },
     select: {
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 
   const missingInPilotlog = logtenRows.filter((row) => !pilotlogFingerprints.has(row.fingerprint));
 
-  // "Missing in LogTen" means PilotLog entries that are not represented in the uploaded LogTen export.
+  // "Missing in LogTen" means FlightTraks entries that are not represented in the uploaded LogTen export.
   // We only consider entries with enough fields to generate a stable fingerprint (tail+origin).
   const logtenFingerprints = new Set(logtenRows.map((r) => r.fingerprint));
   const missingInLogten = pilotlogEntries

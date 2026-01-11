@@ -76,7 +76,7 @@ export function EditPersonModal({ person }: EditPersonModalProps) {
               Edit person
             </Dialog.Title>
             <Dialog.Description className="text-sm text-slate-600 dark:text-slate-400">
-              If the email matches an existing PilotLog user, we’ll automatically link them.
+              If the email matches an existing FlightTraks user, we’ll automatically link them.
             </Dialog.Description>
           </div>
 

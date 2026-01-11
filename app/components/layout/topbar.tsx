@@ -1,4 +1,5 @@
 import { MobileNav } from "@/app/components/layout/mobile-nav";
+import { FlightTraksMark } from "@/app/components/branding/flighttraks-mark";
 
 interface TopbarProps {
   user: any;
@@ -11,8 +12,11 @@ export function Topbar({ user }: TopbarProps) {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <MobileNav user={user} />
+          <div className="hidden sm:block">
+            <FlightTraksMark className="h-8 w-8" />
+          </div>
           <div>
-            <h1 className="text-base font-semibold tracking-tight">PilotLog</h1>
+            <h1 className="text-base font-semibold tracking-tight">FlightTraks</h1>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Plan, import, and log every flight.
             </p>

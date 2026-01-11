@@ -52,7 +52,7 @@ Seeding also creates system default preflight and postflight checklist templates
 It also seeds a small starter `Airport` dataset (including `KLOM`) for timezone-aware flight creation.
 
 ### (Optional) Import a larger airport + timezone dataset
-PilotLog can automatically infer the correct IANA timezone (DST-aware) from an airport code (ICAO/IATA) when creating flights.
+FlightTraks can automatically infer the correct IANA timezone (DST-aware) from an airport code (ICAO/IATA) when creating flights.
 For global coverage, import a CSV/TSV that contains at least:
 - `icao` (or `gps_code` / `ident`)
 - `timeZone` (IANA timezone, e.g. `America/New_York`)

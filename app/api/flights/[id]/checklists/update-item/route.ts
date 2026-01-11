@@ -178,11 +178,13 @@ export async function POST(
     updates.valueText = parsed.data.valueText ? String(parsed.data.valueText) : null;
   }
 
-  if (parsed.data.complete) {
-    updates.completed = true;
-    if (!item.completedAt) {
-      updates.completedAt = new Date();
-    }
+  // For non-CHECK items, completion is an explicit user action (swipe / button).
+  // Support both marking complete and undoing completion.
+  if (item.inputType !== "CHECK" && parsed.data.complete !== undefined) {
+    const raw = String(parsed.data.complete).toLowerCase();
+    const shouldComplete = raw === "true" || raw === "1" || raw === "yes" || raw === "on";
+    updates.completed = shouldComplete;
+    updates.completedAt = shouldComplete ? new Date() : null;
   }
 
   await prisma.flightChecklistItem.update({

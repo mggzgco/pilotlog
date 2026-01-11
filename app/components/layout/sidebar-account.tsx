@@ -87,7 +87,9 @@ export function SidebarAccount({ user, onLogout, collapsed = false }: SidebarAcc
             <Button
               variant="ghost"
               className="w-full justify-start text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white"
-              onClick={onLogout}
+              onClick={() => {
+                void onLogout();
+              }}
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout

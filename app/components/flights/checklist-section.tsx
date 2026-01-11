@@ -84,6 +84,7 @@ type ChecklistSectionProps = {
   flightStatus: string;
   aircraftId: string | null;
   defaultSignatureName: string;
+  defaultTab?: "PREFLIGHT" | "POSTFLIGHT";
   preflightRun: ChecklistRunView | null;
   postflightRun: ChecklistRunView | null;
 };
@@ -121,11 +122,13 @@ export function ChecklistSection({
   flightStatus,
   aircraftId,
   defaultSignatureName,
+  defaultTab,
   preflightRun,
   postflightRun
 }: ChecklistSectionProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"PREFLIGHT" | "POSTFLIGHT">(
-    "PREFLIGHT"
+    defaultTab ?? "PREFLIGHT"
   );
   const [signingPhase, setSigningPhase] = useState<
     "PREFLIGHT" | "POSTFLIGHT" | null
@@ -327,6 +330,7 @@ export function ChecklistSection({
   };
 
   useEffect(() => {
+    setIsMounted(true);
     if (!activeRun) {
       return;
     }
@@ -343,7 +347,7 @@ export function ChecklistSection({
   const buildPayload = (
     item: ChecklistItemView,
     state: ChecklistItemState,
-    complete = false
+    complete?: boolean
   ): ChecklistSavePayload => {
     const payload: ChecklistSavePayload = {
       itemId: item.id,
@@ -373,8 +377,8 @@ export function ChecklistSection({
       payload.valueText = state.valueText;
     }
 
-    if (complete) {
-      payload.complete = "true";
+    if (complete !== undefined) {
+      payload.complete = complete ? "true" : "false";
     }
 
     return payload;
@@ -413,6 +417,10 @@ export function ChecklistSection({
     }
 
     const payload = buildPayload(item, nextState, options?.complete ?? false);
+    // Only send explicit completion when caller asked for it.
+    // (Otherwise, completion for CHECK is derived from valueCheck server-side.)
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    options?.complete === undefined && delete payload.complete;
 
     if (options?.immediate) {
       void saveItem(payload, activeRun.id);
@@ -472,17 +480,33 @@ export function ChecklistSection({
         updateItemState(
           item.id,
           { valueYesNo: false, completed: false },
-          { immediate: true }
+          { complete: false, immediate: true }
         );
       }
     }
 
     if (item.inputType === ChecklistInputType.YES_NO) {
-      updateItemState(
-        item.id,
-        { valueYesNo: deltaX > 0, completed: true },
-        { complete: true, immediate: true }
-      );
+      if (deltaX > 0) {
+        updateItemState(
+          item.id,
+          { valueYesNo: itemStateRef.current[item.id]?.valueYesNo ?? true, completed: true },
+          { complete: true, immediate: true }
+        );
+      } else {
+        updateItemState(
+          item.id,
+          { valueYesNo: null, completed: false },
+          { complete: false, immediate: true }
+        );
+      }
+    }
+
+    if (item.inputType === ChecklistInputType.NUMBER || item.inputType === ChecklistInputType.TEXT) {
+      if (deltaX > 0) {
+        updateItemState(item.id, { completed: true }, { complete: true, immediate: true });
+      } else {
+        updateItemState(item.id, { completed: false }, { complete: false, immediate: true });
+      }
     }
   };
 
@@ -545,6 +569,21 @@ export function ChecklistSection({
           >
             No
           </Button>
+          <Button
+            type="button"
+            size="lg"
+            variant="ghost"
+            disabled={disabled || !(state?.completed ?? false)}
+            onClick={() => {
+              updateItemState(
+                item.id,
+                { valueYesNo: null, completed: false },
+                { complete: false, immediate: true }
+              );
+            }}
+          >
+            Undo
+          </Button>
         </div>
       );
     }
@@ -566,15 +605,30 @@ export function ChecklistSection({
       );
     }
 
+    // TEXT: allow data entry *and* explicit completion.
     return (
-      <Input
-        name={`valueText-${item.id}`}
-        type="text"
-        className="h-12 text-base"
-        value={state?.valueText ?? ""}
-        disabled={disabled}
-        onChange={(event) => updateItemState(item.id, { valueText: event.target.value })}
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          name={`valueText-${item.id}`}
+          type="text"
+          className="h-12 flex-1 text-base"
+          value={state?.valueText ?? ""}
+          disabled={disabled}
+          onChange={(event) => updateItemState(item.id, { valueText: event.target.value })}
+        />
+        <Button
+          type="button"
+          size="lg"
+          variant={(state?.completed ?? false) ? "default" : "outline"}
+          disabled={disabled}
+          onClick={() => {
+            const next = !(state?.completed ?? false);
+            updateItemState(item.id, { completed: next }, { complete: next, immediate: true });
+          }}
+        >
+          {(state?.completed ?? false) ? "Completed" : "Mark complete"}
+        </Button>
+      </div>
     );
   };
 
@@ -699,10 +753,14 @@ export function ChecklistSection({
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {run.status === ChecklistRunStatus.SIGNED
                 ? `${run.decision === "REJECTED" ? "Rejected" : run.decision === "ACCEPTED" ? "Accepted" : "Signed"}${
-                    run.signedAt ? ` · ${formatDateTime24(new Date(run.signedAt))}` : ""
+                    run.signedAt && isMounted
+                      ? ` · ${formatDateTime24(new Date(run.signedAt))}`
+                      : ""
                   }`
                 : run.startedAt
-                  ? `Started · ${formatDateTime24(new Date(run.startedAt))}`
+                  ? isMounted
+                    ? `Started · ${formatDateTime24(new Date(run.startedAt))}`
+                    : "Started"
                   : "Not started"}
               {run.signatureName ? ` · Signed by ${run.signatureName}` : ""}
             </p>
@@ -840,7 +898,7 @@ export function ChecklistSection({
                       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/30">
                         {renderInput(item, isDisabled)}
                         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                          Tip: swipe right to complete · swipe left to undo (CHECK / YES-NO)
+                          Tip: swipe right to complete · swipe left to undo (CHECK / YES-NO / TEXT / NUMBER)
                         </p>
                       </div>
                       <details className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">

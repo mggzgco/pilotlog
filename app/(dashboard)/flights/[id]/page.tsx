@@ -171,7 +171,28 @@ export default async function FlightDetailPage({
       flight.providerFlightId ||
       ["IMPORTED", "COMPLETED"].includes(flight.status)
   );
-  const [logbookEntries, receiptCount] = await Promise.all([
+
+  const assignedPreflightTemplateId =
+    flight.aircraft?.preflightChecklistTemplateId ??
+    flight.aircraft?.aircraftType?.defaultPreflightTemplateId ??
+    null;
+  const assignedPostflightTemplateId =
+    flight.aircraft?.postflightChecklistTemplateId ??
+    flight.aircraft?.aircraftType?.defaultPostflightTemplateId ??
+    null;
+  const hasAnyAssignedChecklistTemplate = Boolean(
+    assignedPreflightTemplateId || assignedPostflightTemplateId
+  );
+
+  const preflightRun = assignedPreflightTemplateId
+    ? flight.checklistRuns.find((run) => run.phase === "PREFLIGHT") ?? null
+    : null;
+  const postflightRun = assignedPostflightTemplateId
+    ? flight.checklistRuns.find((run) => run.phase === "POSTFLIGHT") ?? null
+    : null;
+
+  const [logbookEntries, receiptCount, preflightRemainingRequired, postflightRemainingRequired] =
+    await Promise.all([
     prisma.logbookEntry.findMany({
       where: { flightId: flight.id },
       select: {
@@ -186,7 +207,27 @@ export default async function FlightDetailPage({
     }),
     prisma.receiptDocument.count({
       where: { flightId: flight.id, userId: user.id, NOT: { storagePath: { startsWith: "photo_" } } }
-    })
+    }),
+    preflightRun
+      ? prisma.flightChecklistItem.count({
+          where: {
+            checklistRunId: preflightRun.id,
+            kind: "STEP",
+            required: true,
+            completed: false
+          }
+        })
+      : Promise.resolve(null),
+    postflightRun
+      ? prisma.flightChecklistItem.count({
+          where: {
+            checklistRunId: postflightRun.id,
+            kind: "STEP",
+            required: true,
+            completed: false
+          }
+        })
+      : Promise.resolve(null)
   ]);
 
   const logbookEntryCount = logbookEntries.length;
@@ -197,6 +238,17 @@ export default async function FlightDetailPage({
   const needsLogbook = !hasAnyLogbookEntry;
   const needsCosts = !hasCosts;
   const needsReceipts = !hasReceipts;
+  const preflightIsAccepted =
+    preflightRun?.status === "SIGNED" && preflightRun.decision !== "REJECTED";
+  const canStartPostflight = preflightIsAccepted || flight.status === "COMPLETED" || flight.endTime;
+  const postflightIsAccepted =
+    postflightRun?.status === "SIGNED" && postflightRun.decision !== "REJECTED";
+  const needsPreflightChecklist = Boolean(
+    assignedPreflightTemplateId && !preflightIsAccepted
+  );
+  const needsPostflightChecklist = Boolean(
+    assignedPostflightTemplateId && canStartPostflight && !postflightIsAccepted
+  );
   const checklistSummary = flight.checklistRuns.reduce<
     Record<"PREFLIGHT" | "POSTFLIGHT", string>
   >(
@@ -207,17 +259,14 @@ export default async function FlightDetailPage({
     { PREFLIGHT: "NOT_AVAILABLE", POSTFLIGHT: "NOT_AVAILABLE" }
   );
 
-  const assignedPreflightTemplateId =
-    flight.aircraft?.preflightChecklistTemplateId ??
-    flight.aircraft?.aircraftType?.defaultPreflightTemplateId ??
-    null;
-  const assignedPostflightTemplateId =
-    flight.aircraft?.postflightChecklistTemplateId ??
-    flight.aircraft?.aircraftType?.defaultPostflightTemplateId ??
-    null;
-  const hasAnyAssignedChecklistTemplate = Boolean(
-    assignedPreflightTemplateId || assignedPostflightTemplateId
-  );
+  const checklistStatusLabel = (run: typeof preflightRun | typeof postflightRun) => {
+    if (!run) return "Not started";
+    if (run.status === "IN_PROGRESS") return "In progress";
+    if (run.status === "SIGNED") {
+      return run.decision === "REJECTED" ? "Closed (incomplete)" : "Signed";
+    }
+    return "Not available";
+  };
 
   const flightNotes =
     flight.statsJson &&
@@ -353,7 +402,7 @@ export default async function FlightDetailPage({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <p className="text-sm text-slate-400">Route map</p>
@@ -710,15 +759,123 @@ export default async function FlightDetailPage({
               )}
         </CardContent>
       </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400">Checklists</p>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/flights/${flight.id}/checklists`}>Open checklists</Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!hasAnyAssignedChecklistTemplate ? (
+              <div className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                No checklists assigned to this aircraft.
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {assignedPreflightTemplateId ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
+                        Pre-flight
+                      </p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
+                        {checklistStatusLabel(preflightRun)}
+                        {typeof preflightRemainingRequired === "number"
+                          ? ` · ${preflightRemainingRequired} required remaining`
+                          : ""}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/flights/${flight.id}/checklists?tab=preflight`}>
+                        {preflightRun ? "Continue" : "Start"}
+                      </Link>
+                    </Button>
+                  </div>
+                ) : null}
+
+                {assignedPostflightTemplateId ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
+                        Post-flight
+                      </p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
+                        {canStartPostflight ? (
+                          <>
+                            {checklistStatusLabel(postflightRun)}
+                            {typeof postflightRemainingRequired === "number"
+                              ? ` · ${postflightRemainingRequired} required remaining`
+                              : ""}
+                          </>
+                        ) : (
+                          "Locked until pre-flight is signed (or flight completes)"
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      asChild
+                      disabled={!canStartPostflight}
+                    >
+                      <Link href={`/flights/${flight.id}/checklists?tab=postflight`}>
+                        {postflightRun ? "Continue" : "Start"}
+                      </Link>
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {(needsAdsB || needsLogbook || needsCosts || needsReceipts) && (
+      {(needsAdsB ||
+        needsLogbook ||
+        needsCosts ||
+        needsReceipts ||
+        needsPreflightChecklist ||
+        needsPostflightChecklist) && (
         <Card>
           <CardHeader>
             <p className="text-sm text-slate-400">Next steps</p>
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 text-sm text-slate-300">
+              {needsPreflightChecklist ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
+                  <span>
+                    Complete pre-flight checklist.
+                    {typeof preflightRemainingRequired === "number"
+                      ? ` (${preflightRemainingRequired} required remaining)`
+                      : ""}
+                  </span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/flights/${flight.id}/checklists?tab=preflight`}>
+                      Open pre-flight
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
+              {needsPostflightChecklist ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
+                  <span>
+                    Complete post-flight checklist.
+                    {typeof postflightRemainingRequired === "number"
+                      ? ` (${postflightRemainingRequired} required remaining)`
+                      : ""}
+                  </span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/flights/${flight.id}/checklists?tab=postflight`}>
+                      Open post-flight
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
               {needsAdsB ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
                   <span>Attach ADS-B track data (optional, but unlocks stats/map).</span>

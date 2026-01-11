@@ -2,13 +2,13 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Flight Training Super App",
+  title: "FlightTraks",
   description: "Flight tracking, logbook, and cost management.",
-  applicationName: "PilotLog",
+  applicationName: "FlightTraks",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "PilotLog",
+    title: "FlightTraks",
     statusBarStyle: "black-translucent"
   },
   formatDetection: {
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
       { url: "/icons/icon-512.svg", sizes: "512x512", type: "image/svg+xml" }
     ],

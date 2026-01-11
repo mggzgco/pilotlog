@@ -90,7 +90,7 @@ export function LogTenSyncClient() {
           <div>
             <p className="text-sm font-semibold">Upload a LogTen export</p>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Export from LogTen (CSV/TSV). PilotLog will compare entries and show what’s missing on each side.
+              Export from LogTen (CSV/TSV). FlightTraks will compare entries and show what’s missing on each side.
             </p>
           </div>
           <div className="flex gap-2">
@@ -119,8 +119,8 @@ export function LogTenSyncClient() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { label: "LogTen rows", value: result.stats.logtenCount },
-            { label: "PilotLog entries", value: result.stats.pilotlogCount },
-            { label: "Missing in PilotLog", value: result.stats.missingInPilotlog },
+            { label: "FlightTraks entries", value: result.stats.pilotlogCount },
+            { label: "Missing in FlightTraks", value: result.stats.missingInPilotlog },
             { label: "Missing in LogTen", value: result.stats.missingInLogten }
           ].map((card) => (
             <div
@@ -161,7 +161,7 @@ export function LogTenSyncClient() {
           <div className="mt-4 grid gap-6 lg:grid-cols-2">
             <div>
               <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                Missing in PilotLog (from LogTen)
+                Missing in FlightTraks (from LogTen)
               </p>
               <div className="mt-2 space-y-2">
                 {missingPilotlogRows.slice(0, 8).map((r: any) => (
@@ -186,7 +186,7 @@ export function LogTenSyncClient() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                Missing in LogTen (from PilotLog)
+                Missing in LogTen (from FlightTraks)
               </p>
               <div className="mt-2 space-y-2">
                 {missingInLogten.slice(0, 8).map((r: any) => (

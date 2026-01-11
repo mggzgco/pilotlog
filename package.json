@@ -16,6 +16,7 @@
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
     "db:import:airports": "tsx prisma/import-airports.ts",
+    "db:import:checklist": "tsx prisma/import-checklist-template.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

@@ -175,7 +175,14 @@ export default async function DashboardPage() {
         }
       }),
       prisma.flight.count({
-        where: { userId: user.id, startTime: { gte: days90 } }
+        // Currency proxy: count only "completed" flights with a CLOSED logbook entry.
+        where: {
+          userId: user.id,
+          startTime: { gte: days90 },
+          logbookEntries: { some: { status: "CLOSED" } }
+          ,
+          OR: [{ status: "COMPLETED" }, { endTime: { not: null } }]
+        }
       }),
       prisma.flight.count({
         where: { userId: user.id, startTime: { gte: days30 } }

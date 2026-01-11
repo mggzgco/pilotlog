@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plane, ClipboardList, Receipt, Radar, BarChart3, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { SidebarAccount, SidebarAccountUser } from "@/app/components/layout/sidebar-account";
+import { FlightTraksMark } from "@/app/components/branding/flighttraks-mark";
 import { logoutAction } from "@/app/lib/actions/auth-actions";
 import { useEffect, useMemo, useState } from "react";
 
@@ -39,7 +40,7 @@ export function Sidebar({ user }: { user: any }) {
     }
   }, [collapsed]);
 
-  const title = useMemo(() => (collapsed ? "PilotLog" : "Flight training"), [collapsed]);
+  const title = useMemo(() => (collapsed ? "FlightTraks" : "FlightTraks"), [collapsed]);
 
   return (
     <aside
@@ -48,17 +49,18 @@ export function Sidebar({ user }: { user: any }) {
         collapsed ? "w-16 px-2" : "w-64 px-5"
       ].join(" ")}
     >
-      <div className={collapsed ? "mb-6 flex items-center justify-center" : "mb-6 space-y-1"}>
-        {!collapsed ? (
-          <>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              PilotLog
-            </div>
-            <div className="text-xl font-semibold tracking-tight">{title}</div>
-          </>
+      <div className={collapsed ? "mb-6 flex items-center justify-center" : "mb-6"}>
+        {collapsed ? (
+          <FlightTraksMark className="h-9 w-9" />
         ) : (
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-            PL
+          <div className="flex items-center gap-3">
+            <FlightTraksMark className="h-9 w-9" />
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                FlightTraks
+              </div>
+              <div className="truncate text-xl font-semibold tracking-tight">{title}</div>
+            </div>
           </div>
         )}
       </div>
