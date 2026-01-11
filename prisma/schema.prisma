@@ -94,6 +94,8 @@ model User {
   lastName           String?
   name               String?
   phone              String?
+  homeAirport        String?
+  homeTimeZone       String?
   passwordHash       String
   status             UserStatus             @default(PENDING)
   role               UserRole               @default(USER)
@@ -128,7 +130,9 @@ model Flight {
   tailNumber          String
   tailNumberSnapshot  String?
   origin              String
+  originAirportId     String?
   destination         String?
+  destinationAirportId String?
   status              FlightStatus         @default(PLANNED)
   plannedStartTime    DateTime?
   plannedEndTime      DateTime?
@@ -145,6 +149,8 @@ model Flight {
   createdAt           DateTime             @default(now())
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   aircraft            Aircraft?            @relation(fields: [aircraftId], references: [id], onDelete: SetNull)
+  originAirport       Airport?             @relation("FlightOriginAirport", fields: [originAirportId], references: [id], onDelete: SetNull)
+  destinationAirport  Airport?             @relation("FlightDestinationAirport", fields: [destinationAirportId], references: [id], onDelete: SetNull)
   logbookEntries      LogbookEntry[]
   participants        FlightParticipant[]
   peopleParticipants  FlightPersonParticipant[]
@@ -155,6 +161,29 @@ model Flight {
 
   @@unique([userId, importedProvider, providerFlightId])
   @@index([aircraftId])
+  @@index([originAirportId])
+  @@index([destinationAirportId])
+}
+
+model Airport {
+  id        String   @id @default(cuid())
+  icao      String   @unique
+  iata      String?
+  name      String?
+  city      String?
+  region    String?
+  country   String?
+  latitude  Float?
+  longitude Float?
+  timeZone  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  originFlights      Flight[] @relation("FlightOriginAirport")
+  destinationFlights Flight[] @relation("FlightDestinationAirport")
+
+  @@index([iata])
+  @@index([timeZone])
 }
 
 model FlightParticipant {

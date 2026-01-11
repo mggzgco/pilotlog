@@ -295,7 +295,7 @@ export default async function DashboardPage() {
               }
               secondaryAction={
                 <Button variant="outline" asChild>
-                  <Link href="/flights">Add a manual flight</Link>
+                  <Link href="/flights/new">Add a manual flight</Link>
                 </Button>
               }
             />

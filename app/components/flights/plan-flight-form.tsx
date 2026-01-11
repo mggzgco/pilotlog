@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { TimeZoneSelect } from "@/app/components/ui/timezone-select";
 
 type AircraftOption = {
   id: string;
@@ -20,13 +21,17 @@ type ParticipantOption = {
 type PlanFlightFormProps = {
   aircraftOptions: AircraftOption[];
   participantOptions: ParticipantOption[];
+  defaultDepartureLabel: string;
+  defaultTimeZone: string;
 };
 
 const roleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
 
 export function PlanFlightForm({
   aircraftOptions,
-  participantOptions
+  participantOptions,
+  defaultDepartureLabel,
+  defaultTimeZone
 }: PlanFlightFormProps) {
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [tailNumber, setTailNumber] = useState("");
@@ -114,7 +119,7 @@ export function PlanFlightForm({
         <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
           Departure label
         </label>
-        <Input name="departureLabel" placeholder="KLAX" />
+        <Input name="departureLabel" placeholder="KLOM" defaultValue={defaultDepartureLabel} />
       </div>
       <div>
         <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
@@ -124,15 +129,48 @@ export function PlanFlightForm({
       </div>
       <div>
         <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
-          Planned start time
+          Time zone
         </label>
-        <Input name="plannedStartTime" type="datetime-local" />
+        <TimeZoneSelect name="timeZone" defaultValue={defaultTimeZone || undefined} />
+        <p className="mt-1 text-xs text-slate-500">
+          If the airport code is recognized, the server will automatically use that airport’s time zone (DST-aware).
+        </p>
       </div>
       <div>
         <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
-          Planned end time
+          Planned start (date)
         </label>
-        <Input name="plannedEndTime" type="datetime-local" />
+        <Input name="plannedStartDate" type="date" />
+      </div>
+      <div>
+        <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+          Planned start (24h)
+        </label>
+        <Input
+          name="plannedStartClock"
+          type="text"
+          inputMode="numeric"
+          placeholder="HH:MM"
+          pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+        />
+      </div>
+      <div>
+        <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+          Planned end (date)
+        </label>
+        <Input name="plannedEndDate" type="date" />
+      </div>
+      <div>
+        <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+          Planned end (24h)
+        </label>
+        <Input
+          name="plannedEndClock"
+          type="text"
+          inputMode="numeric"
+          placeholder="HH:MM"
+          pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+        />
       </div>
       <div className="lg:col-span-2">
         <p className="mb-2 text-xs font-semibold uppercase text-slate-400">

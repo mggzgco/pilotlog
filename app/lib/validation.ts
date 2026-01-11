@@ -51,7 +51,9 @@ export const changePasswordSchema = z
 export const updateProfileSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  phone: z.string().optional()
+  phone: z.string().optional(),
+  homeAirport: z.string().optional(),
+  homeTimeZone: z.string().optional()
 });
 
 export const flightSchema = z.object({

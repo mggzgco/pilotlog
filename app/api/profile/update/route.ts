@@ -26,6 +26,8 @@ export async function POST(request: Request) {
   const firstName = String(parsed.data.firstName ?? "").trim();
   const lastName = String(parsed.data.lastName ?? "").trim();
   const phone = String(parsed.data.phone ?? "").trim();
+  const homeAirportRaw = String(parsed.data.homeAirport ?? "").trim();
+  const homeTimeZoneRaw = String(parsed.data.homeTimeZone ?? "").trim();
   const nameValue = [firstName, lastName].filter(Boolean).join(" ");
 
   await prisma.user.update({
@@ -34,7 +36,9 @@ export async function POST(request: Request) {
       firstName: firstName || null,
       lastName: lastName || null,
       name: nameValue || null,
-      phone: phone || null
+      phone: phone || null,
+      homeAirport: homeAirportRaw || null,
+      homeTimeZone: homeTimeZoneRaw || null
     }
   });
 

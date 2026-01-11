@@ -6,16 +6,102 @@ import { selectChecklistTemplate } from "@/app/lib/checklists/templates";
 import { createChecklistRunSnapshot } from "@/app/lib/checklists/snapshot";
 import { recordAuditEvent } from "@/app/lib/audit";
 import { normalizeParticipants, parseParticipantFormData } from "@/app/lib/flights/participants";
+import { lookupAirportByCode } from "@/app/lib/airports/lookup";
 
 const plannedFlightSchema = z.object({
   tailNumber: z.string().optional(),
   aircraftId: z.string().optional(),
   unassigned: z.string().optional(),
+  // legacy (datetime-local)
   plannedStartTime: z.string().optional(),
   plannedEndTime: z.string().optional(),
+  // new (explicit 24h + timezone)
+  timeZone: z.string().optional(),
+  plannedStartDate: z.string().optional(),
+  plannedStartClock: z.string().optional(),
+  plannedEndDate: z.string().optional(),
+  plannedEndClock: z.string().optional(),
   departureLabel: z.string().optional(),
   arrivalLabel: z.string().optional()
 });
+
+function parseClockHHMM(value: string | null): { hour: number; minute: number } | null {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return null;
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(trimmed);
+  if (!match) return null;
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+}
+
+function getTimeZoneParts(date: Date, timeZone: string) {
+  try {
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+    const parts = dtf.formatToParts(date);
+    const byType = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+    return {
+      year: Number(byType.year),
+      month: Number(byType.month),
+      day: Number(byType.day),
+      hour: Number(byType.hour),
+      minute: Number(byType.minute),
+      second: Number(byType.second)
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Convert a local (date + HH:MM) in a specific IANA timezone to a UTC Date.
+// This uses a small iterative correction to account for DST transitions.
+function zonedLocalToUtc({
+  dateStr,
+  clock,
+  timeZone
+}: {
+  dateStr: string;
+  clock: { hour: number; minute: number };
+  timeZone: string;
+}): Date | null {
+  const dateTrimmed = dateStr.trim();
+  if (!dateTrimmed) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateTrimmed);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+
+  const desiredLocalAsUtcMs = Date.UTC(year, month - 1, day, clock.hour, clock.minute, 0);
+  let guessMs = desiredLocalAsUtcMs;
+
+  for (let i = 0; i < 2; i += 1) {
+    const guessDate = new Date(guessMs);
+    const actual = getTimeZoneParts(guessDate, timeZone);
+    if (!actual) return null;
+    const actualLocalAsUtcMs = Date.UTC(
+      actual.year,
+      actual.month - 1,
+      actual.day,
+      actual.hour,
+      actual.minute,
+      actual.second
+    );
+    const diffMs = desiredLocalAsUtcMs - actualLocalAsUtcMs;
+    guessMs += diffMs;
+  }
+
+  const result = new Date(guessMs);
+  return Number.isNaN(result.getTime()) ? null : result;
+}
 
 export async function POST(request: Request) {
   const user = await requireUser();
@@ -62,20 +148,39 @@ export async function POST(request: Request) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const plannedStart = parsed.data.plannedStartTime
+  const fallbackTimeZone = String(parsed.data.timeZone ?? "").trim() || "UTC";
+
+  const plannedStartClock = parseClockHHMM(
+    parsed.data.plannedStartClock ? String(parsed.data.plannedStartClock) : null
+  );
+  const plannedEndClock = parseClockHHMM(
+    parsed.data.plannedEndClock ? String(parsed.data.plannedEndClock) : null
+  );
+
+  // Legacy fallback (datetime-local)
+  const plannedStartLegacy = parsed.data.plannedStartTime
     ? new Date(String(parsed.data.plannedStartTime))
     : null;
-  const plannedEnd = parsed.data.plannedEndTime
+  const plannedEndLegacy = parsed.data.plannedEndTime
     ? new Date(String(parsed.data.plannedEndTime))
     : null;
 
-  if (plannedStart && Number.isNaN(plannedStart.getTime())) {
+  if ((parsed.data.plannedStartDate && !plannedStartClock) || (!parsed.data.plannedStartDate && plannedStartClock)) {
+    redirectUrl.searchParams.set("toast", "Planned start requires both date and time (HH:MM).");
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+  if ((parsed.data.plannedEndDate && !plannedEndClock) || (!parsed.data.plannedEndDate && plannedEndClock)) {
+    redirectUrl.searchParams.set("toast", "Planned end requires both date and time (HH:MM).");
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+  if (plannedStartLegacy && Number.isNaN(plannedStartLegacy.getTime())) {
     redirectUrl.searchParams.set("toast", "Invalid planned start time.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }
-
-  if (plannedEnd && Number.isNaN(plannedEnd.getTime())) {
+  if (plannedEndLegacy && Number.isNaN(plannedEndLegacy.getTime())) {
     redirectUrl.searchParams.set("toast", "Invalid planned end time.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
@@ -83,6 +188,51 @@ export async function POST(request: Request) {
 
   const departureLabel = String(parsed.data.departureLabel ?? "").trim();
   const arrivalLabel = String(parsed.data.arrivalLabel ?? "").trim();
+  const [originAirport, destinationAirport] = await Promise.all([
+    departureLabel ? lookupAirportByCode(departureLabel) : Promise.resolve(null),
+    arrivalLabel ? lookupAirportByCode(arrivalLabel) : Promise.resolve(null)
+  ]);
+
+  const startTimeZone = originAirport?.timeZone ?? fallbackTimeZone;
+  const endTimeZone = destinationAirport?.timeZone ?? startTimeZone;
+
+  const plannedStartFromParts =
+    parsed.data.plannedStartDate && plannedStartClock
+      ? zonedLocalToUtc({
+          dateStr: String(parsed.data.plannedStartDate),
+          clock: plannedStartClock,
+          timeZone: startTimeZone
+        })
+      : null;
+  const plannedEndFromParts =
+    parsed.data.plannedEndDate && plannedEndClock
+      ? zonedLocalToUtc({
+          dateStr: String(parsed.data.plannedEndDate),
+          clock: plannedEndClock,
+          timeZone: endTimeZone
+        })
+      : null;
+
+  const plannedStart = plannedStartFromParts ?? plannedStartLegacy;
+  const plannedEnd = plannedEndFromParts ?? plannedEndLegacy;
+
+  if (parsed.data.plannedStartDate && plannedStartFromParts === null) {
+    redirectUrl.searchParams.set(
+      "toast",
+      "Invalid planned start date/time for the departure airport time zone."
+    );
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+  if (parsed.data.plannedEndDate && plannedEndFromParts === null) {
+    redirectUrl.searchParams.set(
+      "toast",
+      "Invalid planned end date/time for the arrival airport time zone."
+    );
+    redirectUrl.searchParams.set("toastType", "error");
+    return NextResponse.redirect(redirectUrl);
+  }
+
   const startTime = plannedStart ?? new Date();
   const participantInputs = normalizeParticipants(
     user.id,
@@ -97,11 +247,17 @@ export async function POST(request: Request) {
         tailNumberSnapshot: tailNumber,
         aircraftId,
         origin: departureLabel || "TBD",
+        originAirportId: originAirport?.id ?? null,
         destination: arrivalLabel || null,
+        destinationAirportId: destinationAirport?.id ?? null,
         plannedStartTime: plannedStart,
         plannedEndTime: plannedEnd,
         startTime,
         status: "PLANNED",
+        statsJson: {
+          startTimeZone,
+          endTimeZone
+        },
         participants: {
           create: [
             { userId: user.id, role: "PIC" },

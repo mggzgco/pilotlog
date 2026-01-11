@@ -3,6 +3,7 @@ import { prisma } from "@/app/lib/db";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
+import { TimeZoneSelect } from "@/app/components/ui/timezone-select";
 
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
@@ -15,6 +16,8 @@ export default async function ProfilePage() {
       lastName: true,
       name: true,
       phone: true,
+      homeAirport: true,
+      homeTimeZone: true,
       status: true
     }
   });
@@ -57,6 +60,17 @@ export default async function ProfilePage() {
             <div>
               <label className="text-sm text-slate-300">Phone</label>
               <Input name="phone" defaultValue={user.phone ?? ""} />
+            </div>
+            <div>
+              <label className="text-sm text-slate-300">Home airport</label>
+              <Input name="homeAirport" placeholder="KLOM" defaultValue={user.homeAirport ?? ""} />
+            </div>
+            <div>
+              <label className="text-sm text-slate-300">Home time zone</label>
+              <TimeZoneSelect name="homeTimeZone" defaultValue={user.homeTimeZone ?? undefined} />
+              <p className="mt-1 text-xs text-slate-500">
+                Used as the default time zone when creating flights.
+              </p>
             </div>
             <div className="lg:col-span-2">
               {/* PROF-003: save profile changes */}

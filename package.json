@@ -11,6 +11,7 @@
     "db:reset": "prisma migrate reset --force",
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
+    "db:import:airports": "tsx prisma/import-airports.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

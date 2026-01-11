@@ -5,6 +5,10 @@ import { PlanFlightForm } from "@/app/components/flights/plan-flight-form";
 
 export default async function NewPlannedFlightPage() {
   const user = await requireUser();
+  const profile = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { homeAirport: true, homeTimeZone: true }
+  });
   const aircraft = await prisma.aircraft.findMany({
     where: { userId: user.id },
     orderBy: { tailNumber: "asc" }
@@ -38,6 +42,8 @@ export default async function NewPlannedFlightPage() {
           <PlanFlightForm
             aircraftOptions={aircraft}
             participantOptions={participantOptions}
+            defaultDepartureLabel={profile?.homeAirport ?? ""}
+            defaultTimeZone={profile?.homeTimeZone ?? ""}
           />
         </CardContent>
       </Card>

@@ -9,6 +9,7 @@ import { hashPassword } from "../app/lib/password";
 const prisma = new PrismaClient();
 
 async function main() {
+  await seedAirports();
   await seedDefaultChecklists();
 
   const email = process.env.SEED_ADMIN_EMAIL;
@@ -39,6 +40,71 @@ async function main() {
   });
 
   console.log("Seed admin created.");
+}
+
+async function seedAirports() {
+  // Minimal curated seed to enable timezone-aware entry immediately.
+  // You can expand this later (e.g., bulk import) without changing app logic.
+  const airports: Array<{
+    icao: string;
+    iata?: string;
+    name: string;
+    city?: string;
+    region?: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
+    timeZone: string;
+  }> = [
+    // User-requested example: Wings Field (Philadelphia area)
+    {
+      icao: "KLOM",
+      iata: "LOM",
+      name: "Wings Field",
+      city: "Philadelphia",
+      region: "PA",
+      country: "US",
+      latitude: 40.1375,
+      longitude: -75.2651,
+      timeZone: "America/New_York"
+    },
+    { icao: "KJFK", iata: "JFK", name: "John F. Kennedy International", city: "New York", region: "NY", country: "US", timeZone: "America/New_York" },
+    { icao: "KLAX", iata: "LAX", name: "Los Angeles International", city: "Los Angeles", region: "CA", country: "US", timeZone: "America/Los_Angeles" },
+    { icao: "KSFO", iata: "SFO", name: "San Francisco International", city: "San Francisco", region: "CA", country: "US", timeZone: "America/Los_Angeles" },
+    { icao: "KORD", iata: "ORD", name: "Chicago O'Hare International", city: "Chicago", region: "IL", country: "US", timeZone: "America/Chicago" },
+    { icao: "KDEN", iata: "DEN", name: "Denver International", city: "Denver", region: "CO", country: "US", timeZone: "America/Denver" },
+    { icao: "PHNL", iata: "HNL", name: "Daniel K. Inouye International", city: "Honolulu", region: "HI", country: "US", timeZone: "Pacific/Honolulu" },
+    { icao: "EGLL", iata: "LHR", name: "London Heathrow", city: "London", country: "GB", timeZone: "Europe/London" },
+    { icao: "LFPG", iata: "CDG", name: "Paris Charles de Gaulle", city: "Paris", country: "FR", timeZone: "Europe/Paris" },
+    { icao: "RJTT", iata: "HND", name: "Tokyo Haneda", city: "Tokyo", country: "JP", timeZone: "Asia/Tokyo" }
+  ];
+
+  for (const airport of airports) {
+    await prisma.airport.upsert({
+      where: { icao: airport.icao },
+      create: {
+        icao: airport.icao,
+        iata: airport.iata ?? null,
+        name: airport.name,
+        city: airport.city ?? null,
+        region: airport.region ?? null,
+        country: airport.country ?? null,
+        latitude: airport.latitude ?? null,
+        longitude: airport.longitude ?? null,
+        timeZone: airport.timeZone
+      },
+      update: {
+        iata: airport.iata ?? null,
+        name: airport.name,
+        city: airport.city ?? null,
+        region: airport.region ?? null,
+        country: airport.country ?? null,
+        latitude: airport.latitude ?? null,
+        longitude: airport.longitude ?? null,
+        timeZone: airport.timeZone
+      }
+    });
+  }
 }
 
 async function seedDefaultChecklists() {

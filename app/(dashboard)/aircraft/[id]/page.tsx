@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/auth/session";
-import { updateAircraftDetailsAction } from "@/app/lib/actions/aircraft-actions";
+import { assignAircraftChecklistAction, updateAircraftDetailsAction } from "@/app/lib/actions/aircraft-actions";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -38,6 +38,15 @@ export default async function AircraftDetailPage({
   if (!aircraft) {
     notFound();
   }
+
+  const templates = await prisma.checklistTemplate.findMany({
+    where: { userId: user.id },
+    select: { id: true, name: true, phase: true, isDefault: true },
+    orderBy: [{ phase: "asc" }, { isDefault: "desc" }, { createdAt: "desc" }]
+  });
+
+  const preflightTemplates = templates.filter((t) => t.phase === "PREFLIGHT");
+  const postflightTemplates = templates.filter((t) => t.phase === "POSTFLIGHT");
 
   const renderChecklistTemplate = (
     template:
@@ -233,6 +242,32 @@ export default async function AircraftDetailPage({
             <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
               Pre-Flight
             </p>
+            <form action={assignAircraftChecklistAction} className="mt-2 flex flex-wrap items-end gap-3">
+              <input type="hidden" name="aircraftId" value={aircraft.id} />
+              <input type="hidden" name="phase" value="PREFLIGHT" />
+              <input type="hidden" name="scope" value="aircraft" />
+              <label className="min-w-[260px] flex-1 text-sm text-slate-600 dark:text-slate-400">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Assigned template
+                </span>
+                <select
+                  name="templateId"
+                  defaultValue={aircraft.preflightChecklistTemplateId ?? ""}
+                  className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                >
+                  <option value="">None</option>
+                  {preflightTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.isDefault ? " (default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <FormSubmitButton type="submit" pendingText="Assigning...">
+                Assign
+              </FormSubmitButton>
+            </form>
             <div className="mt-2">
               {renderChecklistTemplate(aircraft.preflightChecklistTemplate as any, "pre-flight")}
             </div>
@@ -241,6 +276,32 @@ export default async function AircraftDetailPage({
             <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
               Post-Flight
             </p>
+            <form action={assignAircraftChecklistAction} className="mt-2 flex flex-wrap items-end gap-3">
+              <input type="hidden" name="aircraftId" value={aircraft.id} />
+              <input type="hidden" name="phase" value="POSTFLIGHT" />
+              <input type="hidden" name="scope" value="aircraft" />
+              <label className="min-w-[260px] flex-1 text-sm text-slate-600 dark:text-slate-400">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Assigned template
+                </span>
+                <select
+                  name="templateId"
+                  defaultValue={aircraft.postflightChecklistTemplateId ?? ""}
+                  className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                >
+                  <option value="">None</option>
+                  {postflightTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.isDefault ? " (default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <FormSubmitButton type="submit" pendingText="Assigning...">
+                Assign
+              </FormSubmitButton>
+            </form>
             <div className="mt-2">
               {renderChecklistTemplate(aircraft.postflightChecklistTemplate as any, "post-flight")}
             </div>
