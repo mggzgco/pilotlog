@@ -10,7 +10,7 @@ import { EmptyState } from "@/app/components/ui/empty-state";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { Input } from "@/app/components/ui/input";
-import { formatFlightRouteLabel } from "@/app/lib/flights/route";
+import { formatFlightRouteLabel } from "@/app/lib/flights/route-label";
 import { formatDateTime24 } from "@/app/lib/utils";
 
 const formatPersonName = (person: {

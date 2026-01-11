@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       ipAddress: getClientIp(request)
     });
 
-    if (result.error) {
+    if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 429 });
     }
 

@@ -9,7 +9,7 @@ import { FlightsTable } from "@/app/components/flights/flights-table";
 import { CreateFlightModal } from "@/app/components/flights/create-flight-modal";
 import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 import { Plane } from "lucide-react";
-import { formatFlightRouteLabel } from "@/app/lib/flights/route";
+import { formatFlightRouteLabel } from "@/app/lib/flights/route-label";
 
 type FlightsSearchParams = {
   search?: string;
@@ -105,21 +105,21 @@ export default async function FlightsPage({
     });
   }
 
-  const orderBy = (() => {
+  const orderBy: Prisma.FlightOrderByWithRelationInput[] = (() => {
     switch (sort) {
       case "date_asc":
-        return [{ plannedStartTime: "asc" }, { startTime: "asc" }] as const;
+        return [{ plannedStartTime: "asc" as const }, { startTime: "asc" as const }];
       case "tail_asc":
-        return [{ tailNumber: "asc" }] as const;
+        return [{ tailNumber: "asc" as const }];
       case "tail_desc":
-        return [{ tailNumber: "desc" }] as const;
+        return [{ tailNumber: "desc" as const }];
       case "status_asc":
-        return [{ status: "asc" }] as const;
+        return [{ status: "asc" as const }];
       case "status_desc":
-        return [{ status: "desc" }] as const;
+        return [{ status: "desc" as const }];
       case "date_desc":
       default:
-        return [{ plannedStartTime: "desc" }, { startTime: "desc" }] as const;
+        return [{ plannedStartTime: "desc" as const }, { startTime: "desc" as const }];
     }
   })();
 
@@ -183,6 +183,11 @@ export default async function FlightsPage({
   };
 
   const flightRows = flights.map((flight) => {
+    const linkAction = (label: string, href: string) =>
+      ({ type: "link" as const, label, href });
+    const formAction = (label: string, action: string) =>
+      ({ type: "form" as const, label, action });
+
     const displayTime = flight.plannedStartTime ?? flight.startTime;
     const preflightRun = flight.checklistRuns.find(
       (run) => run.phase === "PREFLIGHT"
@@ -214,26 +219,21 @@ export default async function FlightsPage({
 
     const nextAction =
       derivedStatus === "PLANNED" && checklistAvailable && preflightDecision === "—"
-        ? { type: "link", label: "Start Preflight", href: `/flights/${flight.id}` }
+        ? linkAction("Start Preflight", `/flights/${flight.id}`)
         : preflightDecision === "Accepted" && postflightDecision === "—"
-          ? {
-              type: "form",
-              label: "Start Postflight",
-              action: `/api/flights/${flight.id}/checklists/start-postflight`
-            }
+          ? formAction(
+              "Start Postflight",
+              `/api/flights/${flight.id}/checklists/start-postflight`
+            )
           : isPostflightAccepted && !isImported
-            ? { type: "link", label: "Import ADS-B", href: `/flights/${flight.id}/match` }
+            ? linkAction("Import ADS-B", `/flights/${flight.id}/match`)
             : isPostflightAccepted && !hasLogbookEntry
-              ? { type: "link", label: "Log Hours", href: `/flights/${flight.id}` }
+              ? linkAction("Log Hours", `/flights/${flight.id}`)
               : isPostflightAccepted && !hasCosts
-                ? { type: "link", label: "Add Costs", href: `/flights/${flight.id}` }
+                ? linkAction("Add Costs", `/flights/${flight.id}`)
                 : isPostflightAccepted && !hasReceipts
-                  ? {
-                      type: "link",
-                      label: "Upload Receipts",
-                      href: `/flights/${flight.id}#receipt-upload`
-                    }
-                : { type: "link", label: "Open", href: `/flights/${flight.id}` };
+                  ? linkAction("Upload Receipts", `/flights/${flight.id}#receipt-upload`)
+                : linkAction("Open", `/flights/${flight.id}`);
 
     return {
       id: flight.id,

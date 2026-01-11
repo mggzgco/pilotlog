@@ -2,7 +2,21 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { lucia } from "@/app/lib/auth/lucia";
 
-export async function getCurrentUser() {
+export type AppUserRole = "USER" | "ADMIN";
+export type AppUserStatus = "PENDING" | "ACTIVE" | "DISABLED";
+
+export type AppUser = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  name: string | null;
+  phone: string | null;
+  role: AppUserRole;
+  status: AppUserStatus;
+};
+
+export async function getCurrentUser(): Promise<{ session: any; user: AppUser | null }> {
   const sessionId = cookies().get(lucia.sessionCookieName)?.value ?? null;
   if (!sessionId) {
     return { session: null, user: null };
@@ -22,10 +36,10 @@ export async function getCurrentUser() {
     // ignore cookie write errors in edge cases
   }
 
-  return result;
+  return { session: result.session, user: (result.user as any) ?? null };
 }
 
-export async function requireUser() {
+export async function requireUser(): Promise<AppUser> {
   const { user, session } = await getCurrentUser();
   if (!user || !session) {
     // NFR-SEC-001: block unauthenticated access

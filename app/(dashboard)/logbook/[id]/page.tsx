@@ -191,14 +191,14 @@ export default async function LogbookEntryDetailPage({
               type="number"
               step="0.1"
               placeholder="Hobbs out"
-              defaultValue={entry.hobbsOut ?? ""}
+              defaultValue={entry.hobbsOut?.toString?.() ?? ""}
             />
             <Input
               name="hobbsIn"
               type="number"
               step="0.1"
               placeholder="Hobbs in"
-              defaultValue={entry.hobbsIn ?? ""}
+              defaultValue={entry.hobbsIn?.toString?.() ?? ""}
             />
 
             <div className="lg:col-span-3">
@@ -207,57 +207,75 @@ export default async function LogbookEntryDetailPage({
               </p>
             </div>
 
-            <Input name="picTime" type="number" step="0.1" placeholder="PIC" defaultValue={entry.picTime ?? ""} />
+            <Input
+              name="picTime"
+              type="number"
+              step="0.1"
+              placeholder="PIC"
+              defaultValue={entry.picTime?.toString?.() ?? ""}
+            />
             <Input
               name="dualReceivedTime"
               type="number"
               step="0.1"
               placeholder="Dual rcvd"
-              defaultValue={entry.dualReceivedTime ?? ""}
+              defaultValue={entry.dualReceivedTime?.toString?.() ?? ""}
             />
-            <Input name="sicTime" type="number" step="0.1" placeholder="SIC" defaultValue={entry.sicTime ?? ""} />
+            <Input
+              name="sicTime"
+              type="number"
+              step="0.1"
+              placeholder="SIC"
+              defaultValue={entry.sicTime?.toString?.() ?? ""}
+            />
             <Input
               name="soloTime"
               type="number"
               step="0.1"
               placeholder="Solo"
-              defaultValue={entry.soloTime ?? ""}
+              defaultValue={entry.soloTime?.toString?.() ?? ""}
             />
             <Input
               name="nightTime"
               type="number"
               step="0.1"
               placeholder="Night"
-              defaultValue={entry.nightTime ?? ""}
+              defaultValue={entry.nightTime?.toString?.() ?? ""}
             />
-            <Input name="xcTime" type="number" step="0.1" placeholder="XC" defaultValue={entry.xcTime ?? ""} />
+            <Input
+              name="xcTime"
+              type="number"
+              step="0.1"
+              placeholder="XC"
+              defaultValue={entry.xcTime?.toString?.() ?? ""}
+            />
             <Input
               name="simulatedInstrumentTime"
               type="number"
               step="0.1"
               placeholder="Sim inst"
-              defaultValue={entry.simulatedInstrumentTime ?? ""}
+              defaultValue={entry.simulatedInstrumentTime?.toString?.() ?? ""}
             />
             <Input
               name="instrumentTime"
               type="number"
               step="0.1"
               placeholder="Actual inst"
-              defaultValue={entry.instrumentTime ?? ""}
+              defaultValue={entry.instrumentTime?.toString?.() ?? ""}
             />
             <Input
               name="simulatorTime"
               type="number"
               step="0.1"
               placeholder="Simulator"
-              defaultValue={entry.simulatorTime ?? ""}
+              defaultValue={entry.simulatorTime?.toString?.() ?? ""}
             />
             <Input
               name="groundTime"
               type="number"
               step="0.1"
               placeholder="Ground"
-              defaultValue={entry.groundTime ?? ""}
+              defaultValue={entry.groundTime?.toString?.() ?? ""}
             />
             <Input
               name="dayTakeoffs"

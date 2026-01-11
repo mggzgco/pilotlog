@@ -6,7 +6,7 @@ import { Button } from "@/app/components/ui/button";
 import { FlightMap } from "@/app/components/maps/flight-map";
 import { getLatestFlightWithTrackPoints, getRecentFlights } from "@/app/lib/flights/queries";
 import { EmptyState } from "@/app/components/ui/empty-state";
-import { formatFlightRouteLabel } from "@/app/lib/flights/route";
+import { formatFlightRouteLabel } from "@/app/lib/flights/route-label";
 import { flightHasLandingOverDistanceNm } from "@/app/lib/airports/xc";
 import { CostPieChart, type CostPieSlice } from "@/app/components/charts/CostPieChart";
 import { HoursLineChart } from "@/app/components/charts/HoursLineChart";

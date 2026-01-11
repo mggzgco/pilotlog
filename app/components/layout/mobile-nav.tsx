@@ -10,13 +10,7 @@ import { SidebarAccount } from "@/app/components/layout/sidebar-account";
 import { logoutAction } from "@/app/lib/actions/auth-actions";
 
 interface MobileNavProps {
-  user: {
-    name: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    email: string;
-    role: "USER" | "ADMIN";
-  };
+  user: any;
 }
 
 export function MobileNav({ user }: MobileNavProps) {
@@ -74,10 +68,10 @@ export function MobileNav({ user }: MobileNavProps) {
           <div className="mt-8 border-t border-slate-200 pt-4 dark:border-slate-800">
             <SidebarAccount
               user={{
-                name: user.name ?? null,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email
+                name: user?.name ?? null,
+                firstName: user?.firstName ?? null,
+                lastName: user?.lastName ?? null,
+                email: user?.email ?? ""
               }}
               onLogout={logoutAction}
               collapsed={false}

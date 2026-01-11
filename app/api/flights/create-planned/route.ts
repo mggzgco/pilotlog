@@ -33,9 +33,34 @@ const plannedFlightSchema = z.object({
 function parseClockHHMM(value: string | null): { hour: number; minute: number } | null {
   const trimmed = value?.trim() ?? "";
   if (!trimmed) return null;
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(trimmed);
-  if (!match) return null;
-  return { hour: Number(match[1]), minute: Number(match[2]) };
+
+  // 0630 -> 06:30
+  const compact = /^(\d{2})(\d{2})$/.exec(trimmed);
+  if (compact) {
+    const hour = Number(compact[1]);
+    const minute = Number(compact[2]);
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return { hour, minute };
+  }
+
+  // 6:30, 06:30, 6.30, 6:30pm, 6:30 pm
+  const hm = /^(\d{1,2})[:.](\d{2})\s*(am|pm)?$/i.exec(trimmed);
+  if (hm) {
+    let hour = Number(hm[1]);
+    const minute = Number(hm[2]);
+    const suffix = hm[3]?.toLowerCase() ?? null;
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    if (minute < 0 || minute > 59) return null;
+    if (suffix) {
+      if (hour < 1 || hour > 12) return null;
+      if (suffix === "am") hour = hour === 12 ? 0 : hour;
+      if (suffix === "pm") hour = hour === 12 ? 12 : hour + 12;
+    } else {
+      if (hour < 0 || hour > 23) return null;
+    }
+    return { hour, minute };
+  }
+
+  return null;
 }
 
 function getTimeZoneParts(date: Date, timeZone: string) {
@@ -363,8 +388,8 @@ export async function POST(request: Request) {
     }
   });
 
-  const redirectUrl = new URL(`/flights/${flight.id}`, request.url);
-  redirectUrl.searchParams.set("toast", "Planned flight created.");
-  redirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(redirectUrl);
+  const successRedirectUrl = new URL(`/flights/${flight.id}`, request.url);
+  successRedirectUrl.searchParams.set("toast", "Planned flight created.");
+  successRedirectUrl.searchParams.set("toastType", "success");
+  return NextResponse.redirect(successRedirectUrl);
 }

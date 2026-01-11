@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     password: parsed.data.password
   });
 
-  if (result.error) {
+  if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 

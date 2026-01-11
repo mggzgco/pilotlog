@@ -42,6 +42,46 @@ type CreateFlightModalProps = {
 
 const newOptionValue = "__create__";
 
+function normalizeClockInput(raw: string): string | null {
+  const trimmed = raw.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  // 0630 -> 06:30
+  const compact = /^(\d{2})(\d{2})$/.exec(trimmed);
+  if (compact) {
+    const hour = Number(compact[1]);
+    const minute = Number(compact[2]);
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    }
+  }
+
+  // 6:30, 06:30, 6.30, 6:30pm, 6:30 pm
+  const hm = /^(\d{1,2})[:.](\d{2})\s*(am|pm)?$/.exec(trimmed);
+  if (hm) {
+    let hour = Number(hm[1]);
+    const minute = Number(hm[2]);
+    const suffix = hm[3] ?? null;
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    if (minute < 0 || minute > 59) return null;
+
+    if (suffix) {
+      if (hour < 1 || hour > 12) return null;
+      if (suffix === "am") {
+        hour = hour === 12 ? 0 : hour;
+      } else {
+        hour = hour === 12 ? 12 : hour + 12;
+      }
+    } else {
+      if (hour < 0 || hour > 23) return null;
+    }
+
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }
+
+  return null;
+}
+
 export function CreateFlightModal({
   aircraftOptions,
   participantOptions,
@@ -103,7 +143,25 @@ export function CreateFlightModal({
 
     setIsSubmitting(true);
     try {
+      const normalizedStart = normalizeClockInput(plannedStartClock);
+      if (!normalizedStart) {
+        setErrorMessage('Start time must be valid (examples: "06:30", "6:30", "0630").');
+        return;
+      }
+      const normalizedEnd = plannedEndClock ? normalizeClockInput(plannedEndClock) : null;
+      if (plannedEndClock && !normalizedEnd) {
+        setErrorMessage('End time must be valid (examples: "08:10", "8:10", "0810").');
+        return;
+      }
+
       const formData = new FormData(event.currentTarget);
+      formData.set("plannedStartClock", normalizedStart);
+      setPlannedStartClock(normalizedStart);
+      if (normalizedEnd) {
+        formData.set("plannedEndClock", normalizedEnd);
+        setPlannedEndClock(normalizedEnd);
+      }
+
       // Normalize stop labels from client-side state (ensures removed rows don't submit stale values).
       formData.delete("stopLabel");
       stops
@@ -259,11 +317,14 @@ export function CreateFlightModal({
                     name="plannedStartClock"
                     type="text"
                     inputMode="text"
-                    placeholder="HH:MM"
-                    pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+                    placeholder='Examples: "06:30" or "0630"'
                     required
                     value={plannedStartClock}
                     onChange={(event) => setPlannedStartClock(event.target.value)}
+                    onBlur={() => {
+                      const normalized = normalizeClockInput(plannedStartClock);
+                      if (normalized) setPlannedStartClock(normalized);
+                    }}
                     className="mt-2"
                   />
                 </div>
@@ -281,10 +342,13 @@ export function CreateFlightModal({
                     name="plannedEndClock"
                     type="text"
                     inputMode="text"
-                    placeholder="HH:MM"
-                    pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+                    placeholder='Examples: "08:10" or "0810"'
                     value={plannedEndClock}
                     onChange={(event) => setPlannedEndClock(event.target.value)}
+                    onBlur={() => {
+                      const normalized = plannedEndClock ? normalizeClockInput(plannedEndClock) : null;
+                      if (normalized) setPlannedEndClock(normalized);
+                    }}
                     className="mt-2"
                   />
                 </div>

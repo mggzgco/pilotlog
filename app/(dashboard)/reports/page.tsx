@@ -106,7 +106,7 @@ export default async function ReportsPage({
               <Button variant="outline" asChild>
                 <Link href="/reports">Reset</Link>
               </Button>
-              <Button variant="secondary" asChild>
+              <Button variant="outline" asChild>
                 <a href={exportHref}>Download CSV</a>
               </Button>
             </div>

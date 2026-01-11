@@ -1,13 +1,7 @@
 import { MobileNav } from "@/app/components/layout/mobile-nav";
 
 interface TopbarProps {
-  user: {
-    name: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    email: string;
-    role: "USER" | "ADMIN";
-  };
+  user: any;
 }
 
 export function Topbar({ user }: TopbarProps) {

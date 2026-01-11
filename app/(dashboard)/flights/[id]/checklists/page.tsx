@@ -33,9 +33,9 @@ export default async function FlightChecklistsPage({
   }
 
   const defaultSignatureName =
-    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-    user.name ||
-    user.email;
+    (user as any).name ||
+    (user as any).email ||
+    "Pilot";
 
   const toChecklistRunView = (run: typeof flight.checklistRuns[number]) => ({
     id: run.id,

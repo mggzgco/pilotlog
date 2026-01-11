@@ -19,7 +19,7 @@ export async function POST(
         refererUrl && refererUrl.origin === origin
           ? refererUrl
           : new URL(`/flights/${params.id}`, request.url);
-      redirectUrl.searchParams.set("toast", csrf.error);
+      redirectUrl.searchParams.set("toast", csrf.error ?? "CSRF validation failed.");
       redirectUrl.searchParams.set("toastType", "error");
       return NextResponse.redirect(redirectUrl, { status: 303 });
     }
@@ -125,7 +125,7 @@ export async function POST(
           endTime: match.endTime,
           durationMinutes: match.durationMinutes ? Math.round(match.durationMinutes) : null,
           distanceNm: match.distanceNm ? Math.round(match.distanceNm) : null,
-          statsJson: match.stats ?? null,
+          statsJson: match.stats ? (match.stats as any) : undefined,
           // If we have an endTime from ADS-B, treat as landed/completed.
           status: "COMPLETED"
         }

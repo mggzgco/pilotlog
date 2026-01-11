@@ -6,21 +6,21 @@ import { LogOut, User } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
 export type SidebarAccountUser = {
-  name: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  email: string;
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
 };
 
 type SidebarAccountProps = {
-  user: SidebarAccountUser;
+  user: any;
   onLogout: () => void;
   collapsed?: boolean;
 };
 
 function initialsForUser(user: SidebarAccountUser) {
   const initialsSource =
-    [user.firstName, user.lastName].filter(Boolean).join(" ") || user.name || user.email;
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || user.name || user.email || "Pilot";
   return initialsSource
     .split(" ")
     .map((part) => part[0])
@@ -30,12 +30,13 @@ function initialsForUser(user: SidebarAccountUser) {
 }
 
 function displayNameForUser(user: SidebarAccountUser) {
-  return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.name || "Pilot";
+  return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.name || user.email || "Pilot";
 }
 
 export function SidebarAccount({ user, onLogout, collapsed = false }: SidebarAccountProps) {
   const initials = initialsForUser(user);
   const displayName = displayNameForUser(user);
+  const email = user.email || "";
 
   return (
     <DropdownMenu.Root>
@@ -44,7 +45,7 @@ export function SidebarAccount({ user, onLogout, collapsed = false }: SidebarAcc
           type="button"
           className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 dark:focus-visible:ring-offset-slate-950"
           aria-label="Open account menu"
-          title={collapsed ? `${displayName} · ${user.email}` : undefined}
+          title={collapsed && email ? `${displayName} · ${email}` : displayName}
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white shadow-lg shadow-brand-600/20">
             {initials}
@@ -55,7 +56,7 @@ export function SidebarAccount({ user, onLogout, collapsed = false }: SidebarAcc
                 {displayName}
               </div>
               <div className="truncate text-xs text-slate-600 dark:text-slate-400">
-                {user.email}
+                {email}
               </div>
             </div>
           ) : null}

@@ -15,7 +15,7 @@ export const navItems = [
   { href: "/aircraft", label: "Aircraft", icon: Plane }
 ];
 
-export function Sidebar({ user }: { user: SidebarAccountUser }) {
+export function Sidebar({ user }: { user: any }) {
   // UX-001: persistent left navigation for core modules
   const pathname = usePathname();
   const storageKey = "pilotlog.sidebarCollapsed";

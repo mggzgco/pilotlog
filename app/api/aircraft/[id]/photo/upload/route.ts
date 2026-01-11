@@ -18,7 +18,7 @@ export async function POST(
       refererUrl && refererUrl.origin === origin
         ? refererUrl
         : new URL(`/aircraft/${params.id}`, request.url);
-    redirectUrl.searchParams.set("toast", csrf.error);
+    redirectUrl.searchParams.set("toast", csrf.error ?? "CSRF validation failed.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl, { status: 303 });
   }
