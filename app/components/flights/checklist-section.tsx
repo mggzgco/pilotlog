@@ -133,6 +133,10 @@ export function ChecklistSection({
     "PREFLIGHT" | "POSTFLIGHT" | null
   >(null);
   const [rejectionNote, setRejectionNote] = useState("");
+  const [closingPhase, setClosingPhase] = useState<
+    "PREFLIGHT" | "POSTFLIGHT" | null
+  >(null);
+  const [closingNote, setClosingNote] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [isOnline, setIsOnline] = useState(true);
   const [itemState, setItemState] = useState<Record<string, ChecklistItemState>>({});
@@ -879,6 +883,7 @@ export function ChecklistSection({
   };
 
   const signingLabel = signingPhase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight";
+  const closingLabel = closingPhase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight";
 
   const totalItems =
     activeRun?.items.filter((item) => item.kind !== "SECTION").length ?? 0;
@@ -985,26 +990,40 @@ export function ChecklistSection({
                 Checklist is locked and read-only.
               </p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    size="lg"
+                    disabled={!canAccept}
+                    onClick={() => setSigningPhase(activeRun.phase)}
+                  >
+                    Accept & Sign
+                  </Button>
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    disabled={!canDecide}
+                    onClick={() => {
+                      setRejectionNote("");
+                      setRejectingPhase(activeRun.phase);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                </div>
                 <Button
                   type="button"
                   size="lg"
-                  disabled={!canAccept}
-                  onClick={() => setSigningPhase(activeRun.phase)}
-                >
-                  Accept & Sign
-                </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  variant="outline"
+                  variant="ghost"
                   disabled={!canDecide}
                   onClick={() => {
-                    setRejectionNote("");
-                    setRejectingPhase(activeRun.phase);
+                    setClosingNote("");
+                    setClosingPhase(activeRun.phase);
                   }}
                 >
-                  Reject
+                  Close without completing
                 </Button>
               </div>
             )}
@@ -1113,6 +1132,60 @@ export function ChecklistSection({
                   type="button"
                   variant="outline"
                   onClick={() => setSigningPhase(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {closingPhase ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-slate-800 bg-slate-950 p-6">
+            <h3 className="text-lg font-semibold text-slate-100">
+              Close {closingLabel} checklist
+            </h3>
+            <p className="mt-2 text-sm text-slate-400">
+              This closes the checklist without completing all items. You can still continue the flight workflow.
+            </p>
+            <form
+              action={`/api/flights/${flightId}/checklists/${
+                closingPhase === "PREFLIGHT" ? "close-preflight" : "close-postflight"
+              }`}
+              method="post"
+              className="mt-4 grid gap-3"
+            >
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Note (optional)
+                </label>
+                <textarea
+                  name="note"
+                  className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-base text-slate-100"
+                  value={closingNote}
+                  onChange={(event) => setClosingNote(event.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Signature name
+                </label>
+                <Input
+                  name="signatureName"
+                  defaultValue={defaultSignatureName}
+                  required
+                />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <FormSubmitButton type="submit" pendingText="Closing...">
+                  Close checklist
+                </FormSubmitButton>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setClosingPhase(null)}
                 >
                   Cancel
                 </Button>

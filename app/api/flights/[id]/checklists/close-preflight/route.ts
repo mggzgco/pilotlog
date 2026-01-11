@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
-import { verifyPassword } from "@/app/lib/password";
 import { recordAuditEvent } from "@/app/lib/audit";
 
-const rejectSchema = z.object({
+const closeSchema = z.object({
   signatureName: z.string().min(1),
-  password: z.string().min(1),
-  rejectionNote: z.string().min(1)
+  note: z.string().optional()
 });
 
 export async function POST(
@@ -16,21 +14,20 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const user = await requireUser();
-  const redirectUrl = new URL(`/flights/${params.id}`, request.url);
+  const redirectUrl = new URL(`/flights/${params.id}/checklists`, request.url);
+
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
-  const parsed = rejectSchema.safeParse(raw);
+  const parsed = closeSchema.safeParse(raw);
   if (!parsed.success) {
-    redirectUrl.searchParams.set("toast", "Invalid rejection details.");
+    redirectUrl.searchParams.set("toast", "Invalid close details.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }
 
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
-    include: {
-      checklistRuns: true
-    }
+    include: { checklistRuns: true }
   });
 
   if (!flight) {
@@ -47,7 +44,7 @@ export async function POST(
   }
 
   if (run.status === "SIGNED") {
-    redirectUrl.searchParams.set("toast", "Pre-flight checklist already signed.");
+    redirectUrl.searchParams.set("toast", "Pre-flight checklist already closed.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
   }
@@ -58,21 +55,16 @@ export async function POST(
     return NextResponse.redirect(redirectUrl);
   }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { passwordHash: true }
-  });
-
-  if (!dbUser || !(await verifyPassword(dbUser.passwordHash, parsed.data.password))) {
-    redirectUrl.searchParams.set("toast", "Password confirmation failed.");
-    redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  const signatureIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const signatureIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const signatureUserAgent = request.headers.get("user-agent") ?? null;
   const signedAt = new Date();
-  const decisionNote = String(parsed.data.rejectionNote);
+  const decisionNote = [
+    "Closed without completion.",
+    parsed.data.note?.trim() ? `Note: ${parsed.data.note.trim()}` : null
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   await prisma.$transaction(async (tx) => {
     await tx.flightChecklistRun.update({
@@ -89,7 +81,7 @@ export async function POST(
       }
     });
 
-    // Unblock flow even when rejected.
+    // Unblock the workflow (post-flight availability/next steps) without requiring checklist completion.
     await tx.flight.update({
       where: { id: flight.id },
       data: { status: "PREFLIGHT_SIGNED" }
@@ -98,13 +90,14 @@ export async function POST(
 
   await recordAuditEvent({
     userId: user.id,
-    action: "preflight_rejected",
+    action: "preflight_closed",
     entityType: "Flight",
     entityId: flight.id,
     metadata: { decisionNote }
   });
 
-  redirectUrl.searchParams.set("toast", "Pre-flight checklist rejected.");
+  redirectUrl.searchParams.set("toast", "Pre-flight checklist closed.");
   redirectUrl.searchParams.set("toastType", "success");
   return NextResponse.redirect(redirectUrl);
 }
+
