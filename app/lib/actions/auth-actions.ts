@@ -26,7 +26,7 @@ import {
   resetPassword as performPasswordReset
 } from "@/app/lib/auth/password-reset";
 
-export type AuthFormState = { error?: string; success?: string };
+export type AuthFormState = { error: string | undefined; success?: string };
 
 function getClientIp() {
   const forwarded = headers().get("x-forwarded-for");
@@ -250,7 +250,7 @@ export async function forgotPasswordAction(formData: FormData) {
   if (result.error) {
     return { error: result.error };
   }
-  return { success: result.success };
+  return { error: undefined, success: result.success };
 }
 
 export async function resetPasswordAction(formData: FormData) {
@@ -261,7 +261,11 @@ export async function resetPasswordAction(formData: FormData) {
   }
 
   const { token, password } = parsed.data;
-  return performPasswordReset({ token, password });
+  const result = await performPasswordReset({ token, password });
+  if ("error" in result) {
+    return { error: result.error };
+  }
+  return { error: undefined, success: result.success };
 }
 
 export async function registerFormAction(

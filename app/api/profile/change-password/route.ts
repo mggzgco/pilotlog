@@ -11,7 +11,7 @@ import { recordAuditEvent } from "@/app/lib/audit";
 export async function POST(request: Request) {
   const csrf = validateRequestCsrf(request);
   if (!csrf.ok) {
-    return NextResponse.json({ error: csrf.error }, { status: 403 });
+    return NextResponse.json({ error: csrf.error ?? "CSRF validation failed." }, { status: 403 });
   }
 
   const { user, session } = await getCurrentUser();

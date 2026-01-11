@@ -43,9 +43,9 @@ const saveSchema = z.object({
 export async function POST(request: Request) {
   try {
     const csrf = validateRequestCsrf(request);
-    if (!csrf.ok) {
-      return NextResponse.json({ error: csrf.error }, { status: 403 });
-    }
+  if (!csrf.ok) {
+    return NextResponse.json({ error: csrf.error ?? "CSRF validation failed." }, { status: 403 });
+  }
 
     const { user, session } = await getCurrentUser();
     if (!user || !session || user.status !== "ACTIVE") {
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
           status: "COMPLETED",
           importedProvider: provider,
           providerFlightId: candidate.providerFlightId,
-          statsJson: candidate.stats ?? null
+          statsJson: candidate.stats ? (candidate.stats as any) : undefined
         }
       });
 

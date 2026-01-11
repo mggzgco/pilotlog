@@ -47,7 +47,7 @@ export async function POST(
   try {
     const csrf = validateRequestCsrf(request);
     if (!csrf.ok) {
-      return redirectWithToast(csrf.error, "error");
+      return redirectWithToast(csrf.error ?? "CSRF validation failed.", "error");
     }
 
     const { user, session } = await getCurrentUser();

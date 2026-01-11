@@ -16,7 +16,7 @@ export async function recordAuditEvent(input: AuditInput) {
         action: input.action,
         entityType: input.entityType ?? null,
         entityId: input.entityId ?? null,
-        metadata: input.metadata ?? null
+        metadata: input.metadata ? (input.metadata as any) : undefined
       }
     });
   } catch (error) {

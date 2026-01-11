@@ -16,9 +16,9 @@ export async function POST(request: Request) {
 
   try {
     const csrf = validateRequestCsrf(request);
-    if (!csrf.ok) {
-      return redirectWithToast(csrf.error, "error");
-    }
+  if (!csrf.ok) {
+    return redirectWithToast(csrf.error ?? "CSRF validation failed.", "error");
+  }
 
     const { user, session } = await getCurrentUser();
     if (!user || !session || user.status !== "ACTIVE") {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     const entryId = parsed.data.id?.trim() || "";
     const flightId = parsed.data.flightId?.trim() || "";
-    const status = parsed.data.status === "CLOSED" ? "CLOSED" : "OPEN";
+    const status = (parsed.data.status === "CLOSED" ? "CLOSED" : "OPEN") as "OPEN" | "CLOSED";
     const flight = flightId
       ? await prisma.flight.findFirst({
           where: { id: flightId, userId: user.id },
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       userId: user.id,
       flightId: linkedFlightId,
       date: new Date(parsed.data.date),
-      status,
+      status: status as any,
       tailNumberSnapshot: flight?.tailNumberSnapshot ?? flight?.tailNumber ?? null,
       origin: flight?.origin ?? null,
       destination: flight?.destination ?? null,

@@ -10,8 +10,7 @@ export const lucia = new Lucia(adapter, {
       // AUTH-011: secure session cookies
       // NFR-SEC-002: HttpOnly + SameSite session enforcement
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      httpOnly: true
+      sameSite: "lax"
     }
   },
   getUserAttributes: (attributes) => {

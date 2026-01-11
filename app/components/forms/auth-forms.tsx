@@ -11,7 +11,7 @@ import {
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 
-const initialState: AuthFormState = {};
+const initialState: AuthFormState = { error: undefined };
 
 export function LoginForm() {
   const [state, formAction] = useFormState(loginFormAction, initialState);

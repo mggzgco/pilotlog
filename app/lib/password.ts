@@ -1,11 +1,12 @@
 import argon2 from "argon2";
 
 // AUTH-005: use Argon2id for secure password hashing
-const options: argon2.Options = {
+const options: argon2.Options & { raw?: false } = {
   type: argon2.argon2id,
   memoryCost: 2 ** 16,
   timeCost: 3,
-  parallelism: 1
+  parallelism: 1,
+  raw: false
 };
 
 export async function hashPassword(password: string) {

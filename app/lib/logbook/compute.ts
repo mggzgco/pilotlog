@@ -66,7 +66,7 @@ export function computeTotalTimeHours(input: LogbookTotalsInput): number | null 
     toNumber(input.soloTime)
   ];
   const hasPrimary = primaryBuckets.some((v) => v !== null && v !== undefined);
-  const primarySum = primaryBuckets.reduce((acc, v) => acc + (v ?? 0), 0);
+  const primarySum = primaryBuckets.reduce<number>((acc, v) => acc + (v ?? 0), 0);
   if (hasPrimary && primarySum > 0) {
     return Math.round(primarySum * 100) / 100;
   }
@@ -101,7 +101,7 @@ export function computeTotalTimeHours(input: LogbookTotalsInput): number | null 
     toNumber(input.instrumentTime)
   ];
   const hasFallback = fallbackBuckets.some((v) => v !== null && v !== undefined);
-  const fallbackSum = fallbackBuckets.reduce((acc, v) => acc + (v ?? 0), 0);
+  const fallbackSum = fallbackBuckets.reduce<number>((acc, v) => acc + (v ?? 0), 0);
   if (hasFallback && fallbackSum > 0) {
     return Math.round(fallbackSum * 100) / 100;
   }

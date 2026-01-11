@@ -3,6 +3,8 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/app/components/ui/toast-provider";
 
 type FlightRowMenuProps = {
   flightId: string;
@@ -10,6 +12,9 @@ type FlightRowMenuProps = {
 };
 
 export function FlightRowMenu({ flightId, menuItems }: FlightRowMenuProps) {
+  const router = useRouter();
+  const { addToast } = useToast();
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
@@ -39,15 +44,28 @@ export function FlightRowMenu({ flightId, menuItems }: FlightRowMenuProps) {
             </DropdownMenu.Item>
           ))}
           <DropdownMenu.Separator className="my-1 h-px bg-slate-200 dark:bg-slate-800" />
-          <DropdownMenu.Item asChild>
-            <form action={`/api/flights/${flightId}/delete`} method="post" className="w-full">
-              <button
-                type="submit"
-                className="block w-full cursor-pointer px-3 py-2 text-left text-rose-600 outline-none transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
-              >
-                Delete flight
-              </button>
-            </form>
+          <DropdownMenu.Item
+            onSelect={async (event) => {
+              event.preventDefault();
+              const ok = window.confirm("Delete this flight? This cannot be undone.");
+              if (!ok) return;
+
+              try {
+                const response = await fetch(`/api/flights/${flightId}/delete`, { method: "POST" });
+                if (!response.ok) {
+                  const payload = await response.json().catch(() => ({}));
+                  addToast(payload.error ?? "Unable to delete flight.", "error");
+                  return;
+                }
+                addToast("Flight deleted.", "success");
+                router.refresh();
+              } catch {
+                addToast("Unable to delete flight.", "error");
+              }
+            }}
+            className="cursor-pointer px-3 py-2 text-left text-rose-600 outline-none transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+          >
+            Delete flight
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

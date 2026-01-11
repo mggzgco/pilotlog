@@ -272,7 +272,7 @@ function buildTrackPoints(track: AeroApiTrackResponse | null): FlightTrackPoint[
         headingDeg: headingValue !== null ? Math.round(headingValue) : null
       } satisfies FlightTrackPoint;
     })
-    .filter((point): point is FlightTrackPoint => point !== null);
+    .filter((point): point is NonNullable<typeof point> => point !== null);
 
   // AeroAPI altitude units can vary by endpoint/account. We normalize by detecting
   // "hundreds of feet" style values (e.g. 34 => 3,400 ft) based on max altitude.
@@ -390,11 +390,11 @@ export class AeroApiAdsbProvider implements AdsbProvider {
           const trackResponse =
             (await fetchAeroApi<AeroApiTrackResponse>(
               `/history/flights/${encodeURIComponent(faFlightId)}/track`,
-              { include_estimated_positions: true }
+              { include_estimated_positions: "true" }
             ).catch(() => null)) ??
             (await fetchAeroApi<AeroApiTrackResponse>(
               `/flights/${encodeURIComponent(faFlightId)}/track`,
-              { include_estimated_positions: true }
+              { include_estimated_positions: "true" }
             ).catch(() => null));
 
           const trackPoints = buildTrackPoints(trackResponse);
@@ -428,7 +428,9 @@ export class AeroApiAdsbProvider implements AdsbProvider {
       })
     );
 
-    return candidates.filter((candidate): candidate is FlightCandidate => candidate !== null);
+    return candidates.filter(
+      (candidate): candidate is NonNullable<typeof candidate> => candidate !== null
+    );
     } catch (error) {
       if (error instanceof AdsbProviderError && error.status && error.status >= 500) {
         // Treat upstream 5xx as "no results" instead of crashing the app.

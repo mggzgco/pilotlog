@@ -155,7 +155,7 @@ export async function attachAdsbCandidateToFlight({
         distanceNm: roundedDistance,
         origin: candidate.depLabel,
         destination: candidate.arrLabel,
-        statsJson: candidate.stats ?? null,
+        statsJson: candidate.stats ? (candidate.stats as any) : undefined,
         // If the ADS-B candidate has an end time, the flight is confirmed landed.
         status: "COMPLETED",
         autoImportStatus: "MATCHED",

@@ -7,7 +7,7 @@ import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 export async function POST(request: Request) {
   const csrf = validateRequestCsrf(request);
   if (!csrf.ok) {
-    return NextResponse.json({ error: csrf.error }, { status: 403 });
+    return NextResponse.json({ error: csrf.error ?? "CSRF validation failed." }, { status: 403 });
   }
 
   const sessionId = cookies().get(lucia.sessionCookieName)?.value;

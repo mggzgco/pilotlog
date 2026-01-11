@@ -78,7 +78,7 @@ export function CostItemForm({
   const showRateFields = ["rental", "instruction"].includes(normalizedCategory);
   const showFuelFields = normalizedCategory === "fuel";
   const categoryOptions = useMemo(() => {
-    const options = [...costCategoryOptions];
+    const options: Array<{ value: string; label: string }> = [...costCategoryOptions];
     if (
       category.trim() &&
       !costCategoryValues.includes(
@@ -113,8 +113,8 @@ export function CostItemForm({
   }, [showRateFields, showFuelFields, rate, quantityHours, fuelGallons, fuelPrice]);
 
   const amountIsAutoCalculated =
-    (showRateFields && rate.trim() && quantityHours.trim()) ||
-    (showFuelFields && fuelGallons.trim() && fuelPrice.trim());
+    !!((showRateFields && rate.trim() && quantityHours.trim()) ||
+    (showFuelFields && fuelGallons.trim() && fuelPrice.trim()));
 
   return (
     <form action={action} method="post" className="mt-3 grid gap-3 lg:grid-cols-3">

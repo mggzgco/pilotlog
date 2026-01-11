@@ -36,13 +36,13 @@ export type LogTenMapping = {
   updatedAt?: string;
 };
 
-function findHeader(headers: string[], candidates: string[]) {
+function findHeader(headers: string[], candidates: string[]): string | undefined {
   const lower = new Map(headers.map((h) => [h.toLowerCase().trim(), h] as const));
   for (const c of candidates) {
     const found = lower.get(c.toLowerCase());
     if (found) return found;
   }
-  return null;
+  return undefined;
 }
 
 export function guessLogTenMapping(headers: string[]): LogTenMapping | null {
