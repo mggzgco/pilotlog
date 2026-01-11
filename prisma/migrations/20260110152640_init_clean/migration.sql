@@ -1,3 +1,3 @@
 -- Intentionally empty.
--- Base schema was moved into `20260110133500_add_aircraft_photo` to fix the
--- timestamp ordering issue that broke shadow DB setup (P3006/P1014).
+-- (Legacy) This migration was previously used during a refactor; it remains as a no-op
+-- to preserve migration history ordering.

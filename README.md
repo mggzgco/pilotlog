@@ -73,6 +73,8 @@ npm run dev
 - `npm run test` — run Vitest in CI-style mode
 - `npm run test:watch` — run Vitest in watch mode
 - `npm run test:coverage` — run tests with line-by-line coverage output
+- `npm run db:migrate` — apply migrations (uses `prisma migrate deploy`, no shadow DB)
+- `npm run db:migrate:dev` — dev-mode migrations (uses `prisma migrate dev`)
 
 ## Security notes
 - Session cookies are HttpOnly and SameSite=Lax, secure in production.
