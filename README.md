@@ -81,5 +81,9 @@ npm run dev
 - All data access is scoped to the authenticated user.
 - Receipts are stored under `/uploads` and downloaded through auth-checked endpoints.
 
+## Deployment
+
+- See `docs/deploy/aws-godaddy.md` for a production deployment guide using **GoDaddy (DNS)** + **AWS (application server)**.
+
 ## ADS-B providers
 The `app/lib/adsb.ts` provider interface makes it easy to integrate a real ADS-B data source later. The mock provider returns sample flights for tail number `N12345`.

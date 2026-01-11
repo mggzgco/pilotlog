@@ -672,35 +672,7 @@ export function ChecklistSection({
       );
     }
 
-    if (
-      phase === "PREFLIGHT" &&
-      run.status === ChecklistRunStatus.IN_PROGRESS &&
-      (!run.startedAt ||
-        (flightStatus === "PLANNED" &&
-          run.items
-            .filter((item) => item.kind !== "SECTION")
-            .every((item) => {
-              const state = itemState[item.id];
-              const completed = state?.completed ?? item.completed;
-              return !completed;
-            })))
-    ) {
-      return (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
-            Pre-flight checklist is ready to start.
-          </div>
-          <form
-            action={`/api/flights/${flightId}/checklists/start-preflight`}
-            method="post"
-          >
-            <FormSubmitButton type="submit" pendingText="Starting checklist...">
-              Start Pre-Flight Checklist
-            </FormSubmitButton>
-          </form>
-        </div>
-      );
-    }
+    const runStarted = Boolean(run.startedAt);
 
     // Single ordering: automatic numbering based on the current personal order (or legacy order).
     const getSortKey = (item: ChecklistItemView) => item.personalOrder ?? item.order;
@@ -722,9 +694,16 @@ export function ChecklistSection({
       children.sort((a, b) => getSortKey(a) - getSortKey(b))
     );
 
+    const informationalSections = topLevelItems.filter(
+      (item) => item.kind === "SECTION" && (childrenByParent[item.id]?.length ?? 0) === 0
+    );
+    const numberedTopLevelItems = topLevelItems.filter(
+      (item) => item.kind !== "SECTION" || (childrenByParent[item.id]?.length ?? 0) > 0
+    );
+
     const displayRows: Array<{ item: ChecklistItemView; depth: 0 | 1; prefix?: string }> = [];
     let topIndex = 0;
-    for (const item of topLevelItems) {
+    for (const item of numberedTopLevelItems) {
       topIndex += 1;
       if (item.kind === "SECTION") {
         displayRows.push({ item, depth: 0, prefix: `${topIndex}` });
@@ -753,6 +732,44 @@ export function ChecklistSection({
 
     return (
       <div className="space-y-4">
+        {!runStarted ? (
+          <div className="space-y-3">
+            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-300">
+              Checklist is ready to start. Items are read-only until you start it.
+            </div>
+            <form
+              action={`/api/flights/${flightId}/checklists/${
+                phase === "PREFLIGHT" ? "start-preflight" : "start-postflight"
+              }`}
+              method="post"
+            >
+              <FormSubmitButton type="submit" pendingText="Starting checklist...">
+                Start {phase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight"} Checklist
+              </FormSubmitButton>
+            </form>
+          </div>
+        ) : null}
+
+        {informationalSections.length > 0 ? (
+          <div className="space-y-3">
+            {informationalSections.map((section) => (
+              <div
+                key={section.id}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-300"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+                  {section.title}
+                </p>
+                {section.details ? (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
+                    {section.details}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
           <div>
             <p className="font-semibold text-slate-900 dark:text-slate-100">
@@ -851,7 +868,7 @@ export function ChecklistSection({
 
               const state = itemState[item.id];
               const completed = state?.completed ?? item.completed;
-              const isDisabled = isLocked;
+              const isDisabled = isLocked || !runStarted;
 
               return (
                 <div
@@ -969,8 +986,9 @@ export function ChecklistSection({
       }).length ?? 0;
 
   const isChecklistLocked = activeRun?.status === ChecklistRunStatus.SIGNED;
+  const isChecklistStarted = Boolean(activeRun?.startedAt);
   const canDecide =
-    activeRun?.status === ChecklistRunStatus.IN_PROGRESS && !isChecklistLocked;
+    activeRun?.status === ChecklistRunStatus.IN_PROGRESS && !isChecklistLocked && isChecklistStarted;
   const canAccept = Boolean(canDecide && requiredRemaining === 0);
   const showDecisionFooter =
     Boolean(activeRun) && activeRun?.status !== ChecklistRunStatus.NOT_AVAILABLE;

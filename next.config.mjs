@@ -35,7 +35,11 @@ if (isProduction) {
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000"]
+      allowedOrigins: (
+        process.env.NEXT_ALLOWED_ORIGINS
+          ? process.env.NEXT_ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+          : ["localhost:3000"]
+      )
     }
   },
   images: {

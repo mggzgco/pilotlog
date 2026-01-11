@@ -2,7 +2,11 @@ import { promises as fs } from "fs";
 import path from "path";
 import crypto from "crypto";
 
-const uploadDir = path.join(process.cwd(), "uploads");
+// For AWS deployment, this should be backed by a persistent volume (EFS) or otherwise durable storage.
+// Configure via UPLOAD_DIR=/mnt/efs/uploads (recommended) or leave unset for local dev.
+const uploadDir = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(process.cwd(), "uploads");
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const ALLOWED_RECEIPT_MIME_TYPES: Record<string, string> = {

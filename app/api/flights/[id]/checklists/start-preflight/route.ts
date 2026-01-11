@@ -9,7 +9,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const user = await requireUser();
-  const redirectUrl = new URL(`/flights/${params.id}`, request.url);
+  const redirectUrl = new URL(`/flights/${params.id}/checklists`, request.url);
+  redirectUrl.searchParams.set("tab", "preflight");
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
     select: {
