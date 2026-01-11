@@ -55,7 +55,7 @@ export async function POST(
   }
 
   const remainingRequired = run.items.filter(
-    (item) => item.required && !item.completed
+    (item) => item.kind !== "SECTION" && item.required && !item.completed
   );
 
   if (remainingRequired.length > 0) {

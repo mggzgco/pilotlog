@@ -139,6 +139,9 @@ export async function POST(
 
   if (item.inputType === "CHECK") {
     updates.valueYesNo = Boolean(parsed.data.valueCheck);
+    // For CHECK items, a checked box is the completion signal.
+    updates.completed = updates.valueYesNo;
+    updates.completedAt = updates.valueYesNo ? new Date() : null;
   }
 
   if (item.inputType === "YES_NO") {

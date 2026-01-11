@@ -521,10 +521,11 @@ export function ChecklistSection({
             checked={state?.valueYesNo ?? false}
             disabled={disabled}
             onChange={(event) => {
+              const checked = event.target.checked;
               updateItemState(
                 item.id,
-                { valueYesNo: event.target.checked },
-                { immediate: true }
+                { valueYesNo: checked, completed: checked },
+                { complete: checked, immediate: true }
               );
             }}
           />
@@ -859,18 +860,22 @@ export function ChecklistSection({
                     <div className="flex flex-col items-start gap-4 lg:items-end">
                       <div className="w-full lg:w-72">{renderInput(item, isDisabled)}</div>
                       <div className="w-full">
-                        <label className="mb-1 block text-xs uppercase text-slate-400">
-                          Notes
-                        </label>
-                        <textarea
-                          name={`notes-${item.id}`}
-                          className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-base text-slate-100"
-                          value={state?.notes ?? ""}
-                          disabled={isDisabled}
-                          onChange={(event) =>
-                            updateItemState(item.id, { notes: event.target.value })
-                          }
-                        />
+                        <details className="rounded-md border border-slate-800">
+                          <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold uppercase text-slate-300">
+                            Notes
+                          </summary>
+                          <div className="p-3">
+                            <textarea
+                              name={`notes-${item.id}`}
+                              className="min-h-[96px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-base text-slate-100"
+                              value={state?.notes ?? ""}
+                              disabled={isDisabled}
+                              onChange={(event) =>
+                                updateItemState(item.id, { notes: event.target.value })
+                              }
+                            />
+                          </div>
+                        </details>
                       </div>
                       {!isLocked && !isFocusMode ? (
                         <Button
@@ -913,17 +918,21 @@ export function ChecklistSection({
 
   const signingLabel = signingPhase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight";
 
-  const totalItems = activeRun?.items.length ?? 0;
+  const totalItems =
+    activeRun?.items.filter((item) => item.kind !== "SECTION").length ?? 0;
   const completedItems =
-    activeRun?.items.filter((item) => itemState[item.id]?.completed ?? item.completed)
-      .length ?? 0;
+    activeRun?.items
+      .filter((item) => item.kind !== "SECTION")
+      .filter((item) => itemState[item.id]?.completed ?? item.completed).length ?? 0;
   const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
   const requiredRemaining =
-    activeRun?.items.filter((item) => {
-      const state = itemState[item.id];
-      const completed = state?.completed ?? item.completed;
-      return item.required && !completed;
-    }).length ?? 0;
+    activeRun?.items
+      .filter((item) => item.kind !== "SECTION")
+      .filter((item) => {
+        const state = itemState[item.id];
+        const completed = state?.completed ?? item.completed;
+        return item.required && !completed;
+      }).length ?? 0;
 
   const isChecklistLocked = activeRun?.status === ChecklistRunStatus.SIGNED;
   const canDecide =
