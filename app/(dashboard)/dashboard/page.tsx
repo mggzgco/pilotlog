@@ -88,6 +88,10 @@ export default async function DashboardPage() {
           nightTime: true,
           instrumentTime: true,
           xcTime: true,
+          dayTakeoffs: true,
+          dayLandings: true,
+          nightTakeoffs: true,
+          nightLandings: true,
           flight: {
             select: {
               durationMinutes: true,
@@ -107,6 +111,10 @@ export default async function DashboardPage() {
           nightTime: true,
           instrumentTime: true,
           xcTime: true,
+          dayTakeoffs: true,
+          dayLandings: true,
+          nightTakeoffs: true,
+          nightLandings: true,
           flight: {
             select: {
               durationMinutes: true,
@@ -126,6 +134,10 @@ export default async function DashboardPage() {
           nightTime: true,
           instrumentTime: true,
           xcTime: true,
+          dayTakeoffs: true,
+          dayLandings: true,
+          nightTakeoffs: true,
+          nightLandings: true,
           flight: {
             select: {
               durationMinutes: true,
@@ -179,6 +191,10 @@ export default async function DashboardPage() {
       nightTime: unknown;
       instrumentTime: unknown;
       xcTime: unknown;
+      dayTakeoffs: unknown;
+      dayLandings: unknown;
+      nightTakeoffs: unknown;
+      nightLandings: unknown;
       flight:
         | {
             durationMinutes: number | null;
@@ -197,9 +213,13 @@ export default async function DashboardPage() {
       pic: 0,
       night: 0,
       instrument: 0,
-      xc: 0
+      xc: 0,
+      takeoffs: 0,
+      landings: 0,
+      entries: 0
     };
     for (const entry of entries) {
+      totals.entries += 1;
       const totalRaw = Number(entry.totalTime);
       const total =
         Number.isFinite(totalRaw) && totalRaw > 0
@@ -216,6 +236,8 @@ export default async function DashboardPage() {
       } else if (entry.flight && flightHasLandingOverDistanceNm(entry.flight, 50)) {
         totals.xc += total;
       }
+      totals.takeoffs += (Number(entry.dayTakeoffs) || 0) + (Number(entry.nightTakeoffs) || 0);
+      totals.landings += (Number(entry.dayLandings) || 0) + (Number(entry.nightLandings) || 0);
     }
     return totals;
   };
@@ -552,32 +574,70 @@ export default async function DashboardPage() {
                   <p className="mt-1 text-2xl font-semibold tracking-tight">
                     {row.totals.total.toFixed(1)}h
                   </p>
-                  <div className="mt-3 grid gap-2 text-sm">
-                    {(() => {
-                      const buckets = [
-                        { key: "dual", label: "Dual", value: row.totals.dual },
-                        { key: "pic", label: "PIC", value: row.totals.pic },
-                        { key: "ifr", label: "IFR", value: row.totals.instrument },
-                        { key: "night", label: "Night", value: row.totals.night },
-                        { key: "xc", label: "XC (landing ≥50nm)", value: row.totals.xc }
-                      ];
-                      const nonZero = buckets
-                        .filter((b) => b.value >= 0.05)
-                        .sort((a, b) => b.value - a.value);
-                      const display = (nonZero.length > 0 ? nonZero : buckets).slice(0, 4);
-                      return display.map((bucket) => (
-                        <div
-                          key={bucket.key}
-                          className="flex items-center justify-between text-slate-700 dark:text-slate-200"
-                        >
-                          <span className="text-slate-600 dark:text-slate-400">
-                            {bucket.label}
-                          </span>
-                          <span>{bucket.value.toFixed(1)}h</span>
+                  {(() => {
+                    const buckets = [
+                      { key: "dual", label: "Dual", value: row.totals.dual, color: "bg-sky-500" },
+                      { key: "pic", label: "PIC", value: row.totals.pic, color: "bg-indigo-500" },
+                      { key: "ifr", label: "IFR", value: row.totals.instrument, color: "bg-violet-500" },
+                      { key: "night", label: "Night", value: row.totals.night, color: "bg-slate-600" },
+                      { key: "xc", label: "XC", value: row.totals.xc, color: "bg-emerald-500" }
+                    ];
+                    const total = row.totals.total;
+                    const nonZero = buckets.filter((b) => b.value >= 0.05).sort((a, b) => b.value - a.value);
+                    const top = nonZero[0] ?? null;
+                    const focusLabel =
+                      top && total > 0
+                        ? `${top.label} focus · ${Math.round((top.value / total) * 100)}%`
+                        : "No time breakdown yet";
+
+                    const display = (nonZero.length > 0 ? nonZero : buckets).slice(0, 4);
+
+                    return (
+                      <div className="mt-3 space-y-3">
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                            Mix
+                          </p>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                            {total > 0
+                              ? display.map((b) => (
+                                  <div
+                                    key={b.key}
+                                    className={`h-2 ${b.color} inline-block`}
+                                    style={{ width: `${Math.max(2, (b.value / total) * 100)}%` }}
+                                  />
+                                ))
+                              : null}
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">{focusLabel}</p>
                         </div>
-                      ));
-                    })()}
-                  </div>
+
+                        <div className="grid gap-2 text-sm">
+                          {display.map((bucket) => (
+                            <div
+                              key={bucket.key}
+                              className="flex items-center justify-between text-slate-700 dark:text-slate-200"
+                            >
+                              <span className="text-slate-600 dark:text-slate-400">
+                                {bucket.label === "XC" ? "XC (landing ≥50nm)" : bucket.label}
+                              </span>
+                              <span>{bucket.value.toFixed(1)}h</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
+                            <span className="text-slate-600 dark:text-slate-400">Landings</span>
+                            <span>{row.totals.landings || "—"}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
+                            <span className="text-slate-600 dark:text-slate-400">Avg / entry</span>
+                            <span>
+                              {row.totals.entries > 0 ? `${(row.totals.total / row.totals.entries).toFixed(1)}h` : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
