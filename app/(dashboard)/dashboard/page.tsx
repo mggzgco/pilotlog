@@ -9,6 +9,7 @@ import { EmptyState } from "@/app/components/ui/empty-state";
 import { formatFlightRouteLabel } from "@/app/lib/flights/route";
 import { flightHasLandingOverDistanceNm } from "@/app/lib/airports/xc";
 import { CostPieChart, type CostPieSlice } from "@/app/components/charts/CostPieChart";
+import { HoursLineChart } from "@/app/components/charts/HoursLineChart";
 import { PlanFlightModal } from "@/app/components/flights/plan-flight-modal";
 import { formatDateTime24, formatTime24 } from "@/app/lib/utils";
 import { ArrowRight, Calendar, Radar, TriangleAlert, Wallet } from "lucide-react";
@@ -85,6 +86,7 @@ export default async function DashboardPage() {
       prisma.logbookEntry.findMany({
         where: { userId: user.id, date: { gte: monthStart } },
         select: {
+          date: true,
           totalTime: true,
           picTime: true,
           dualReceivedTime: true,
@@ -108,6 +110,7 @@ export default async function DashboardPage() {
       prisma.logbookEntry.findMany({
         where: { userId: user.id, date: { gte: days30 } },
         select: {
+          date: true,
           totalTime: true,
           picTime: true,
           dualReceivedTime: true,
@@ -131,6 +134,7 @@ export default async function DashboardPage() {
       prisma.logbookEntry.findMany({
         where: { userId: user.id, date: { gte: yearStart } },
         select: {
+          date: true,
           totalTime: true,
           picTime: true,
           dualReceivedTime: true,
@@ -236,6 +240,7 @@ export default async function DashboardPage() {
 
   const computeLogbookTotals = (
     entries: Array<{
+      date?: Date;
       totalTime: unknown;
       picTime: unknown;
       dualReceivedTime: unknown;
@@ -258,6 +263,13 @@ export default async function DashboardPage() {
         | null;
     }>
   ) => {
+    const entryTotalHours = (entry: { totalTime: unknown; flight: { durationMinutes: number | null } | null }) => {
+      const totalRaw = Number(entry.totalTime);
+      return Number.isFinite(totalRaw) && totalRaw > 0
+        ? totalRaw
+        : (entry.flight?.durationMinutes ?? 0) / 60;
+    };
+
     const totals = {
       total: 0,
       dual: 0,
@@ -271,11 +283,7 @@ export default async function DashboardPage() {
     };
     for (const entry of entries) {
       totals.entries += 1;
-      const totalRaw = Number(entry.totalTime);
-      const total =
-        Number.isFinite(totalRaw) && totalRaw > 0
-          ? totalRaw
-          : (entry.flight?.durationMinutes ?? 0) / 60;
+      const total = entryTotalHours(entry);
       totals.total += total;
       totals.dual += Number(entry.dualReceivedTime) || 0;
       totals.pic += Number(entry.picTime) || 0;
@@ -296,6 +304,39 @@ export default async function DashboardPage() {
   const totalsMonth = computeLogbookTotals(logbookMonth);
   const totals30 = computeLogbookTotals(logbook30);
   const totalsYtd = computeLogbookTotals(logbookYtd);
+
+  const hoursTrend30 = (() => {
+    const dayKeys: string[] = [];
+    const dayLabels: string[] = [];
+    const values: number[] = [];
+    const byDay = new Map<string, number>();
+
+    for (let i = 29; i >= 0; i -= 1) {
+      const d = addDays(startOfDay(now), -i);
+      const key = d.toISOString().slice(0, 10);
+      dayKeys.push(key);
+      dayLabels.push(d.toLocaleDateString(undefined, { month: "short", day: "2-digit" }));
+      byDay.set(key, 0);
+    }
+
+    for (const entry of logbook30) {
+      if (!entry.date) continue;
+      const key = entry.date.toISOString().slice(0, 10);
+      if (!byDay.has(key)) continue;
+      const totalRaw = Number(entry.totalTime);
+      const total =
+        Number.isFinite(totalRaw) && totalRaw > 0
+          ? totalRaw
+          : (entry.flight?.durationMinutes ?? 0) / 60;
+      byDay.set(key, (byDay.get(key) ?? 0) + total);
+    }
+
+    for (const key of dayKeys) {
+      values.push(Number((byDay.get(key) ?? 0).toFixed(2)));
+    }
+
+    return { labels: dayLabels, values };
+  })();
   const monthCostCents = monthCostItems.reduce((sum, item) => sum + item.amountCents, 0);
 
   const monthCostPerHour =
@@ -659,88 +700,110 @@ export default async function DashboardPage() {
             <p className="text-sm text-slate-600 dark:text-slate-400">Time details</p>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { label: "30 days", totals: totals30 },
-                { label: "This month", totals: totalsMonth },
-                { label: "YTD", totals: totalsYtd }
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/30"
-                >
-                  <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                    {row.label}
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight">
-                    {row.totals.total.toFixed(1)}h
-                  </p>
-                  {(() => {
-                    const buckets = [
-                      { key: "dual", label: "Dual", value: row.totals.dual, color: "bg-sky-500" },
-                      { key: "pic", label: "PIC", value: row.totals.pic, color: "bg-indigo-500" },
-                      { key: "ifr", label: "IFR", value: row.totals.instrument, color: "bg-violet-500" },
-                      { key: "night", label: "Night", value: row.totals.night, color: "bg-slate-600" },
-                      { key: "xc", label: "XC", value: row.totals.xc, color: "bg-emerald-500" }
-                    ];
-                    const total = row.totals.total;
-                    const nonZero = buckets.filter((b) => b.value >= 0.05).sort((a, b) => b.value - a.value);
-                    const top = nonZero[0] ?? null;
-                    const focusLabel =
-                      top && total > 0
-                        ? `${top.label} focus · ${Math.round((top.value / total) * 100)}%`
-                        : "No time breakdown yet";
-
-                    const display = (nonZero.length > 0 ? nonZero : buckets).slice(0, 4);
-
-                    return (
-                      <div className="mt-3 space-y-3">
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                            Mix
-                          </p>
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                            {total > 0
-                              ? display.map((b) => (
-                                  <div
-                                    key={b.key}
-                                    className={`h-2 ${b.color} inline-block`}
-                                    style={{ width: `${Math.max(2, (b.value / total) * 100)}%` }}
-                                  />
-                                ))
-                              : null}
-                          </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">{focusLabel}</p>
-                        </div>
-
-                        <div className="grid gap-2 text-sm">
-                          {display.map((bucket) => (
-                            <div
-                              key={bucket.key}
-                              className="flex items-center justify-between text-slate-700 dark:text-slate-200"
-                            >
-                              <span className="text-slate-600 dark:text-slate-400">
-                                {bucket.label === "XC" ? "XC (landing ≥50nm)" : bucket.label}
-                              </span>
-                              <span>{bucket.value.toFixed(1)}h</span>
-                            </div>
-                          ))}
-                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
-                            <span className="text-slate-600 dark:text-slate-400">Landings</span>
-                            <span>{row.totals.landings || "—"}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
-                            <span className="text-slate-600 dark:text-slate-400">Avg / entry</span>
-                            <span>
-                              {row.totals.entries > 0 ? `${(row.totals.total / row.totals.entries).toFixed(1)}h` : "—"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+            <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                      Hours · last 30 days
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold tracking-tight">{totals30.total.toFixed(1)}h</p>
+                  </div>
+                  <div className="text-right text-xs text-slate-600 dark:text-slate-400">
+                    <p>{totals30.entries} entries</p>
+                    <p>
+                      Avg{" "}
+                      {totals30.entries > 0 ? `${(totals30.total / totals30.entries).toFixed(1)}h/entry` : "—"}
+                    </p>
+                  </div>
                 </div>
-              ))}
+
+                <div className="mt-3">
+                  <HoursLineChart labels={hoursTrend30.labels} values={hoursTrend30.values} height={180} />
+                </div>
+
+                {(() => {
+                  const buckets = [
+                    { key: "dual", label: "Dual", value: totals30.dual, color: "bg-sky-500" },
+                    { key: "pic", label: "PIC", value: totals30.pic, color: "bg-indigo-500" },
+                    { key: "ifr", label: "IFR", value: totals30.instrument, color: "bg-violet-500" },
+                    { key: "night", label: "Night", value: totals30.night, color: "bg-slate-600" },
+                    { key: "xc", label: "XC", value: totals30.xc, color: "bg-emerald-500" }
+                  ];
+                  const total = totals30.total;
+                  const nonZero = buckets.filter((b) => b.value >= 0.05).sort((a, b) => b.value - a.value);
+                  const top = nonZero[0] ?? null;
+                  const focusLabel =
+                    top && total > 0 ? `${top.label} focus · ${Math.round((top.value / total) * 100)}%` : "—";
+                  const display = (nonZero.length > 0 ? nonZero : buckets).slice(0, 4);
+
+                  return (
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Mix</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">{focusLabel}</p>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                        {total > 0
+                          ? display.map((b) => (
+                              <div
+                                key={b.key}
+                                className={`h-2 ${b.color} inline-block`}
+                                style={{ width: `${Math.max(2, (b.value / total) * 100)}%` }}
+                              />
+                            ))
+                          : null}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Summary</p>
+                <div className="mt-3 grid gap-3">
+                  {[
+                    { label: "This month", value: `${totalsMonth.total.toFixed(1)}h` },
+                    { label: "YTD", value: `${totalsYtd.total.toFixed(1)}h` },
+                    { label: "Landings (30d)", value: totals30.landings ? `${totals30.landings}` : "—" }
+                  ].map((row) => (
+                    <div key={row.label} className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">{row.label}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                  <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                    Top buckets (30d)
+                  </p>
+                  <div className="mt-2 grid gap-1">
+                    {[
+                      { label: "Dual", value: totals30.dual },
+                      { label: "PIC", value: totals30.pic },
+                      { label: "IFR", value: totals30.instrument },
+                      { label: "Night", value: totals30.night }
+                    ]
+                      .filter((b) => b.value >= 0.05)
+                      .slice(0, 4)
+                      .map((bucket) => (
+                        <div key={bucket.label} className="flex items-center justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">{bucket.label}</span>
+                          <span className="font-semibold">{bucket.value.toFixed(1)}h</span>
+                        </div>
+                      ))}
+                    {[
+                      totals30.dual,
+                      totals30.pic,
+                      totals30.instrument,
+                      totals30.night
+                    ].every((v) => v < 0.05) ? (
+                      <p className="text-sm text-slate-600 dark:text-slate-400">No buckets logged yet.</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
