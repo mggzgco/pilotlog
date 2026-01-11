@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type TimeZoneSelectProps = {
   name: string;
@@ -21,25 +21,43 @@ const FALLBACK_TIMEZONES = [
 ];
 
 export function TimeZoneSelect({ name, defaultValue, className }: TimeZoneSelectProps) {
-  const timeZones = useMemo(() => {
+  // Important: keep the server-rendered HTML deterministic to avoid hydration mismatches.
+  // We start with a stable fallback list and only expand to supportedValuesOf on the client after mount.
+  const [timeZones, setTimeZones] = useState<string[]>(FALLBACK_TIMEZONES);
+
+  useEffect(() => {
     const supported = (Intl as any)?.supportedValuesOf?.("timeZone");
     if (Array.isArray(supported) && supported.length > 0) {
-      return supported as string[];
+      setTimeZones(supported as string[]);
     }
-    return FALLBACK_TIMEZONES;
   }, []);
 
-  const resolvedDefault = useMemo(() => {
-    if (defaultValue && timeZones.includes(defaultValue)) return defaultValue;
-    const systemTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (systemTz && timeZones.includes(systemTz)) return systemTz;
-    return "UTC";
-  }, [defaultValue, timeZones]);
+  // Deterministic initial selection: prefer profile value; otherwise use UTC on first render.
+  // After hydration, if no profile value exists, we can adopt the device time zone.
+  const [value, setValue] = useState<string>(() => defaultValue ?? "UTC");
+
+  useEffect(() => {
+    if (defaultValue) {
+      setValue(defaultValue);
+      return;
+    }
+    try {
+      const systemTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (systemTz) setValue(systemTz);
+    } catch {
+      // ignore
+    }
+  }, [defaultValue]);
+
+  const normalizedValue = useMemo(() => {
+    return timeZones.includes(value) ? value : "UTC";
+  }, [timeZones, value]);
 
   return (
     <select
       name={name}
-      defaultValue={resolvedDefault}
+      value={normalizedValue}
+      onChange={(event) => setValue(event.target.value)}
       className={
         className ??
         "h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"

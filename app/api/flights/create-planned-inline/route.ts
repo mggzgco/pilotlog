@@ -15,12 +15,95 @@ import { lookupAirportByCode } from "@/app/lib/airports/lookup";
 
 const plannedFlightSchema = z.object({
   aircraftId: z.string().min(1),
-  plannedStartTime: z.string().min(1),
+  // Legacy (datetime-local)
+  plannedStartTime: z.string().optional(),
   plannedEndTime: z.string().optional(),
+  // New (explicit 24h + timezone)
+  timeZone: z.string().optional(),
+  plannedStartDate: z.string().optional(),
+  plannedStartClock: z.string().optional(),
+  plannedEndDate: z.string().optional(),
+  plannedEndClock: z.string().optional(),
   origin: z.string().min(1),
   destination: z.string().min(1),
   stopLabel: z.union([z.string(), z.array(z.string())]).optional()
 });
+
+function parseClockHHMM(value: string | null): { hour: number; minute: number } | null {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return null;
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(trimmed);
+  if (!match) return null;
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+}
+
+function getTimeZoneParts(date: Date, timeZone: string) {
+  try {
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+    const parts = dtf.formatToParts(date);
+    const byType = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+    return {
+      year: Number(byType.year),
+      month: Number(byType.month),
+      day: Number(byType.day),
+      hour: Number(byType.hour),
+      minute: Number(byType.minute),
+      second: Number(byType.second)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function zonedLocalToUtc({
+  dateStr,
+  clock,
+  timeZone
+}: {
+  dateStr: string;
+  clock: { hour: number; minute: number };
+  timeZone: string;
+}): Date | null {
+  const dateTrimmed = dateStr.trim();
+  if (!dateTrimmed) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateTrimmed);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+
+  const desiredLocalAsUtcMs = Date.UTC(year, month - 1, day, clock.hour, clock.minute, 0);
+  let guessMs = desiredLocalAsUtcMs;
+
+  for (let i = 0; i < 2; i += 1) {
+    const guessDate = new Date(guessMs);
+    const actual = getTimeZoneParts(guessDate, timeZone);
+    if (!actual) return null;
+    const actualLocalAsUtcMs = Date.UTC(
+      actual.year,
+      actual.month - 1,
+      actual.day,
+      actual.hour,
+      actual.minute,
+      actual.second
+    );
+    const diffMs = desiredLocalAsUtcMs - actualLocalAsUtcMs;
+    guessMs += diffMs;
+  }
+
+  const result = new Date(guessMs);
+  return Number.isNaN(result.getTime()) ? null : result;
+}
 
 export async function POST(request: Request) {
   const user = await requireUser();
@@ -32,24 +115,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid planned flight details." }, { status: 400 });
   }
 
-  const plannedStart = new Date(parsed.data.plannedStartTime);
-  const plannedEnd = parsed.data.plannedEndTime
-    ? new Date(parsed.data.plannedEndTime)
+  const plannedStartLegacy = parsed.data.plannedStartTime
+    ? new Date(String(parsed.data.plannedStartTime))
+    : null;
+  const plannedEndLegacy = parsed.data.plannedEndTime
+    ? new Date(String(parsed.data.plannedEndTime))
     : null;
 
-  if (Number.isNaN(plannedStart.getTime())) {
+  if (plannedStartLegacy && Number.isNaN(plannedStartLegacy.getTime())) {
     return NextResponse.json({ error: "Invalid scheduled start time." }, { status: 400 });
   }
-
-  if (plannedEnd && Number.isNaN(plannedEnd.getTime())) {
+  if (plannedEndLegacy && Number.isNaN(plannedEndLegacy.getTime())) {
     return NextResponse.json({ error: "Invalid scheduled end time." }, { status: 400 });
-  }
-
-  if (plannedEnd && plannedEnd < plannedStart) {
-    return NextResponse.json(
-      { error: "Scheduled end time cannot be earlier than start time." },
-      { status: 400 }
-    );
   }
 
   const aircraft = await prisma.aircraft.findFirst({
@@ -77,6 +154,78 @@ export async function POST(request: Request) {
     lookupAirportByCode(destinationLabel),
     ...stopLabels.map((s) => lookupAirportByCode(s))
   ]);
+
+  const userProfile = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { homeTimeZone: true }
+  });
+
+  const fallbackTimeZone =
+    String(parsed.data.timeZone ?? "").trim() ||
+    userProfile?.homeTimeZone ||
+    "UTC";
+
+  const plannedStartClock = parseClockHHMM(
+    parsed.data.plannedStartClock ? String(parsed.data.plannedStartClock) : null
+  );
+  const plannedEndClock = parseClockHHMM(
+    parsed.data.plannedEndClock ? String(parsed.data.plannedEndClock) : null
+  );
+
+  if (
+    (parsed.data.plannedStartDate && !plannedStartClock) ||
+    (!parsed.data.plannedStartDate && plannedStartClock)
+  ) {
+    return NextResponse.json(
+      { error: "Scheduled start requires both date and time (HH:MM)." },
+      { status: 400 }
+    );
+  }
+  if ((parsed.data.plannedEndDate && !plannedEndClock) || (!parsed.data.plannedEndDate && plannedEndClock)) {
+    return NextResponse.json(
+      { error: "Scheduled end requires both date and time (HH:MM)." },
+      { status: 400 }
+    );
+  }
+
+  const startTimeZone = originAirport?.timeZone ?? fallbackTimeZone;
+  const endTimeZone = destinationAirport?.timeZone ?? startTimeZone;
+
+  const plannedStartFromParts =
+    parsed.data.plannedStartDate && plannedStartClock
+      ? zonedLocalToUtc({
+          dateStr: String(parsed.data.plannedStartDate),
+          clock: plannedStartClock,
+          timeZone: startTimeZone
+        })
+      : null;
+  const plannedEndFromParts =
+    parsed.data.plannedEndDate && plannedEndClock
+      ? zonedLocalToUtc({
+          dateStr: String(parsed.data.plannedEndDate),
+          clock: plannedEndClock,
+          timeZone: endTimeZone
+        })
+      : null;
+
+  const plannedStart = plannedStartFromParts ?? plannedStartLegacy;
+  const plannedEnd = plannedEndFromParts ?? plannedEndLegacy;
+
+  if (!plannedStart) {
+    return NextResponse.json({ error: "Scheduled start time is required." }, { status: 400 });
+  }
+  if (parsed.data.plannedStartDate && plannedStartFromParts === null) {
+    return NextResponse.json(
+      { error: "Invalid scheduled start date/time for the origin airport time zone." },
+      { status: 400 }
+    );
+  }
+  if (parsed.data.plannedEndDate && plannedEndFromParts === null) {
+    return NextResponse.json(
+      { error: "Invalid scheduled end date/time for the destination airport time zone." },
+      { status: 400 }
+    );
+  }
 
   const participantInputs = normalizeParticipants(
     user.id,
@@ -109,8 +258,8 @@ export async function POST(request: Request) {
         startTime: plannedStart,
         status: "PLANNED",
         statsJson: {
-          startTimeZone: originAirport?.timeZone ?? null,
-          endTimeZone: destinationAirport?.timeZone ?? null
+          startTimeZone,
+          endTimeZone
         },
         participants: {
           create: [
@@ -175,7 +324,9 @@ export async function POST(request: Request) {
       aircraftId: aircraft.id,
       tailNumber: aircraft.tailNumber,
       plannedStartTime: plannedStart.toISOString(),
-      plannedEndTime: plannedEnd?.toISOString() ?? null
+      plannedEndTime: plannedEnd?.toISOString() ?? null,
+      startTimeZone,
+      endTimeZone
     }
   });
 

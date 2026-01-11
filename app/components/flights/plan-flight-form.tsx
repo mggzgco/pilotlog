@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
-import { TimeZoneSelect } from "@/app/components/ui/timezone-select";
 
 type AircraftOption = {
   id: string;
@@ -48,6 +47,9 @@ export function PlanFlightForm({
       method="post"
       className="grid gap-4 lg:grid-cols-2"
     >
+      {/* If the airport code is recognized, the server will automatically use that airport’s time zone (DST-aware).
+          This hidden fallback is only used when the airport time zone can't be derived. */}
+      <input type="hidden" name="timeZone" value={defaultTimeZone || "UTC"} />
       <div className="lg:col-span-2 space-y-3">
         {aircraftOptions.length > 0 ? (
           <div>
@@ -172,13 +174,11 @@ export function PlanFlightForm({
           </div>
         )}
       </div>
-      <div>
-        <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
-          Time zone
-        </label>
-        <TimeZoneSelect name="timeZone" defaultValue={defaultTimeZone || undefined} />
-        <p className="mt-1 text-xs text-slate-500">
-          If the airport code is recognized, the server will automatically use that airport’s time zone (DST-aware).
+      <div className="lg:col-span-2 rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+        <p className="font-medium text-slate-900 dark:text-slate-100">Time zone</p>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Automatically derived from the selected airports (DST-aware). If an airport isn’t recognized, we fall back to
+          your profile home time zone.
         </p>
       </div>
       <div>
@@ -193,10 +193,8 @@ export function PlanFlightForm({
         </label>
         <Input
           name="plannedStartClock"
-          type="text"
-          inputMode="numeric"
-          placeholder="HH:MM"
-          pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+          type="time"
+          step={60}
         />
       </div>
       <div>
@@ -211,10 +209,8 @@ export function PlanFlightForm({
         </label>
         <Input
           name="plannedEndClock"
-          type="text"
-          inputMode="numeric"
-          placeholder="HH:MM"
-          pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+          type="time"
+          step={60}
         />
       </div>
       <div className="lg:col-span-2">

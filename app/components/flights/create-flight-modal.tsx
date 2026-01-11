@@ -67,8 +67,10 @@ export function CreateFlightModal({
   const [newAircraftModel, setNewAircraftModel] = useState("");
   const [newPersonName, setNewPersonName] = useState("");
   const [newPersonEmail, setNewPersonEmail] = useState("");
-  const [plannedStart, setPlannedStart] = useState("");
-  const [plannedEnd, setPlannedEnd] = useState("");
+  const [plannedStartDate, setPlannedStartDate] = useState("");
+  const [plannedStartClock, setPlannedStartClock] = useState("");
+  const [plannedEndDate, setPlannedEndDate] = useState("");
+  const [plannedEndClock, setPlannedEndClock] = useState("");
   const [stops, setStops] = useState<string[]>([]);
 
   const aircraftOptionsSorted = useMemo(() => {
@@ -83,8 +85,10 @@ export function CreateFlightModal({
     setSelectedAircraftId("");
     setUserParticipants([{ id: "", role: "SIC" }]);
     setPeopleParticipants([{ id: "", role: "SIC" }]);
-    setPlannedStart("");
-    setPlannedEnd("");
+    setPlannedStartDate("");
+    setPlannedStartClock("");
+    setPlannedEndDate("");
+    setPlannedEndClock("");
     setStops([]);
     setErrorMessage(null);
   };
@@ -92,15 +96,6 @@ export function CreateFlightModal({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
-
-    if (plannedStart && plannedEnd) {
-      const start = new Date(plannedStart);
-      const end = new Date(plannedEnd);
-      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end < start) {
-        setErrorMessage("Scheduled end time cannot be earlier than start time.");
-        return;
-      }
-    }
 
     setIsSubmitting(true);
     try {
@@ -246,11 +241,20 @@ export function CreateFlightModal({
                     Scheduled start
                   </label>
                   <Input
-                    name="plannedStartTime"
-                    type="datetime-local"
+                    name="plannedStartDate"
+                    type="date"
                     required
-                    value={plannedStart}
-                    onChange={(event) => setPlannedStart(event.target.value)}
+                    value={plannedStartDate}
+                    onChange={(event) => setPlannedStartDate(event.target.value)}
+                  />
+                  <Input
+                    name="plannedStartClock"
+                    type="time"
+                    step={60}
+                    required
+                    value={plannedStartClock}
+                    onChange={(event) => setPlannedStartClock(event.target.value)}
+                    className="mt-2"
                   />
                 </div>
                 <div>
@@ -258,11 +262,18 @@ export function CreateFlightModal({
                     Scheduled end
                   </label>
                   <Input
-                    name="plannedEndTime"
-                    type="datetime-local"
-                    value={plannedEnd}
-                    min={plannedStart || undefined}
-                    onChange={(event) => setPlannedEnd(event.target.value)}
+                    name="plannedEndDate"
+                    type="date"
+                    value={plannedEndDate}
+                    onChange={(event) => setPlannedEndDate(event.target.value)}
+                  />
+                  <Input
+                    name="plannedEndClock"
+                    type="time"
+                    step={60}
+                    value={plannedEndClock}
+                    onChange={(event) => setPlannedEndClock(event.target.value)}
+                    className="mt-2"
                   />
                 </div>
                 <div>
