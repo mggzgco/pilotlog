@@ -64,7 +64,7 @@ export function CreateFlightModal({
     { id: "", role: "SIC" }
   ]);
   const [peopleParticipants, setPeopleParticipants] = useState<ParticipantRow[]>([
-    { id: "", role: "SIC" }
+    { id: "", role: "PASSENGER" }
   ]);
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [newAircraftTailNumber, setNewAircraftTailNumber] = useState("");
@@ -88,7 +88,7 @@ export function CreateFlightModal({
   const resetForm = () => {
     setSelectedAircraftId("");
     setUserParticipants([{ id: "", role: "SIC" }]);
-    setPeopleParticipants([{ id: "", role: "SIC" }]);
+    setPeopleParticipants([{ id: "", role: "PASSENGER" }]);
     setPlannedStartDate("");
     setPlannedStartClock("");
     setPlannedEndDate("");
@@ -471,7 +471,7 @@ export function CreateFlightModal({
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        setPeopleParticipants((prev) => [...prev, { id: "", role: "SIC" }])
+                        setPeopleParticipants((prev) => [...prev, { id: "", role: "PASSENGER" }])
                       }
                     >
                       <Plus className="mr-2 h-4 w-4" />

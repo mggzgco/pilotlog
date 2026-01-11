@@ -69,6 +69,7 @@ enum FlightParticipantRole {
   STUDENT
   PIC
   SIC
+  PASSENGER
 }
 
 enum LogbookEntryStatus {

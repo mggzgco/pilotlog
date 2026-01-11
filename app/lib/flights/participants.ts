@@ -2,7 +2,8 @@ export const participantRoleOptions = [
   "PIC",
   "SIC",
   "INSTRUCTOR",
-  "STUDENT"
+  "STUDENT",
+  "PASSENGER"
 ] as const;
 
 export type ParticipantRole = (typeof participantRoleOptions)[number];
