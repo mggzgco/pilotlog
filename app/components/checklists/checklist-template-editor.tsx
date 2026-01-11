@@ -28,6 +28,7 @@ type SectionDraft = {
     key: string;
     itemLabel: string;
     acceptanceCriteria: string;
+    instructions: string;
     officialOrder: number;
   }>;
 };
@@ -56,6 +57,7 @@ function toDraft(items: Item[]): SectionDraft[] {
       key: step.id,
       itemLabel: step.itemLabel ?? "",
       acceptanceCriteria: step.acceptanceCriteria ?? "",
+      instructions: step.details ?? "",
       officialOrder: step.officialOrder
     }))
   }));
@@ -81,7 +83,7 @@ export function ChecklistTemplateEditor({
       title: "Cabin",
       instructions: "",
       officialOrder: 1,
-      steps: [{ key: newKey(), itemLabel: "", acceptanceCriteria: "", officialOrder: 2 }]
+      steps: [{ key: newKey(), itemLabel: "", acceptanceCriteria: "", instructions: "", officialOrder: 2 }]
     }]
   );
   const [saving, setSaving] = useState(false);
@@ -110,7 +112,7 @@ export function ChecklistTemplateEditor({
         title: "New section",
         instructions: "",
         officialOrder: 999,
-        steps: [{ key: newKey(), itemLabel: "", acceptanceCriteria: "", officialOrder: 999 }]
+        steps: [{ key: newKey(), itemLabel: "", acceptanceCriteria: "", instructions: "", officialOrder: 999 }]
       }
     ]);
   };
@@ -128,7 +130,7 @@ export function ChecklistTemplateEditor({
               ...s,
               steps: [
                 ...s.steps,
-                { key: newKey(), itemLabel: "", acceptanceCriteria: "", officialOrder: 999 }
+                { key: newKey(), itemLabel: "", acceptanceCriteria: "", instructions: "", officialOrder: 999 }
               ]
             }
       )
@@ -179,6 +181,7 @@ export function ChecklistTemplateEditor({
               .map((st) => ({
                 itemLabel: st.itemLabel.trim(),
                 acceptanceCriteria: st.acceptanceCriteria.trim(),
+                instructions: st.instructions.trim(),
                 officialOrder: st.officialOrder
               }))
               .filter((st) => st.itemLabel.length > 0)
@@ -311,6 +314,25 @@ export function ChecklistTemplateEditor({
                               placeholder='Acceptance criteria (e.g., "ON")'
                             />
                             </div>
+                            <textarea
+                              value={step.instructions}
+                              onChange={(e) =>
+                                setSections((prev) =>
+                                  prev.map((s) =>
+                                    s.key !== section.key
+                                      ? s
+                                      : {
+                                          ...s,
+                                          steps: s.steps.map((st) =>
+                                            st.key === step.key ? { ...st, instructions: e.target.value } : st
+                                          )
+                                        }
+                                  )
+                                )
+                              }
+                              placeholder="Instruction (optional)"
+                              className="min-h-[70px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
+                            />
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Official</span>
                               <input
@@ -336,7 +358,7 @@ export function ChecklistTemplateEditor({
                               />
                             </div>
                           </div>
-                          {/* sub-steps only carry item + acceptance criteria */}
+                          {/* sub-steps: item + acceptance criteria + optional instruction */}
                         </div>
                         <div className="flex flex-col items-center gap-2">
                           <Button

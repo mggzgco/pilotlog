@@ -12,6 +12,7 @@ type Payload = {
     steps: Array<{
       itemLabel?: string;
       acceptanceCriteria?: string;
+      instructions?: string;
       officialOrder?: number;
     }>;
   }>;
@@ -54,6 +55,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
                 typeof step.acceptanceCriteria === "string"
                   ? step.acceptanceCriteria.trim()
                   : "",
+              instructions: typeof step.instructions === "string" ? step.instructions.trim() : "",
               officialOrder: Number.isFinite(step.officialOrder) ? Number(step.officialOrder) : null
             }))
             .filter((step) => step.itemLabel.length > 0)
@@ -114,7 +116,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
             title: step.itemLabel || "Step",
             itemLabel: step.itemLabel || null,
             acceptanceCriteria: step.acceptanceCriteria || null,
-            details: null,
+            details: step.instructions || null,
             required: true,
             inputType: "CHECK"
           }

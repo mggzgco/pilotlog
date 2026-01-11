@@ -15,6 +15,7 @@ type StepDraft = {
   id: string;
   itemLabel: string;
   acceptanceCriteria: string;
+  instructions: string;
   officialOrder: number;
   personalOrder: number;
 };
@@ -84,6 +85,7 @@ export function CreateAircraftChecklistModal({
             id: newId(),
             itemLabel: "",
             acceptanceCriteria: "",
+            instructions: "",
             officialOrder: 2,
             personalOrder: 2
           }
@@ -118,6 +120,7 @@ export function CreateAircraftChecklistModal({
               id: newId(),
               itemLabel: "",
               acceptanceCriteria: "",
+              instructions: "",
               officialOrder: 2,
               personalOrder: 2
             }
@@ -143,6 +146,7 @@ export function CreateAircraftChecklistModal({
               id: newId(),
               itemLabel: "",
               acceptanceCriteria: "",
+              instructions: "",
               officialOrder: 999,
               personalOrder: 0
             }
@@ -183,6 +187,7 @@ export function CreateAircraftChecklistModal({
                     id: newId(),
                     itemLabel: "",
                     acceptanceCriteria: "",
+                    instructions: "",
                     officialOrder: 999,
                     personalOrder: 0
                   }
@@ -251,6 +256,7 @@ export function CreateAircraftChecklistModal({
                 .map((step) => ({
                   itemLabel: step.itemLabel.trim(),
                   acceptanceCriteria: step.acceptanceCriteria.trim(),
+                  instructions: step.instructions.trim(),
                   officialOrder: step.officialOrder,
                   personalOrder: step.personalOrder
                 }))
@@ -479,6 +485,27 @@ export function CreateAircraftChecklistModal({
                                       placeholder='Acceptance criteria (e.g., "ON")'
                                     />
                                   </div>
+                                  <textarea
+                                    value={step.instructions}
+                                    onChange={(e) =>
+                                      setSections((prev) =>
+                                        prev.map((s) =>
+                                          s.id !== section.id
+                                            ? s
+                                            : {
+                                                ...s,
+                                                steps: s.steps.map((st) =>
+                                                  st.id === step.id
+                                                    ? { ...st, instructions: e.target.value }
+                                                    : st
+                                                )
+                                              }
+                                        )
+                                      )
+                                    }
+                                    placeholder="Instruction (optional)"
+                                    className="min-h-[70px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
+                                  />
                                   <div className="flex items-center gap-2">
                                     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                       Official
@@ -521,7 +548,7 @@ export function CreateAircraftChecklistModal({
                                   </div>
                                 </div>
 
-                                {/* sub-steps only carry item + acceptance criteria */}
+                                {/* sub-steps: item + acceptance criteria + optional instruction */}
                               </div>
 
                               <div className="flex flex-col items-center gap-2">

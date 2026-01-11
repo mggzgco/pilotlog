@@ -848,7 +848,7 @@ export function ChecklistSection({
                         ) : null}
                       </div>
                       {item.details ? (
-                        <p className="text-sm text-slate-400">{item.details}</p>
+                        <p className="text-sm text-slate-300">{item.details}</p>
                       ) : null}
                       {item.completedAt ? (
                         <p className="mt-2 text-xs text-slate-500">
