@@ -20,6 +20,7 @@ type ParticipantOption = {
 type PlanFlightFormProps = {
   aircraftOptions: AircraftOption[];
   participantOptions: ParticipantOption[];
+  personOptions: ParticipantOption[];
   defaultDepartureLabel: string;
   defaultTimeZone: string;
 };
@@ -29,6 +30,7 @@ const roleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
 export function PlanFlightForm({
   aircraftOptions,
   participantOptions,
+  personOptions,
   defaultDepartureLabel,
   defaultTimeZone
 }: PlanFlightFormProps) {
@@ -246,6 +248,51 @@ export function PlanFlightForm({
                   </option>
                 ))}
               </select>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="lg:col-span-2">
+        <p className="mb-2 text-xs font-semibold uppercase text-slate-400">
+          People (optional)
+        </p>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {[0, 1].map((slot) => (
+            <div key={slot} className="grid gap-2 rounded-md border border-slate-800 p-3">
+              <label className="text-xs font-semibold uppercase text-slate-400">
+                Person {slot + 1}
+              </label>
+              <select
+                name="participantPersonId"
+                className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                defaultValue=""
+              >
+                <option value="">Select a person</option>
+                {personOptions.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="participantPersonRole"
+                className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                defaultValue="SIC"
+              >
+                {roleOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">
+                Add more people in{" "}
+                <Link className="underline underline-offset-2" href="/profile">
+                  Profile
+                </Link>
+                .
+              </p>
             </div>
           ))}
         </div>

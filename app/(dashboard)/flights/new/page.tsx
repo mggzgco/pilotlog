@@ -9,6 +9,11 @@ export default async function NewPlannedFlightPage() {
     where: { id: user.id },
     select: { homeAirport: true, homeTimeZone: true }
   });
+  const people = await prisma.person.findMany({
+    where: { userId: user.id },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, email: true }
+  });
   const aircraft = await prisma.aircraft.findMany({
     where: { userId: user.id },
     orderBy: { tailNumber: "asc" }
@@ -23,6 +28,10 @@ export default async function NewPlannedFlightPage() {
       [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
       entry.name ||
       entry.email
+  }));
+  const personOptions = people.map((entry) => ({
+    id: entry.id,
+    label: entry.email ? `${entry.name} · ${entry.email}` : entry.name
   }));
 
   return (
@@ -42,6 +51,7 @@ export default async function NewPlannedFlightPage() {
           <PlanFlightForm
             aircraftOptions={aircraft}
             participantOptions={participantOptions}
+            personOptions={personOptions}
             defaultDepartureLabel={profile?.homeAirport ?? ""}
             defaultTimeZone={profile?.homeTimeZone ?? ""}
           />

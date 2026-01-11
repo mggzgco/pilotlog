@@ -5,7 +5,12 @@ import { requireUser } from "@/app/lib/session";
 import { selectChecklistTemplate } from "@/app/lib/checklists/templates";
 import { createChecklistRunSnapshot } from "@/app/lib/checklists/snapshot";
 import { recordAuditEvent } from "@/app/lib/audit";
-import { normalizeParticipants, parseParticipantFormData } from "@/app/lib/flights/participants";
+import {
+  normalizeParticipants,
+  normalizePersonParticipants,
+  parseParticipantFormData,
+  parsePersonParticipantFormData
+} from "@/app/lib/flights/participants";
 import { lookupAirportByCode } from "@/app/lib/airports/lookup";
 
 const plannedFlightSchema = z.object({
@@ -245,6 +250,25 @@ export async function POST(request: Request) {
     user.id,
     parseParticipantFormData(formData)
   );
+  const personParticipantInputs = normalizePersonParticipants(
+    parsePersonParticipantFormData(formData)
+  );
+
+  // Ensure all person IDs belong to the current user.
+  if (personParticipantInputs.length > 0) {
+    const ids = personParticipantInputs.map((p) => p.personId);
+    const found = await prisma.person.findMany({
+      where: { userId: user.id, id: { in: ids } },
+      select: { id: true }
+    });
+    const foundSet = new Set(found.map((p) => p.id));
+    const missing = ids.filter((id) => !foundSet.has(id));
+    if (missing.length > 0) {
+      redirectUrl.searchParams.set("toast", "One or more selected people were not found.");
+      redirectUrl.searchParams.set("toastType", "error");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
 
   const flight = await prisma.$transaction(async (tx) => {
     const created = await tx.flight.create({
@@ -280,6 +304,12 @@ export async function POST(request: Request) {
               role: participant.role
             }))
           ]
+        },
+        peopleParticipants: {
+          create: personParticipantInputs.map((participant) => ({
+            personId: participant.personId,
+            role: participant.role
+          }))
         }
       }
     });

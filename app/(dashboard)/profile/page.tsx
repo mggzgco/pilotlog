@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { TimeZoneSelect } from "@/app/components/ui/timezone-select";
+import { CreatePersonModal } from "@/app/components/people/create-person-modal";
 
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
-  const user = await prisma.user.findUnique({
+  const [user, people] = await Promise.all([
+    prisma.user.findUnique({
     where: { id: sessionUser.id },
     select: {
       id: true,
@@ -20,7 +22,13 @@ export default async function ProfilePage() {
       homeTimeZone: true,
       status: true
     }
-  });
+    }),
+    prisma.person.findMany({
+      where: { userId: sessionUser.id },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true }
+    })
+  ]);
 
   if (!user) {
     return null;
@@ -86,6 +94,50 @@ export default async function ProfilePage() {
                 ? "Pending approval"
                 : "Disabled"}
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-400">People</p>
+              <p className="text-xs text-slate-500">
+                Passengers, instructors, and others you fly with. Available in flight creation dropdowns.
+              </p>
+            </div>
+            <CreatePersonModal />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {people.length === 0 ? (
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              No people yet. Add your instructor/passengers here so you can quickly attach them to flights.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600 dark:bg-slate-950 dark:text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Email</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {people.map((person) => (
+                    <tr key={person.id} className="bg-white dark:bg-slate-950">
+                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                        {person.name}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                        {person.email ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
