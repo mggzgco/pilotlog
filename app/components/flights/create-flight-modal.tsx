@@ -69,6 +69,7 @@ export function CreateFlightModal({
   const [newPersonEmail, setNewPersonEmail] = useState("");
   const [plannedStart, setPlannedStart] = useState("");
   const [plannedEnd, setPlannedEnd] = useState("");
+  const [stops, setStops] = useState<string[]>([]);
 
   const aircraftOptionsSorted = useMemo(() => {
     return [...aircraftList].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber));
@@ -84,6 +85,7 @@ export function CreateFlightModal({
     setPeopleParticipants([{ id: "", role: "SIC" }]);
     setPlannedStart("");
     setPlannedEnd("");
+    setStops([]);
     setErrorMessage(null);
   };
 
@@ -103,6 +105,13 @@ export function CreateFlightModal({
     setIsSubmitting(true);
     try {
       const formData = new FormData(event.currentTarget);
+      // Normalize stop labels from client-side state (ensures removed rows don't submit stale values).
+      formData.delete("stopLabel");
+      stops
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 5)
+        .forEach((s) => formData.append("stopLabel", s));
       const response = await fetch("/api/flights/create-planned-inline", {
         method: "POST",
         body: formData
@@ -267,6 +276,49 @@ export function CreateFlightModal({
                     To
                   </label>
                   <Input name="destination" placeholder="Destination airport" required />
+                </div>
+                <div className="md:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
+                      Interim stops (optional)
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setStops((prev) => [...prev, ""])}
+                    >
+                      Add stop
+                    </Button>
+                  </div>
+                  {stops.length === 0 ? (
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                      Add stops if you land somewhere in between (e.g., origin → stop1 → stop2 → destination).
+                    </p>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {stops.map((value, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            placeholder={`Stop ${index + 1} (e.g. KABE)`}
+                            value={value}
+                            onChange={(event) =>
+                              setStops((prev) =>
+                                prev.map((v, i) => (i === index ? event.target.value : v))
+                              )
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setStops((prev) => prev.filter((_, i) => i !== index))}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">

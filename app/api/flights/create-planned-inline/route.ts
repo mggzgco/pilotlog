@@ -11,13 +11,15 @@ import {
   parseParticipantFormData,
   parsePersonParticipantFormData
 } from "@/app/lib/flights/participants";
+import { lookupAirportByCode } from "@/app/lib/airports/lookup";
 
 const plannedFlightSchema = z.object({
   aircraftId: z.string().min(1),
   plannedStartTime: z.string().min(1),
   plannedEndTime: z.string().optional(),
   origin: z.string().min(1),
-  destination: z.string().min(1)
+  destination: z.string().min(1),
+  stopLabel: z.union([z.string(), z.array(z.string())]).optional()
 });
 
 export async function POST(request: Request) {
@@ -59,6 +61,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Selected aircraft was not found." }, { status: 404 });
   }
 
+  const originLabel = parsed.data.origin.trim().toUpperCase();
+  const destinationLabel = parsed.data.destination.trim().toUpperCase();
+  const stopLabels = (() => {
+    const rawStops = parsed.data.stopLabel;
+    const arr = Array.isArray(rawStops) ? rawStops : rawStops ? [rawStops] : [];
+    return arr
+      .map((s) => String(s).trim().toUpperCase())
+      .filter((s) => s.length > 0)
+      .slice(0, 5);
+  })();
+
+  const [originAirport, destinationAirport, ...stopAirports] = await Promise.all([
+    lookupAirportByCode(originLabel),
+    lookupAirportByCode(destinationLabel),
+    ...stopLabels.map((s) => lookupAirportByCode(s))
+  ]);
+
   const participantInputs = normalizeParticipants(
     user.id,
     parseParticipantFormData(formData)
@@ -74,12 +93,25 @@ export async function POST(request: Request) {
         tailNumber: aircraft.tailNumber,
         tailNumberSnapshot: aircraft.tailNumber,
         aircraftId: aircraft.id,
-        origin: parsed.data.origin.trim(),
-        destination: parsed.data.destination.trim(),
+        origin: originLabel,
+        originAirportId: originAirport?.id ?? null,
+        destination: destinationLabel,
+        destinationAirportId: destinationAirport?.id ?? null,
+        stops: {
+          create: stopLabels.map((label, idx) => ({
+            order: idx + 1,
+            label,
+            airportId: stopAirports[idx]?.id ?? null
+          }))
+        },
         plannedStartTime: plannedStart,
         plannedEndTime: plannedEnd,
         startTime: plannedStart,
         status: "PLANNED",
+        statsJson: {
+          startTimeZone: originAirport?.timeZone ?? null,
+          endTimeZone: destinationAirport?.timeZone ?? null
+        },
         participants: {
           create: [
             { userId: user.id, role: "PIC" },

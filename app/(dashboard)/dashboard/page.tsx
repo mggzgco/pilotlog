@@ -6,6 +6,7 @@ import { Button } from "@/app/components/ui/button";
 import { FlightMap } from "@/app/components/maps/flight-map";
 import { getLatestFlightWithTrackPoints, getRecentFlights } from "@/app/lib/flights/queries";
 import { EmptyState } from "@/app/components/ui/empty-state";
+import { formatFlightRouteLabel } from "@/app/lib/flights/route";
 import { ArrowRight, Calendar, Radar, TriangleAlert, Wallet } from "lucide-react";
 
 function formatDuration(durationMinutes: number | null) {
@@ -134,6 +135,7 @@ export default async function DashboardPage() {
           tailNumberSnapshot: true,
           origin: true,
           destination: true,
+          stops: { orderBy: { order: "asc" }, select: { label: true } },
           plannedStartTime: true,
           startTime: true,
           status: true
@@ -197,6 +199,7 @@ export default async function DashboardPage() {
           tailNumberSnapshot: true,
           origin: true,
           destination: true,
+          stops: { orderBy: { order: "asc" }, select: { label: true } },
           plannedStartTime: true,
           startTime: true,
           status: true,
@@ -215,6 +218,7 @@ export default async function DashboardPage() {
           id: true,
           origin: true,
           destination: true,
+          stops: { orderBy: { order: "asc" }, select: { label: true } },
           startTime: true,
           tailNumber: true,
           tailNumberSnapshot: true
@@ -232,6 +236,7 @@ export default async function DashboardPage() {
           id: true,
           origin: true,
           destination: true,
+          stops: { orderBy: { order: "asc" }, select: { label: true } },
           startTime: true,
           tailNumber: true,
           tailNumberSnapshot: true
@@ -391,7 +396,11 @@ export default async function DashboardPage() {
                 <p className="text-sm text-slate-600 dark:text-slate-400">Most recent flight</p>
               <p className="text-lg font-semibold">
                 {latestFlight
-                  ? `${latestFlight.origin} → ${latestFlight.destination ?? "TBD"}`
+                  ? formatFlightRouteLabel({
+                      origin: latestFlight.origin,
+                      stops: latestFlight.stops ?? [],
+                      destination: latestFlight.destination ?? "TBD"
+                    })
                     : "—"}
               </p>
             </div>
@@ -446,7 +455,11 @@ export default async function DashboardPage() {
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <p className="truncate text-sm font-semibold">
-                                    {flight.origin} → {flight.destination ?? "TBD"}
+                                    {formatFlightRouteLabel({
+                                      origin: flight.origin,
+                                      stops: flight.stops ?? [],
+                                      destination: flight.destination ?? "TBD"
+                                    })}
                                   </p>
                                   <p className="mt-1 truncate text-xs text-slate-500">
                                     {when} · {tail} · {flight.status.replaceAll("_", " ").toLowerCase()}

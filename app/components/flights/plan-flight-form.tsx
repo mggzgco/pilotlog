@@ -36,6 +36,7 @@ export function PlanFlightForm({
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [tailNumber, setTailNumber] = useState("");
   const [unassignedConfirmed, setUnassignedConfirmed] = useState(false);
+  const [stops, setStops] = useState<string[]>([]);
 
   const aircraftById = useMemo(() => {
     return new Map(aircraftOptions.map((aircraft) => [aircraft.id, aircraft]));
@@ -126,6 +127,50 @@ export function PlanFlightForm({
           Arrival label
         </label>
         <Input name="arrivalLabel" placeholder="KSFO" />
+      </div>
+      <div className="lg:col-span-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+            Interim stops (optional)
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setStops((prev) => [...prev, ""])}
+          >
+            Add stop
+          </Button>
+        </div>
+        {stops.length === 0 ? (
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Add 1–2 stops if you depart, land somewhere, then continue to your final destination.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {stops.map((value, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  name="stopLabel"
+                  placeholder={`Stop ${index + 1} (e.g. KABE)`}
+                  value={value}
+                  onChange={(event) =>
+                    setStops((prev) =>
+                      prev.map((v, i) => (i === index ? event.target.value : v))
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStops((prev) => prev.filter((_, i) => i !== index))}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div>
         <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">

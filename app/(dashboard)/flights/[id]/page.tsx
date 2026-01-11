@@ -10,6 +10,7 @@ import { EmptyState } from "@/app/components/ui/empty-state";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { Input } from "@/app/components/ui/input";
+import { formatFlightRouteLabel } from "@/app/lib/flights/route";
 
 const formatPersonName = (person: {
   name?: string | null;
@@ -33,6 +34,7 @@ export default async function FlightDetailPage({
     where: { id: params.id, userId: user.id },
     include: {
       trackPoints: { orderBy: { recordedAt: "asc" } },
+      stops: { orderBy: { order: "asc" } },
       aircraft: {
         include: {
           aircraftType: {
@@ -264,8 +266,12 @@ export default async function FlightDetailPage({
               <FlightStatusBadge status={flight.status} />
             </div>
             <p className="text-sm text-slate-400">
-              {flight.tailNumberSnapshot ?? flight.tailNumber} · {flight.origin} →{" "}
-              {flight.destination ?? "TBD"}
+              {flight.tailNumberSnapshot ?? flight.tailNumber} ·{" "}
+              {formatFlightRouteLabel({
+                origin: flight.origin,
+                stops: (flight as any).stops ?? [],
+                destination: flight.destination ?? "TBD"
+              })}
             </p>
             {flightPeople.length > 0 ? (
               <p className="text-xs text-slate-500">

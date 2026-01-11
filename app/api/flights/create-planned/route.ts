@@ -188,10 +188,17 @@ export async function POST(request: Request) {
 
   const departureLabel = String(parsed.data.departureLabel ?? "").trim();
   const arrivalLabel = String(parsed.data.arrivalLabel ?? "").trim();
+  const stopLabelsRaw = formData.getAll("stopLabel").map((v) => String(v ?? "").trim());
+  const stopLabels = stopLabelsRaw
+    .map((v) => v.toUpperCase())
+    .filter((v) => v.length > 0)
+    .slice(0, 5);
   const [originAirport, destinationAirport] = await Promise.all([
     departureLabel ? lookupAirportByCode(departureLabel) : Promise.resolve(null),
     arrivalLabel ? lookupAirportByCode(arrivalLabel) : Promise.resolve(null)
   ]);
+
+  const stopAirports = await Promise.all(stopLabels.map((label) => lookupAirportByCode(label)));
 
   const startTimeZone = originAirport?.timeZone ?? fallbackTimeZone;
   const endTimeZone = destinationAirport?.timeZone ?? startTimeZone;
@@ -250,6 +257,13 @@ export async function POST(request: Request) {
         originAirportId: originAirport?.id ?? null,
         destination: arrivalLabel || null,
         destinationAirportId: destinationAirport?.id ?? null,
+        stops: {
+          create: stopLabels.map((label, idx) => ({
+            order: idx + 1,
+            label,
+            airportId: stopAirports[idx]?.id ?? null
+          }))
+        },
         plannedStartTime: plannedStart,
         plannedEndTime: plannedEnd,
         startTime,

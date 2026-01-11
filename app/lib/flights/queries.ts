@@ -4,7 +4,10 @@ export async function getLatestFlightWithTrackPoints(userId: string) {
   return prisma.flight.findFirst({
     where: { userId },
     orderBy: { startTime: "desc" },
-    include: { trackPoints: { orderBy: { recordedAt: "asc" } } }
+    include: {
+      trackPoints: { orderBy: { recordedAt: "asc" } },
+      stops: { orderBy: { order: "asc" }, select: { label: true } }
+    }
   });
 }
 

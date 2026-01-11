@@ -133,6 +133,7 @@ model Flight {
   originAirportId     String?
   destination         String?
   destinationAirportId String?
+  stops               FlightStop[]
   status              FlightStatus         @default(PLANNED)
   plannedStartTime    DateTime?
   plannedEndTime      DateTime?
@@ -163,6 +164,22 @@ model Flight {
   @@index([aircraftId])
   @@index([originAirportId])
   @@index([destinationAirportId])
+}
+
+model FlightStop {
+  id        String   @id @default(cuid())
+  flightId  String
+  order     Int
+  label     String
+  airportId String?
+  createdAt DateTime @default(now())
+
+  flight    Flight  @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  airport   Airport? @relation(fields: [airportId], references: [id], onDelete: SetNull)
+
+  @@unique([flightId, order])
+  @@index([flightId])
+  @@index([airportId])
 }
 
 model Airport {

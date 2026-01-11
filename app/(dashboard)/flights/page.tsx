@@ -9,6 +9,7 @@ import { FlightsTable } from "@/app/components/flights/flights-table";
 import { CreateFlightModal } from "@/app/components/flights/create-flight-modal";
 import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 import { Plane } from "lucide-react";
+import { formatFlightRouteLabel } from "@/app/lib/flights/route";
 
 type FlightsSearchParams = {
   search?: string;
@@ -131,6 +132,7 @@ export default async function FlightsPage({
         costItems: { select: { id: true } },
         logbookEntries: { select: { id: true } },
         receiptDocuments: { select: { id: true } },
+        stops: { orderBy: { order: "asc" }, select: { label: true } },
         checklistRuns: {
           select: {
             phase: true,
@@ -228,6 +230,11 @@ export default async function FlightsPage({
       tailNumberSnapshot: flight.tailNumberSnapshot,
       origin: flight.origin,
       destination: flight.destination,
+      routeLabel: formatFlightRouteLabel({
+        origin: flight.origin,
+        stops: flight.stops,
+        destination: flight.destination
+      }),
       status: flight.status,
       preflightDecision,
       postflightDecision,

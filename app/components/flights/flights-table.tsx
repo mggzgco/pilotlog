@@ -10,6 +10,7 @@ export interface FlightRow {
   tailNumberSnapshot?: string | null;
   origin: string;
   destination: string | null;
+  routeLabel: string;
   status: string;
   preflightDecision: string;
   postflightDecision: string;
@@ -88,15 +89,7 @@ export function FlightsTable({ flights }: FlightsTableProps) {
                     href={`/flights/${flight.id}`}
                     className="block -mx-4 -my-3 px-4 py-3"
                   >
-                    {flight.destination ? (
-                      <>
-                        {flight.origin} → {flight.destination}
-                      </>
-                    ) : (
-                      <span className="text-slate-600 dark:text-slate-400">
-                        {flight.origin} → —
-                      </span>
-                    )}
+                    {flight.routeLabel}
                   </Link>
                 </td>
                 <td className="px-4 py-3">
