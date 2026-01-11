@@ -126,7 +126,6 @@ export function ChecklistSection({
   const [activeTab, setActiveTab] = useState<"PREFLIGHT" | "POSTFLIGHT">(
     "PREFLIGHT"
   );
-  const [orderMode, setOrderMode] = useState<"personal" | "official">("personal");
   const [signingPhase, setSigningPhase] = useState<
     "PREFLIGHT" | "POSTFLIGHT" | null
   >(null);
@@ -134,13 +133,10 @@ export function ChecklistSection({
     "PREFLIGHT" | "POSTFLIGHT" | null
   >(null);
   const [rejectionNote, setRejectionNote] = useState("");
-  const [isFocusMode, setIsFocusMode] = useState(false);
-  const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [isOnline, setIsOnline] = useState(true);
   const [itemState, setItemState] = useState<Record<string, ChecklistItemState>>({});
 
-  const focusOverrideRef = useRef(false);
   const pendingCountRef = useRef(0);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const itemStateRef = useRef(itemState);
@@ -193,14 +189,7 @@ export function ChecklistSection({
     }
 
     setItemState(mergedState);
-    setActiveItemId(activeRun.items.find((item) => item.kind !== "SECTION")?.id ?? null);
   }, [activeRun?.id, flightId]);
-
-  useEffect(() => {
-    if (activeRun?.status === ChecklistRunStatus.IN_PROGRESS && !focusOverrideRef.current) {
-      setIsFocusMode(true);
-    }
-  }, [activeRun?.status]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -220,22 +209,6 @@ export function ChecklistSection({
       window.removeEventListener("offline", updateOnlineStatus);
     };
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (isFocusMode) {
-      document.body.classList.add("checklist-focus");
-    } else {
-      document.body.classList.remove("checklist-focus");
-    }
-
-    return () => {
-      document.body.classList.remove("checklist-focus");
-    };
-  }, [isFocusMode]);
 
   useEffect(() => {
     if (!isOnline) {
@@ -662,10 +635,8 @@ export function ChecklistSection({
       );
     }
 
-    const getSortKey = (item: ChecklistItemView) =>
-      orderMode === "official"
-        ? item.officialOrder ?? item.order
-        : item.personalOrder ?? item.order;
+    // Single ordering: automatic numbering based on the current personal order (or legacy order).
+    const getSortKey = (item: ChecklistItemView) => item.personalOrder ?? item.order;
 
     const topLevelItems = run.items
       .filter((item) => !item.parentId)
@@ -715,17 +686,41 @@ export function ChecklistSection({
 
     return (
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-400">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
           <div>
-            {run.status === ChecklistRunStatus.SIGNED
-              ? `${run.decision === "REJECTED" ? "Rejected" : run.decision === "ACCEPTED" ? "Accepted" : "Signed"}${
-                  run.signedAt ? ` on ${new Date(run.signedAt).toLocaleString()}` : ""
-                }`
-              : run.startedAt
-                ? `Started ${new Date(run.startedAt).toLocaleString()}`
-                : "Not started"}
+            <p className="font-semibold text-slate-900 dark:text-slate-100">
+              {phase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight"} checklist
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {run.status === ChecklistRunStatus.SIGNED
+                ? `${run.decision === "REJECTED" ? "Rejected" : run.decision === "ACCEPTED" ? "Accepted" : "Signed"}${
+                    run.signedAt ? ` · ${new Date(run.signedAt).toLocaleString()}` : ""
+                  }`
+                : run.startedAt
+                  ? `Started · ${new Date(run.startedAt).toLocaleString()}`
+                  : "Not started"}
+              {run.signatureName ? ` · Signed by ${run.signatureName}` : ""}
+            </p>
           </div>
-          {run.signatureName ? <div>Signed by {run.signatureName}</div> : null}
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${
+              run.status === ChecklistRunStatus.SIGNED
+                ? run.decision === "REJECTED"
+                  ? "bg-rose-500/15 text-rose-700 dark:text-rose-200"
+                  : run.decision === "ACCEPTED"
+                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200"
+                    : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                : "bg-brand-500/15 text-brand-700 dark:text-brand-200"
+            }`}
+          >
+            {run.status === ChecklistRunStatus.SIGNED
+              ? run.decision === "REJECTED"
+                ? "Rejected"
+                : run.decision === "ACCEPTED"
+                  ? "Accepted"
+                  : "Signed"
+              : "In progress"}
+          </span>
         </div>
 
         {run.status === ChecklistRunStatus.SIGNED ? (
@@ -751,30 +746,6 @@ export function ChecklistSection({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Order
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={orderMode === "personal" ? "default" : "outline"}
-              onClick={() => setOrderMode("personal")}
-            >
-              Personal
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={orderMode === "official" ? "default" : "outline"}
-              onClick={() => setOrderMode("official")}
-            >
-              Official
-            </Button>
-          </div>
-        </div>
-
         {displayRows.filter((row) => row.item.kind !== "SECTION").length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
             <p>No checklist items available.</p>
@@ -788,20 +759,20 @@ export function ChecklistSection({
             ) : null}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {displayRows.map((row) => {
               const item = row.item;
               if (item.kind === "SECTION") {
                 return (
                   <div
                     key={item.id}
-                    className="rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3"
+                    className="sticky top-2 z-10 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/90"
                   >
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
                       {row.prefix ? `${row.prefix}. ${item.title}` : item.title}
                     </p>
                     {item.details ? (
-                      <p className="mt-1 text-xs text-slate-400">{item.details}</p>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{item.details}</p>
                     ) : null}
                   </div>
                 );
@@ -809,65 +780,72 @@ export function ChecklistSection({
 
               const state = itemState[item.id];
               const completed = state?.completed ?? item.completed;
-              const isActive = activeItemId === item.id;
               const isDisabled = isLocked;
 
               return (
                 <div
                   key={item.id}
-                  onClick={() => setActiveItemId(item.id)}
                   onTouchStart={(event) => handleSwipeStart(item.id, event)}
                   onTouchEnd={(event) => handleSwipeEnd(item, isDisabled, event)}
-                  className={`touch-pan-y rounded-lg border border-slate-800 p-4 transition ${
-                    isActive && isFocusMode ? "border-brand-500/70 bg-slate-900/70" : ""
+                  className={`touch-pan-y rounded-xl border p-4 shadow-sm transition ${
+                    completed
+                      ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+                      : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
                   }`}
                 >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="grid gap-3 md:grid-cols-[1fr,280px] md:items-start">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-lg font-semibold text-slate-100">
-                          {row.prefix ? `${row.prefix} ` : ""}{item.itemLabel?.trim() || item.title}
+                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {row.prefix}
+                        </span>
+                        <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                          {item.itemLabel?.trim() || item.title}
                         </p>
                         {item.acceptanceCriteria ? (
-                          <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-xs font-semibold text-slate-200">
+                          <span className="rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-200">
                             {item.acceptanceCriteria}
                           </span>
                         ) : null}
                         {item.required ? (
-                          <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             Required
                           </span>
                         ) : (
-                          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-400">
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-slate-900 dark:text-slate-400">
                             Optional
                           </span>
                         )}
                         {completed ? (
-                          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-200">
-                            Complete
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-200">
+                            Done
                           </span>
                         ) : null}
                       </div>
                       {item.details ? (
-                        <p className="text-sm text-slate-300">{item.details}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{item.details}</p>
                       ) : null}
                       {item.completedAt ? (
-                        <p className="mt-2 text-xs text-slate-500">
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
                           Completed {new Date(item.completedAt).toLocaleString()}
                         </p>
                       ) : null}
                     </div>
-                    <div className="flex flex-col items-start gap-4 lg:items-end">
-                      <div className="w-full lg:w-72">{renderInput(item, isDisabled)}</div>
-                      <div className="w-full">
-                        <details className="rounded-md border border-slate-800">
-                          <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold uppercase text-slate-300">
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/30">
+                        {renderInput(item, isDisabled)}
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                          Tip: swipe right to complete · swipe left to undo (CHECK / YES-NO)
+                        </p>
+                      </div>
+                      <details className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                          <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
                             Notes
                           </summary>
                           <div className="p-3">
                             <textarea
                               name={`notes-${item.id}`}
-                              className="min-h-[96px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-base text-slate-100"
+                              className="min-h-[96px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                               value={state?.notes ?? ""}
                               disabled={isDisabled}
                               onChange={(event) =>
@@ -876,22 +854,6 @@ export function ChecklistSection({
                             />
                           </div>
                         </details>
-                      </div>
-                      {!isLocked && !isFocusMode ? (
-                        <Button
-                          type="button"
-                          size="lg"
-                          onClick={() =>
-                            updateItemState(
-                              item.id,
-                              { completed: true },
-                              { complete: true, immediate: true }
-                            )
-                          }
-                        >
-                          {completed ? "Update item" : "Complete item"}
-                        </Button>
-                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -941,11 +903,6 @@ export function ChecklistSection({
   const showDecisionFooter =
     Boolean(activeRun) && activeRun?.status !== ChecklistRunStatus.NOT_AVAILABLE;
 
-  const handleFocusToggle = () => {
-    focusOverrideRef.current = true;
-    setIsFocusMode((prev) => !prev);
-  };
-
   const statusLabel =
     saveStatus === "offline"
       ? "Offline — will sync"
@@ -977,14 +934,6 @@ export function ChecklistSection({
             Not available
           </span>
         ) : null}
-        <Button
-          type="button"
-          size="lg"
-          variant={isFocusMode ? "default" : "outline"}
-          onClick={handleFocusToggle}
-        >
-          {isFocusMode ? "Exit Focus Mode" : "Checklist Focus Mode"}
-        </Button>
         <span
           className={`self-center rounded-full px-3 py-1 text-xs font-semibold uppercase ${
             saveStatus === "offline"
@@ -998,35 +947,15 @@ export function ChecklistSection({
         </span>
       </div>
 
-      {isFocusMode && activeRun ? (
-        <div className="sticky top-0 z-30 rounded-lg border border-slate-800 bg-slate-950/95 p-4 shadow-lg backdrop-blur">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-100">Checklist Progress</p>
-              <p className="text-xs text-slate-400">
-                {completedItems}/{totalItems} items complete
-              </p>
-            </div>
-            <div className="text-xs uppercase text-slate-500">{activeRun.phase}</div>
-          </div>
-          <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
-            <div
-              className="h-2 rounded-full bg-brand-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
-
       {renderChecklist(activeRun, activeTab)}
 
       {showDecisionFooter && activeRun ? (
-        <div className="sticky bottom-0 z-30 rounded-t-2xl border border-slate-800 bg-slate-950/95 p-4 shadow-2xl backdrop-blur">
+        <div className="sticky bottom-0 z-30 rounded-t-2xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
               <div>
-                <p className="font-semibold text-slate-100">Checklist progress</p>
-                <p className="text-xs text-slate-400">
+                <p className="font-semibold text-slate-900 dark:text-slate-100">Checklist progress</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   {completedItems}/{totalItems} complete ·{" "}
                   {requiredRemaining === 0
                     ? "All required items done"
@@ -1052,7 +981,7 @@ export function ChecklistSection({
               />
             </div>
             {isChecklistLocked ? (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Checklist is locked and read-only.
               </p>
             ) : (
@@ -1063,7 +992,7 @@ export function ChecklistSection({
                   disabled={!canAccept}
                   onClick={() => setSigningPhase(activeRun.phase)}
                 >
-                  Accept
+                  Accept & Sign
                 </Button>
                 <Button
                   type="button"
