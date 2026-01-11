@@ -36,6 +36,8 @@ type CreateFlightModalProps = {
   participantOptions: ParticipantOption[];
   personOptions: PersonOption[];
   triggerLabel?: string;
+  defaultOriginLabel?: string;
+  defaultTimeZone?: string;
 };
 
 const newOptionValue = "__create__";
@@ -44,7 +46,9 @@ export function CreateFlightModal({
   aircraftOptions,
   participantOptions,
   personOptions,
-  triggerLabel = "Create Flight"
+  triggerLabel = "Create Flight",
+  defaultOriginLabel,
+  defaultTimeZone
 }: CreateFlightModalProps) {
   const router = useRouter();
   const { addToast } = useToast();
@@ -229,6 +233,10 @@ export function CreateFlightModal({
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+            {/* Same behavior as /flights/new:
+                - server derives tz from airports (DST-aware)
+                - this is a fallback used when airports can't be resolved */}
+            <input type="hidden" name="timeZone" value={defaultTimeZone || "UTC"} />
             <section className="space-y-4">
               <div>
                 <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
@@ -280,13 +288,17 @@ export function CreateFlightModal({
                   <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                     From
                   </label>
-                  <Input name="origin" placeholder="Origin airport" required />
+                  <Input
+                    name="origin"
+                    placeholder="Origin airport (e.g. KLOM)"
+                    defaultValue={defaultOriginLabel || ""}
+                  />
                 </div>
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
                     To
                   </label>
-                  <Input name="destination" placeholder="Destination airport" required />
+                  <Input name="destination" placeholder="Destination airport (optional)" />
                 </div>
                 <div className="md:col-span-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">

@@ -24,8 +24,8 @@ const plannedFlightSchema = z.object({
   plannedStartClock: z.string().optional(),
   plannedEndDate: z.string().optional(),
   plannedEndClock: z.string().optional(),
-  origin: z.string().min(1),
-  destination: z.string().min(1),
+  origin: z.string().optional(),
+  destination: z.string().optional(),
   stopLabel: z.union([z.string(), z.array(z.string())]).optional()
 });
 
@@ -138,8 +138,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Selected aircraft was not found." }, { status: 404 });
   }
 
-  const originLabel = parsed.data.origin.trim().toUpperCase();
-  const destinationLabel = parsed.data.destination.trim().toUpperCase();
+  const originLabelRaw = String(parsed.data.origin ?? "").trim().toUpperCase();
+  const destinationLabelRaw = String(parsed.data.destination ?? "").trim().toUpperCase();
+  const originLabel = originLabelRaw || "TBD";
+  const destinationLabel = destinationLabelRaw || null;
   const stopLabels = (() => {
     const rawStops = parsed.data.stopLabel;
     const arr = Array.isArray(rawStops) ? rawStops : rawStops ? [rawStops] : [];
@@ -150,8 +152,8 @@ export async function POST(request: Request) {
   })();
 
   const [originAirport, destinationAirport, ...stopAirports] = await Promise.all([
-    lookupAirportByCode(originLabel),
-    lookupAirportByCode(destinationLabel),
+    originLabelRaw ? lookupAirportByCode(originLabelRaw) : Promise.resolve(null),
+    destinationLabelRaw ? lookupAirportByCode(destinationLabelRaw) : Promise.resolve(null),
     ...stopLabels.map((s) => lookupAirportByCode(s))
   ]);
 
@@ -213,6 +215,12 @@ export async function POST(request: Request) {
 
   if (!plannedStart) {
     return NextResponse.json({ error: "Scheduled start time is required." }, { status: 400 });
+  }
+  if (plannedEnd && plannedEnd < plannedStart) {
+    return NextResponse.json(
+      { error: "Scheduled end time cannot be earlier than start time." },
+      { status: 400 }
+    );
   }
   if (parsed.data.plannedStartDate && plannedStartFromParts === null) {
     return NextResponse.json(

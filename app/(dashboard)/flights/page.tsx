@@ -36,6 +36,10 @@ export default async function FlightsPage({
   searchParams?: FlightsSearchParams & { [key: string]: string | string[] };
 }) {
   const user = await requireUser();
+  const profile = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { homeAirport: true, homeTimeZone: true }
+  });
   const search = getSearchParam(searchParams?.search).trim();
   const startDate = getSearchParam(searchParams?.startDate).trim();
   const endDate = getSearchParam(searchParams?.endDate).trim();
@@ -282,6 +286,8 @@ export default async function FlightsPage({
           aircraftOptions={aircraft}
           participantOptions={participantOptions}
           personOptions={personOptions}
+          defaultOriginLabel={profile?.homeAirport ?? ""}
+          defaultTimeZone={profile?.homeTimeZone ?? ""}
         />
       </div>
 
@@ -398,6 +404,8 @@ export default async function FlightsPage({
                 participantOptions={participantOptions}
                 personOptions={personOptions}
                 triggerLabel="Create Flight"
+                defaultOriginLabel={profile?.homeAirport ?? ""}
+                defaultTimeZone={profile?.homeTimeZone ?? ""}
               />
             ) : (
               <Button variant="outline" asChild>
