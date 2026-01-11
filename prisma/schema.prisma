@@ -198,6 +198,7 @@ model Airport {
 
   originFlights      Flight[] @relation("FlightOriginAirport")
   destinationFlights Flight[] @relation("FlightDestinationAirport")
+  flightStops        FlightStop[]
 
   @@index([iata])
   @@index([timeZone])
