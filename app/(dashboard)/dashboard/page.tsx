@@ -8,6 +8,7 @@ import { getLatestFlightWithTrackPoints, getRecentFlights } from "@/app/lib/flig
 import { EmptyState } from "@/app/components/ui/empty-state";
 import { formatFlightRouteLabel } from "@/app/lib/flights/route";
 import { flightHasLandingOverDistanceNm } from "@/app/lib/airports/xc";
+import { CostPieChart, type CostPieSlice } from "@/app/components/charts/CostPieChart";
 import { ArrowRight, Calendar, Radar, TriangleAlert, Wallet } from "lucide-react";
 
 function formatDuration(durationMinutes: number | null) {
@@ -77,7 +78,7 @@ export default async function DashboardPage() {
     getRecentFlights(user.id, 10)
   ]);
 
-  const [logbookMonth, logbook30, logbookYtd, monthCosts, flights90, flights30, upcomingFlights] =
+  const [logbookMonth, logbook30, logbookYtd, monthCostItems, flights90, flights30, upcomingFlights] =
     await Promise.all([
       prisma.logbookEntry.findMany({
         where: { userId: user.id, date: { gte: monthStart } },
@@ -148,9 +149,24 @@ export default async function DashboardPage() {
           }
         }
       }),
-      prisma.costItem.aggregate({
+      prisma.costItem.findMany({
         where: { userId: user.id, date: { gte: monthStart } },
-        _sum: { amountCents: true }
+        select: {
+          id: true,
+          amountCents: true,
+          category: true,
+          flightId: true,
+          flight: {
+            select: {
+              id: true,
+              origin: true,
+              destination: true,
+              stops: { orderBy: { order: "asc" }, select: { label: true } },
+              tailNumber: true,
+              tailNumberSnapshot: true
+            }
+          }
+        }
       }),
       prisma.flight.count({
         where: { userId: user.id, startTime: { gte: days90 } }
@@ -245,7 +261,55 @@ export default async function DashboardPage() {
   const totalsMonth = computeLogbookTotals(logbookMonth);
   const totals30 = computeLogbookTotals(logbook30);
   const totalsYtd = computeLogbookTotals(logbookYtd);
-  const monthCostCents = monthCosts._sum.amountCents ?? 0;
+  const monthCostCents = monthCostItems.reduce((sum, item) => sum + item.amountCents, 0);
+
+  const monthCostPerHour =
+    totalsMonth.total > 0 ? monthCostCents / totalsMonth.total : null;
+
+  const monthCostByCategory = monthCostItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.category] = (acc[item.category] ?? 0) + item.amountCents;
+    return acc;
+  }, {});
+
+  const categoryPalette = [
+    "#0ea5e9",
+    "#6366f1",
+    "#22c55e",
+    "#f59e0b",
+    "#ef4444",
+    "#a855f7",
+    "#14b8a6"
+  ];
+
+  const categoryEntries = Object.entries(monthCostByCategory)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  const otherCents = Object.entries(monthCostByCategory)
+    .sort((a, b) => b[1] - a[1])
+    .slice(6)
+    .reduce((sum, [, cents]) => sum + cents, 0);
+
+  const spendSlices: CostPieSlice[] = [
+    ...categoryEntries.map(([category, cents], idx) => ({
+      label: category.replaceAll("_", " "),
+      valueCents: cents,
+      color: categoryPalette[idx % categoryPalette.length]
+    })),
+    ...(otherCents > 0
+      ? [{ label: "Other", valueCents: otherCents, color: "#64748b" }]
+      : [])
+  ];
+
+  const costByFlightId = monthCostItems.reduce<Record<string, number>>((acc, item) => {
+    if (!item.flightId) return acc;
+    acc[item.flightId] = (acc[item.flightId] ?? 0) + item.amountCents;
+    return acc;
+  }, {});
+  const mostExpensiveFlightId = Object.entries(costByFlightId).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const mostExpensiveFlightCostCents = mostExpensiveFlightId ? costByFlightId[mostExpensiveFlightId] : null;
+  const mostExpensiveFlight = mostExpensiveFlightId
+    ? monthCostItems.find((item) => item.flightId === mostExpensiveFlightId)?.flight ?? null
+    : null;
 
   const [plannerFlights, needsLogbookFlights, needsAdsbFlights, needsPostflightFlights] =
     await Promise.all([
@@ -775,27 +839,107 @@ export default async function DashboardPage() {
           <p className="text-sm text-slate-600 dark:text-slate-400">Spend (secondary)</p>
         </CardHeader>
         <CardContent>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                This month
-              </p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight">
-                {formatMoney(monthCostCents)}
-              </p>
-              <p className="text-xs text-slate-500">Total costs logged</p>
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                  This month
+                </p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight">
+                  {formatMoney(monthCostCents)}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {monthCostPerHour !== null
+                    ? `${formatMoney(Math.round(monthCostPerHour))} / flight hour`
+                    : "Cost per hour available after logging hours"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-100 p-2 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                <Wallet className="h-4 w-4" />
+              </div>
             </div>
-            <div className="rounded-lg bg-slate-100 p-2 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-              <Wallet className="h-4 w-4" />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                  Breakdown
+                </p>
+                <CostPieChart slices={spendSlices} />
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                  Highlights
+                </p>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950/30">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">
+                    Most expensive flight (month)
+                  </p>
+                  {mostExpensiveFlight && mostExpensiveFlightCostCents !== null ? (
+                    <Link
+                      href={`/flights/${mostExpensiveFlight.id}`}
+                      className="mt-2 block rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">
+                            {formatFlightRouteLabel({
+                              origin: mostExpensiveFlight.origin,
+                              stops: mostExpensiveFlight.stops ?? [],
+                              destination: mostExpensiveFlight.destination ?? "TBD"
+                            })}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-slate-500">
+                            {(mostExpensiveFlight.tailNumberSnapshot ?? mostExpensiveFlight.tailNumber) || "—"}
+                          </p>
+                        </div>
+                        <div className="shrink-0 font-semibold">
+                          {formatMoney(mostExpensiveFlightCostCents)}
+                        </div>
+                      </div>
+                    </Link>
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                      No flight-linked costs yet this month.
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  {spendSlices
+                    .slice()
+                    .sort((a, b) => b.valueCents - a.valueCents)
+                    .slice(0, 5)
+                    .map((slice) => (
+                      <div
+                        key={slice.label}
+                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950/30"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: slice.color }}
+                          />
+                          <span className="text-slate-700 dark:text-slate-200">
+                            {slice.label}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                          {formatMoney(slice.valueCents)}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+
+            <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
               <Link href="/costs">Open costs</Link>
             </Button>
             <Button asChild variant="outline">
               <Link href="/reports">Open reports</Link>
             </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
