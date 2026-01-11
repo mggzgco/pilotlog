@@ -675,7 +675,15 @@ export function ChecklistSection({
     if (
       phase === "PREFLIGHT" &&
       run.status === ChecklistRunStatus.IN_PROGRESS &&
-      !run.startedAt
+      (!run.startedAt ||
+        (flightStatus === "PLANNED" &&
+          run.items
+            .filter((item) => item.kind !== "SECTION")
+            .every((item) => {
+              const state = itemState[item.id];
+              const completed = state?.completed ?? item.completed;
+              return !completed;
+            })))
     ) {
       return (
         <div className="space-y-4">

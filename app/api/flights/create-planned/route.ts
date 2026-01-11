@@ -359,7 +359,7 @@ export async function POST(request: Request) {
       flightId: created.id,
       phase: "PREFLIGHT",
       status: "IN_PROGRESS",
-      startedAt: new Date(),
+      startedAt: null,
       template: preflightTemplate
     });
 

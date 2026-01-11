@@ -12,6 +12,12 @@ type SnapshotInput = {
   client: Prisma.TransactionClient;
 };
 
+type ReplaceItemsInput = {
+  checklistRunId: string;
+  template: ChecklistTemplateWithItems | null;
+  client: Prisma.TransactionClient;
+};
+
 export async function createChecklistRunSnapshot({
   flightId,
   phase,
@@ -70,4 +76,54 @@ export async function createChecklistRunSnapshot({
   }
 
   return run;
+}
+
+export async function replaceChecklistRunItems({
+  checklistRunId,
+  template,
+  client
+}: ReplaceItemsInput) {
+  const items = template?.items ?? emptyItems;
+
+  await client.flightChecklistItem.deleteMany({
+    where: { checklistRunId }
+  });
+
+  // Create items in `personalOrder` order so parent sections are created before children.
+  const sorted = [...items].sort((a, b) => {
+    const pa = (a.personalOrder ?? a.order ?? 0) as number;
+    const pb = (b.personalOrder ?? b.order ?? 0) as number;
+    return pa - pb;
+  });
+
+  const templateIdToRunId = new Map<string, string>();
+
+  for (const item of sorted) {
+    const templateParentId = (item as any).parentId as string | null | undefined;
+    const parentId = templateParentId ? templateIdToRunId.get(templateParentId) ?? null : null;
+
+    const officialOrder = (item as any).officialOrder ?? item.order;
+    const personalOrder = (item as any).personalOrder ?? item.order;
+
+    const created = await client.flightChecklistItem.create({
+      data: {
+        checklistRunId,
+        // keep legacy `order` aligned with personal order for stable DB ordering
+        order: personalOrder,
+        kind: (item as any).kind ?? "STEP",
+        parentId,
+        officialOrder,
+        personalOrder,
+        title: item.title,
+        itemLabel: (item as any).itemLabel ?? null,
+        acceptanceCriteria: (item as any).acceptanceCriteria ?? null,
+        details: item.details,
+        required: item.required,
+        inputType: item.inputType
+      },
+      select: { id: true }
+    });
+
+    templateIdToRunId.set(item.id, created.id);
+  }
 }
