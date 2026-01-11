@@ -9,6 +9,7 @@ import { EmptyState } from "@/app/components/ui/empty-state";
 import { formatFlightRouteLabel } from "@/app/lib/flights/route";
 import { flightHasLandingOverDistanceNm } from "@/app/lib/airports/xc";
 import { CostPieChart, type CostPieSlice } from "@/app/components/charts/CostPieChart";
+import { PlanFlightModal } from "@/app/components/flights/plan-flight-modal";
 import { ArrowRight, Calendar, Radar, TriangleAlert, Wallet } from "lucide-react";
 
 function formatDuration(durationMinutes: number | null) {
@@ -198,6 +199,39 @@ export default async function DashboardPage() {
         }
       })
     ]);
+
+  const [profile, aircraftOptions, users, people] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { homeAirport: true, homeTimeZone: true }
+    }),
+    prisma.aircraft.findMany({
+      where: { userId: user.id },
+      orderBy: { tailNumber: "asc" },
+      select: { id: true, tailNumber: true, model: true }
+    }),
+    prisma.user.findMany({
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true, name: true, email: true }
+    }),
+    prisma.person.findMany({
+      where: { userId: user.id },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true }
+    })
+  ]);
+
+  const participantOptions = users.map((entry) => ({
+    id: entry.id,
+    label:
+      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
+      entry.name ||
+      entry.email
+  }));
+  const personOptions = people.map((entry) => ({
+    id: entry.id,
+    label: entry.email ? `${entry.name} · ${entry.email}` : entry.name
+  }));
 
   const computeLogbookTotals = (
     entries: Array<{
@@ -608,9 +642,14 @@ export default async function DashboardPage() {
             )}
 
             <div className="pt-2">
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/flights/new">Plan a flight</Link>
-              </Button>
+              <PlanFlightModal
+                triggerLabel="Plan a flight"
+                aircraftOptions={aircraftOptions}
+                participantOptions={participantOptions}
+                personOptions={personOptions}
+                defaultDepartureLabel={profile?.homeAirport ?? ""}
+                defaultTimeZone={profile?.homeTimeZone ?? ""}
+              />
             </div>
           </CardContent>
         </Card>

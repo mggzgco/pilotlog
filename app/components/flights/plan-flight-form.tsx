@@ -23,6 +23,8 @@ type PlanFlightFormProps = {
   personOptions: ParticipantOption[];
   defaultDepartureLabel: string;
   defaultTimeZone: string;
+  cancelHref?: string;
+  onCancel?: () => void;
 };
 
 const roleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
@@ -32,7 +34,9 @@ export function PlanFlightForm({
   participantOptions,
   personOptions,
   defaultDepartureLabel,
-  defaultTimeZone
+  defaultTimeZone,
+  cancelHref = "/flights",
+  onCancel
 }: PlanFlightFormProps) {
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [tailNumber, setTailNumber] = useState("");
@@ -301,9 +305,15 @@ export function PlanFlightForm({
         <FormSubmitButton type="submit" pendingText="Planning flight...">
           Create planned flight
         </FormSubmitButton>
-        <Button variant="outline" asChild>
-          <Link href="/flights">Cancel</Link>
-        </Button>
+        {onCancel ? (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : (
+          <Button variant="outline" asChild>
+            <Link href={cancelHref}>Cancel</Link>
+          </Button>
+        )}
       </div>
     </form>
   );
