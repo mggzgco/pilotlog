@@ -41,8 +41,9 @@ export function PlanFlightModal({
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed inset-y-0 right-0 z-50 w-full max-w-3xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+        {/* Leaflet panes/controls can have high z-index; keep modal above them. */}
+        <Dialog.Overlay className="fixed inset-0 z-[2000] bg-slate-950/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed inset-y-0 right-0 z-[2010] w-full max-w-3xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
           <div className="space-y-1">
             <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Plan a flight
