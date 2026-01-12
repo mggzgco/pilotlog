@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function resolveCookieSecureFlag() {
   const override = process.env.AUTH_COOKIE_SECURE?.trim();
   if (override) return override.toLowerCase() !== "false";
@@ -22,7 +25,8 @@ export async function GET() {
     db = null;
   }
 
-  return NextResponse.json({
+  return NextResponse.json(
+    {
     ADSB_PROVIDER: process.env.ADSB_PROVIDER,
     AEROAPI_KEY_PRESENT: Boolean(process.env.AEROAPI_KEY),
     PRISMA_MIGRATE_ON_STARTUP: process.env.PRISMA_MIGRATE_ON_STARTUP,
@@ -32,5 +36,11 @@ export async function GET() {
     AUTH_COOKIE_SECURE_EFFECTIVE: resolveCookieSecureFlag(),
     DATABASE_URL_PRESENT: Boolean(process.env.DATABASE_URL),
     DATABASE: db
-  });
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store, max-age=0"
+      }
+    }
+  );
 }
