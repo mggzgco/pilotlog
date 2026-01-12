@@ -375,6 +375,7 @@ export class AeroApiAdsbProvider implements AdsbProvider {
     const flightsResponse = await fetchAeroApi<AeroApiFlightResponse>(
       `/flights/${encodeURIComponent(normalizedTailNumber)}`,
       {
+              ident_type: "registration",
               start: isoStart,
               end: isoEnd,
               max_pages: 5
@@ -424,7 +425,14 @@ export class AeroApiAdsbProvider implements AdsbProvider {
             }
           }
         } catch (error) {
-          if (!(error instanceof AdsbProviderError && error.status === 404)) {
+          // Some AeroAPI plans/keys do not allow /flights/search (400 Undisclosed).
+          // Treat that as "no results" rather than crashing the app.
+          if (
+            !(
+              error instanceof AdsbProviderError &&
+              (error.status === 404 || error.status === 400)
+            )
+          ) {
             throw error;
           }
         }

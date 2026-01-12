@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, Shield, X } from "lucide-react";
 import { navItems } from "@/app/components/layout/sidebar";
 import { Button } from "@/app/components/ui/button";
 import { usePathname } from "next/navigation";
@@ -16,6 +16,7 @@ interface MobileNavProps {
 
 export function MobileNav({ user }: MobileNavProps) {
   const pathname = usePathname();
+  const items = navItems.concat(user?.role === "ADMIN" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []);
 
   return (
     <Dialog.Root>
@@ -53,7 +54,7 @@ export function MobileNav({ user }: MobileNavProps) {
           </div>
 
           <nav className="mt-6 flex flex-col gap-2">
-            {navItems.map((item) => {
+            {items.map((item) => {
               const Icon = item.icon;
               return (
                 <Dialog.Close asChild key={item.href}>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plane, ClipboardList, Receipt, Radar, BarChart3, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Plane, ClipboardList, Receipt, Radar, BarChart3, Shield, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { SidebarAccount, SidebarAccountUser } from "@/app/components/layout/sidebar-account";
 import { FlightTraksMark } from "@/app/components/branding/flighttraks-mark";
 import { logoutAction } from "@/app/lib/actions/auth-actions";
@@ -15,6 +15,8 @@ export const navItems = [
   { href: "/costs", label: "Costs", icon: Receipt },
   { href: "/aircraft", label: "Aircraft", icon: Plane }
 ];
+
+const adminNavItems = [{ href: "/admin", label: "Admin", icon: Shield }];
 
 export function Sidebar({ user }: { user: any }) {
   // UX-001: persistent left navigation for core modules
@@ -80,7 +82,7 @@ export function Sidebar({ user }: { user: any }) {
       </button>
 
       <nav className="flex flex-1 flex-col gap-2">
-        {navItems.map((item) => {
+        {navItems.concat(user?.role === "ADMIN" ? adminNavItems : []).map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
           return (

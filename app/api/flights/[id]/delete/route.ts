@@ -48,6 +48,12 @@ export async function POST(
     }
   });
 
+  const accept = request.headers.get("accept") ?? "";
+  const wantsJson = accept.includes("application/json");
+  if (wantsJson) {
+    return NextResponse.json({ ok: true });
+  }
+
   const redirectUrl = new URL("/flights", request.url);
   redirectUrl.searchParams.set("toast", "Flight deleted.");
   redirectUrl.searchParams.set("toastType", "success");

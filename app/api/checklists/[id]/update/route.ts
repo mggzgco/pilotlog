@@ -25,10 +25,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const template = await prisma.checklistTemplate.findFirst({
-    where: { id: params.id, userId: user.id },
-    select: { id: true }
+    where: { id: params.id },
+    select: { id: true, userId: true }
   });
   if (!template) {
+    return NextResponse.json({ error: "Checklist template not found." }, { status: 404 });
+  }
+  const canEdit =
+    template.userId === user.id || (template.userId === null && user.role === "ADMIN");
+  if (!canEdit) {
     return NextResponse.json({ error: "Checklist template not found." }, { status: 404 });
   }
 

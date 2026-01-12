@@ -8,6 +8,9 @@ import { deriveAutoImportWindow, scoreAutoImportCandidate } from "@/app/lib/flig
 import { dedupeImportCandidates } from "@/app/lib/flights/imports";
 import { MatchClient } from "@/app/(dashboard)/flights/[id]/match/match-client";
 
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
 export default async function FlightMatchPage({ params }: { params: { id: string } }) {
   const user = await requireUser();
 
@@ -49,9 +52,47 @@ export default async function FlightMatchPage({ params }: { params: { id: string
   const provider = getAdsbProvider();
   let candidates: ReturnType<typeof dedupeImportCandidates> = [];
   try {
-    candidates = dedupeImportCandidates(
-      await provider.searchFlights(tailNumber, window.searchStart, window.searchEnd)
-    );
+    // AeroAPI behavior varies by plan/key; some keys block /flights/search and some return
+    // results only with different interpretations of the stored times.
+    //
+    // Use the same fallback strategy as auto-import:
+    // - primary +/-4h around stored times
+    // - offset +/-4h treating stored times as local wall-clock
+    // - wide +/-24h versions of each
+    const offsetMs = window.referenceStart.getTimezoneOffset() * 60 * 1000;
+    const windows = [
+      { label: "primary-4h", start: window.searchStart, end: window.searchEnd },
+      {
+        label: "offset-4h",
+        start: new Date(window.referenceStart.getTime() + offsetMs - FOUR_HOURS_MS),
+        end: new Date(window.referenceEnd.getTime() + offsetMs + FOUR_HOURS_MS)
+      },
+      {
+        label: "primary-24h",
+        start: new Date(window.referenceStart.getTime() - TWENTY_FOUR_HOURS_MS),
+        end: new Date(window.referenceEnd.getTime() + TWENTY_FOUR_HOURS_MS)
+      },
+      {
+        label: "offset-24h",
+        start: new Date(window.referenceStart.getTime() + offsetMs - TWENTY_FOUR_HOURS_MS),
+        end: new Date(window.referenceEnd.getTime() + offsetMs + TWENTY_FOUR_HOURS_MS)
+      }
+    ] as const;
+
+    const merged = new Map<string, (typeof candidates)[number]>();
+    for (const w of windows) {
+      const found = dedupeImportCandidates(
+        await provider.searchFlights(tailNumber, w.start, w.end)
+      );
+      for (const f of found) {
+        merged.set(f.providerFlightId, f);
+      }
+      if (merged.size > 0) {
+        break;
+      }
+    }
+
+    candidates = [...merged.values()];
   } catch (error) {
     const message = error instanceof Error ? error.message : "ADS-B provider request failed.";
     return (

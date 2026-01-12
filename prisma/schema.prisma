@@ -113,6 +113,7 @@ model User {
   resetTokens        PasswordResetToken[]
   approvalTokens     AccountApprovalToken[]
   receiptDocuments   ReceiptDocument[]
+  aircraftDocuments  AircraftDocument[]
   auditEvents        AuditEvent[]
   checklistTemplates ChecklistTemplate[]
   checklistSignoffs  FlightChecklistRun[]   @relation("ChecklistRunSignedBy")
@@ -270,11 +271,30 @@ model Aircraft {
   preflightChecklistTemplate    ChecklistTemplate? @relation("AircraftPreflightChecklist", fields: [preflightChecklistTemplateId], references: [id], onDelete: SetNull)
   postflightChecklistTemplate   ChecklistTemplate? @relation("AircraftPostflightChecklist", fields: [postflightChecklistTemplateId], references: [id], onDelete: SetNull)
   flights                       Flight[]
+  documents                     AircraftDocument[]
 
   @@unique([userId, tailNumber])
   @@index([aircraftTypeId])
   @@index([preflightChecklistTemplateId])
   @@index([postflightChecklistTemplateId])
+}
+
+model AircraftDocument {
+  id               String   @id @default(cuid())
+  userId           String
+  aircraftId       String
+  originalFilename String
+  storagePath      String
+  contentType      String?
+  sizeBytes        Int?
+  createdAt        DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aircraft Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([aircraftId])
+  @@unique([aircraftId, storagePath])
 }
 
 model AircraftType {

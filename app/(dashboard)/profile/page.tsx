@@ -6,6 +6,7 @@ import { Input } from "@/app/components/ui/input";
 import { TimeZoneSelect } from "@/app/components/ui/timezone-select";
 import { CreatePersonModal } from "@/app/components/people/create-person-modal";
 import { EditPersonModal } from "@/app/components/people/edit-person-modal";
+import Link from "next/link";
 
 export default async function ProfilePage() {
   const sessionUser = await requireUser();
@@ -140,6 +141,22 @@ export default async function ProfilePage() {
           </p>
         </CardContent>
       </Card>
+
+      {sessionUser.role === "ADMIN" ? (
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Administration</p>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">
+              Manage user approvals, roles, and global checklist templates.
+            </p>
+            <Button asChild variant="outline">
+              <Link href="/admin">Open admin</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

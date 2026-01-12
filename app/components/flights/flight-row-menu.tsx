@@ -51,7 +51,10 @@ export function FlightRowMenu({ flightId, menuItems }: FlightRowMenuProps) {
               if (!ok) return;
 
               try {
-                const response = await fetch(`/api/flights/${flightId}/delete`, { method: "POST" });
+                const response = await fetch(`/api/flights/${flightId}/delete`, {
+                  method: "POST",
+                  headers: { Accept: "application/json" }
+                });
                 if (!response.ok) {
                   const payload = await response.json().catch(() => ({}));
                   addToast(payload.error ?? "Unable to delete flight.", "error");
