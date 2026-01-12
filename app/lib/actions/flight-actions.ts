@@ -38,10 +38,18 @@ export async function createFlightAction(formData: FormData) {
     parsed.data;
 
   // FLIGHT-001: create a flight record with basic metadata
+  const resolvedAircraftId = (
+    await prisma.aircraft.findFirst({
+      where: { userId: user.id, tailNumber: { equals: tailNumber, mode: "insensitive" } },
+      select: { id: true }
+    })
+  )?.id ?? null;
+
   await prisma.flight.create({
     data: {
       userId: user.id,
       tailNumber,
+      aircraftId: resolvedAircraftId,
       origin,
       destination,
       startTime: new Date(startTime),

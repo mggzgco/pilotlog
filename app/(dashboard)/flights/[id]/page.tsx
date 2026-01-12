@@ -80,6 +80,37 @@ export default async function FlightDetailPage({
     notFound();
   }
 
+  // If this flight isn't linked to an aircraft yet, try to link it now based on tail number.
+  // This ensures ADS-B imported flights immediately show aircraft photo/details if the aircraft
+  // exists in the user's fleet, and also "catches up" when an aircraft is added later.
+  let aircraftForDisplay = flight.aircraft ?? null;
+  if (!aircraftForDisplay) {
+    const tail = (flight.tailNumberSnapshot ?? flight.tailNumber).trim();
+    if (tail) {
+      const matchAircraft = await prisma.aircraft.findFirst({
+        where: { userId: user.id, tailNumber: { equals: tail, mode: "insensitive" } },
+        include: {
+          aircraftType: {
+            select: {
+              name: true,
+              defaultPreflightTemplateId: true,
+              defaultPostflightTemplateId: true
+            }
+          }
+        }
+      });
+      if (matchAircraft) {
+        aircraftForDisplay = matchAircraft as any;
+        if (!flight.aircraftId) {
+          await prisma.flight.update({
+            where: { id: flight.id },
+            data: { aircraftId: matchAircraft.id }
+          });
+        }
+      }
+    }
+  }
+
   const plotPointsRaw = flight.trackPoints.map((point) => ({
     recordedAt: point.recordedAt.toISOString(),
     altitudeFeet: point.altitudeFeet,
@@ -120,11 +151,11 @@ export default async function FlightDetailPage({
     altitudePointsDisplay.length > 0
       ? Math.max(...altitudePointsDisplay.map((point) => point.altitudeFeet))
       : null;
-  const aircraftProfileLabel = flight.aircraft?.aircraftType?.name ?? null;
+  const aircraftProfileLabel = aircraftForDisplay?.aircraftType?.name ?? null;
   const aircraftMakeModelLabel =
-    [flight.aircraft?.manufacturer, flight.aircraft?.model].filter(Boolean).join(" ") || "—";
+    [aircraftForDisplay?.manufacturer, aircraftForDisplay?.model].filter(Boolean).join(" ") || "—";
   const aircraftCategoryLabel = (() => {
-    switch (flight.aircraft?.category) {
+    switch (aircraftForDisplay?.category) {
       case "SINGLE_ENGINE_PISTON":
         return "Single-engine piston";
       case "MULTI_ENGINE_PISTON":
@@ -177,12 +208,12 @@ export default async function FlightDetailPage({
   );
 
   const assignedPreflightTemplateId =
-    flight.aircraft?.preflightChecklistTemplateId ??
-    flight.aircraft?.aircraftType?.defaultPreflightTemplateId ??
+    aircraftForDisplay?.preflightChecklistTemplateId ??
+    aircraftForDisplay?.aircraftType?.defaultPreflightTemplateId ??
     null;
   const assignedPostflightTemplateId =
-    flight.aircraft?.postflightChecklistTemplateId ??
-    flight.aircraft?.aircraftType?.defaultPostflightTemplateId ??
+    aircraftForDisplay?.postflightChecklistTemplateId ??
+    aircraftForDisplay?.aircraftType?.defaultPostflightTemplateId ??
     null;
   const hasAnyAssignedChecklistTemplate = Boolean(
     assignedPreflightTemplateId || assignedPostflightTemplateId
@@ -484,11 +515,11 @@ export default async function FlightDetailPage({
                 Aircraft
               </p>
               <div className="mt-3 flex items-start gap-5">
-                {flight.aircraft?.photoStoragePath ? (
+                {aircraftForDisplay?.photoStoragePath ? (
                   <div className="h-48 w-48 overflow-hidden rounded-xl bg-transparent">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`/api/aircraft/${flight.aircraft.id}/photo`}
+                      src={`/api/aircraft/${aircraftForDisplay.id}/photo`}
                       alt={`${flight.tailNumberSnapshot ?? flight.tailNumber} aircraft photo`}
                       className="h-full w-full object-contain"
                     />
@@ -507,20 +538,20 @@ export default async function FlightDetailPage({
                     {aircraftCategoryLabel}
                     {aircraftProfileLabel ? ` · ${aircraftProfileLabel}` : ""}
                   </p>
-                  {flight.aircraft ? (
+                  {aircraftForDisplay ? (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <EditAircraftFromFlightModal
                         flightId={flight.id}
                         aircraft={{
-                          id: flight.aircraft.id,
-                          tailNumber: flight.aircraft.tailNumber,
-                          manufacturer: flight.aircraft.manufacturer,
-                          model: flight.aircraft.model,
-                          category: flight.aircraft.category as any
+                          id: aircraftForDisplay.id,
+                          tailNumber: aircraftForDisplay.tailNumber,
+                          manufacturer: aircraftForDisplay.manufacturer,
+                          model: aircraftForDisplay.model,
+                          category: aircraftForDisplay.category as any
                         }}
                       />
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/aircraft/${flight.aircraft.id}`}>Full aircraft page</Link>
+                        <Link href={`/aircraft/${aircraftForDisplay.id}`}>Full aircraft page</Link>
                       </Button>
                     </div>
                   ) : null}

@@ -178,6 +178,18 @@ export async function POST(request: Request) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // If the flight was marked unassigned but the tail number matches an aircraft in the user's fleet,
+  // link it automatically so photos/details show up everywhere.
+  const resolvedAircraftId =
+    aircraftId ??
+    (
+      await prisma.aircraft.findFirst({
+        where: { userId: user.id, tailNumber: { equals: tailNumber, mode: "insensitive" } },
+        select: { id: true }
+      })
+    )?.id ??
+    null;
+
   const fallbackTimeZone = String(parsed.data.timeZone ?? "").trim() || "UTC";
 
   const plannedStartClock = parseClockHHMM(
@@ -301,7 +313,7 @@ export async function POST(request: Request) {
         userId: user.id,
         tailNumber,
         tailNumberSnapshot: tailNumber,
-        aircraftId,
+        aircraftId: resolvedAircraftId,
         origin: departureLabel || "TBD",
         originAirportId: originAirport?.id ?? null,
         destination: arrivalLabel || null,
@@ -342,13 +354,13 @@ export async function POST(request: Request) {
     const [preflightTemplate, postflightTemplate] = await Promise.all([
       selectChecklistTemplate({
         userId: user.id,
-        aircraftId,
+        aircraftId: resolvedAircraftId,
         phase: "PREFLIGHT",
         client: tx
       }),
       selectChecklistTemplate({
         userId: user.id,
-        aircraftId,
+        aircraftId: resolvedAircraftId,
         phase: "POSTFLIGHT",
         client: tx
       })
@@ -381,7 +393,7 @@ export async function POST(request: Request) {
     entityType: "Flight",
     entityId: flight.id,
     metadata: {
-      aircraftId,
+      aircraftId: resolvedAircraftId,
       tailNumber,
       plannedStartTime: plannedStart?.toISOString() ?? null,
       plannedEndTime: plannedEnd?.toISOString() ?? null

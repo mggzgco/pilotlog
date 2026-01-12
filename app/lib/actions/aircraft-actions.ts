@@ -27,7 +27,7 @@ export async function createAircraftAction(formData: FormData) {
 
   const resolvedCategory = toAircraftCategory(category);
 
-  await prisma.aircraft.create({
+  const created = await prisma.aircraft.create({
     data: {
       userId: user.id,
       tailNumber,
@@ -35,7 +35,22 @@ export async function createAircraftAction(formData: FormData) {
       model: model || null,
       category: resolvedCategory,
       aircraftTypeId: resolvedTypeId
-    }
+    },
+    select: { id: true, tailNumber: true }
+  });
+
+  // Backfill: link existing flights (including ADS-B imported) that match this tail number,
+  // so flight details can show aircraft photo/manufacturer/model.
+  await prisma.flight.updateMany({
+    where: {
+      userId: user.id,
+      aircraftId: null,
+      OR: [
+        { tailNumber: { equals: created.tailNumber, mode: "insensitive" } },
+        { tailNumberSnapshot: { equals: created.tailNumber, mode: "insensitive" } }
+      ]
+    },
+    data: { aircraftId: created.id }
   });
 
   redirect("/aircraft");
@@ -72,14 +87,28 @@ export async function updateAircraftDetailsAction(formData: FormData) {
     return { error: "That tail number already exists." };
   }
 
-  await prisma.aircraft.update({
+  const updated = await prisma.aircraft.update({
     where: { id: aircraftId },
     data: {
       tailNumber,
       manufacturer: manufacturer || null,
       model: model || null,
       category: toAircraftCategory(category)
-    }
+    },
+    select: { id: true, tailNumber: true }
+  });
+
+  // Backfill: if the tail number was edited, link any unassigned flights that match it.
+  await prisma.flight.updateMany({
+    where: {
+      userId: user.id,
+      aircraftId: null,
+      OR: [
+        { tailNumber: { equals: updated.tailNumber, mode: "insensitive" } },
+        { tailNumberSnapshot: { equals: updated.tailNumber, mode: "insensitive" } }
+      ]
+    },
+    data: { aircraftId: updated.id }
   });
 
   redirect(`/aircraft/${aircraftId}`);

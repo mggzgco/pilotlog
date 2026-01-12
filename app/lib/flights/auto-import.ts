@@ -163,6 +163,27 @@ export async function attachAdsbCandidateToFlight({
       }
     });
 
+    // If this flight wasn't linked to an aircraft, try linking it by tail number now so
+    // the flight details page can show aircraft photo/manufacturer/model immediately.
+    if (!updatedFlight.aircraftId) {
+      const tail = (flight.tailNumberSnapshot ?? flight.tailNumber).trim();
+      if (tail) {
+        const matchAircraft = await tx.aircraft.findFirst({
+          where: {
+            userId,
+            tailNumber: { equals: tail, mode: "insensitive" }
+          },
+          select: { id: true }
+        });
+        if (matchAircraft) {
+          await tx.flight.update({
+            where: { id: updatedFlight.id },
+            data: { aircraftId: matchAircraft.id }
+          });
+        }
+      }
+    }
+
     const logbookEntry = await tx.logbookEntry.findFirst({
       where: { flightId: flight.id }
     });
