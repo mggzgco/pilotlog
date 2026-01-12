@@ -13,6 +13,7 @@ import { Input } from "@/app/components/ui/input";
 import { FlightChecklistTemplateSelector } from "@/app/components/flights/flight-checklist-template-selector";
 import { formatFlightRouteLabel } from "@/app/lib/flights/route-label";
 import { formatDateTime24 } from "@/app/lib/utils";
+import { EditAircraftFromFlightModal } from "@/app/components/aircraft/edit-aircraft-from-flight-modal";
 
 const formatPersonName = (person: {
   name?: string | null;
@@ -506,6 +507,23 @@ export default async function FlightDetailPage({
                     {aircraftCategoryLabel}
                     {aircraftProfileLabel ? ` · ${aircraftProfileLabel}` : ""}
                   </p>
+                  {flight.aircraft ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <EditAircraftFromFlightModal
+                        flightId={flight.id}
+                        aircraft={{
+                          id: flight.aircraft.id,
+                          tailNumber: flight.aircraft.tailNumber,
+                          manufacturer: flight.aircraft.manufacturer,
+                          model: flight.aircraft.model,
+                          category: flight.aircraft.category as any
+                        }}
+                      />
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/aircraft/${flight.aircraft.id}`}>Full aircraft page</Link>
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

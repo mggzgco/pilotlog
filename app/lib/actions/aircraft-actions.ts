@@ -85,6 +85,63 @@ export async function updateAircraftDetailsAction(formData: FormData) {
   redirect(`/aircraft/${aircraftId}`);
 }
 
+export async function updateAircraftDetailsFromFlightAction(formData: FormData) {
+  const flightId = String(formData.get("flightId") || "").trim();
+  const aircraftId = String(formData.get("aircraftId") || "").trim();
+  const tailNumber = String(formData.get("tailNumber") || "").trim();
+  const manufacturer = String(formData.get("manufacturer") || "").trim();
+  const model = String(formData.get("model") || "").trim();
+  const category = String(formData.get("category") || "").trim();
+
+  if (!flightId) {
+    return { error: "Flight is required." };
+  }
+  if (!aircraftId) {
+    return { error: "Aircraft is required." };
+  }
+  if (!tailNumber) {
+    return { error: "Tail number is required." };
+  }
+
+  const user = await requireUser();
+
+  const flight = await prisma.flight.findFirst({
+    where: { id: flightId, userId: user.id },
+    select: { id: true }
+  });
+  if (!flight) {
+    return { error: "Flight not found." };
+  }
+
+  const aircraft = await prisma.aircraft.findFirst({
+    where: { id: aircraftId, userId: user.id },
+    select: { id: true }
+  });
+  if (!aircraft) {
+    return { error: "Aircraft not found." };
+  }
+
+  const dup = await prisma.aircraft.findFirst({
+    where: { userId: user.id, tailNumber, NOT: { id: aircraftId } },
+    select: { id: true }
+  });
+  if (dup) {
+    return { error: "That tail number already exists." };
+  }
+
+  await prisma.aircraft.update({
+    where: { id: aircraftId },
+    data: {
+      tailNumber,
+      manufacturer: manufacturer || null,
+      model: model || null,
+      category: toAircraftCategory(category)
+    }
+  });
+
+  redirect(`/flights/${flightId}#stats`);
+}
+
 export async function updateAircraftTypeAction(formData: FormData) {
   const aircraftId = String(formData.get("aircraftId") || "").trim();
   const aircraftTypeId = String(formData.get("aircraftTypeId") || "").trim();
