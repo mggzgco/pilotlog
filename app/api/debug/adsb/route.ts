@@ -119,7 +119,10 @@ export async function GET(request: Request) {
         primaryUrl.searchParams.set("max_pages", "5");
 
         const searchUrl = new URL("flights/search", apiBase);
-        const searchQuery = `-idents ${tail} -begin ${epochStart} -end ${epochEnd}`;
+        // Note: "-begin/-end" variants have been observed to 400 for valid keys.
+        // We query by ident only and rely on the provider-level endpoints (/history/flights, /flights)
+        // for time-scoped results.
+        const searchQuery = `-idents ${tail}`;
         searchUrl.searchParams.set("query", searchQuery);
         searchUrl.searchParams.set("max_pages", "5");
 
@@ -194,12 +197,8 @@ export async function GET(request: Request) {
           headers: invalidHeaders
         });
 
-        // Extra ident variants for search
-        const searchVariants = [
-          `-ident ${tail} -begin ${epochStart} -end ${epochEnd}`,
-          `-idents ${tail}`,
-          `-ident ${tail}`
-        ];
+        // Extra ident variants for search (no time flags)
+        const searchVariants = [`-ident ${tail}`, `-idents ${tail}`];
         for (const [idx, q] of searchVariants.entries()) {
           const urlVariant = new URL("flights/search", apiBase);
           urlVariant.searchParams.set("query", q);
@@ -215,9 +214,10 @@ export async function GET(request: Request) {
           });
         }
 
-        // Aircraft info (type, owner) if available
+        // Aircraft endpoint is not available on some AeroAPI plans/versions and may 404.
+        // Keep this probe for visibility but don't treat it as a key/auth failure.
         const aircraftUrl = new URL(`aircraft/${encodeURIComponent(tail)}`, apiBase);
-        await probe("aircraft_direct", aircraftUrl, { note: "/aircraft (registration lookup)" });
+        await probe("aircraft_direct", aircraftUrl, { note: "/aircraft (may be unsupported; can 404)" });
         await probe("aircraft_direct_invalid_key", aircraftUrl, {
           note: "/aircraft (invalid key control)",
           headers: invalidHeaders

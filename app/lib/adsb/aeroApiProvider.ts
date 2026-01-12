@@ -43,13 +43,14 @@ type AeroApiSearchResponse = {
 };
 
 function buildSearchQueries(ident: string, epochStart: number, epochEnd: number) {
-  // Try multiple query variants to maximize match likelihood.
-  return [
-    `-idents ${ident} -begin ${epochStart} -end ${epochEnd}`,
-    `-ident ${ident} -begin ${epochStart} -end ${epochEnd}`,
-    `-idents ${ident}`,
-    `-ident ${ident}`
-  ];
+  // AeroAPI /flights/search query grammar is not consistent across accounts/plans.
+  // We have observed "-begin/-end" variants returning 400 for valid keys.
+  //
+  // Instead, we query by ident/idents only and filter results locally to the
+  // requested time window.
+  void epochStart;
+  void epochEnd;
+  return [`-idents ${ident}`, `-ident ${ident}`];
 }
 
 type AeroApiTrackPosition = {
@@ -358,7 +359,15 @@ export class AeroApiAdsbProvider implements AdsbProvider {
               query,
               max_pages: 5
             });
-            const searchFlights = searchResponse.flights ?? [];
+            const searchFlights = (searchResponse.flights ?? []).filter((flight) => {
+              const dep = typeof flight.departuretime === "number" ? flight.departuretime : null;
+              const arr = typeof flight.arrivaltime === "number" ? flight.arrivaltime : null;
+              const depOk = dep !== null ? dep >= epochStart && dep <= epochEnd : false;
+              const arrOk = arr !== null ? arr >= epochStart && arr <= epochEnd : false;
+              // Keep if either endpoint intersects window; if both missing, drop.
+              return depOk || arrOk;
+            });
+
             if (searchFlights.length > 0) {
               flights = searchFlights.map((flight) => ({
                 fa_flight_id: flight.fa_flight_id,
