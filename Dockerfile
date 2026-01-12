@@ -1,23 +1,32 @@
 FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 
-# Prisma needs openssl; argon2 may require native build tooling via prebuilds.
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+# Prisma needs openssl. Some native deps (e.g. argon2) may need build tooling in linux/arm64.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  openssl ca-certificates \
+  python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# Don't run lifecycle scripts here (postinstall runs `prisma generate` but prisma/schema.prisma
+# isn't copied into this stage). Prisma generate will run during the build stage after source is copied.
+RUN npm ci --ignore-scripts
 
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  openssl ca-certificates \
+  python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NODE_ENV=production
+# Build native deps (argon2) and generate Prisma client now that prisma/schema.prisma is present.
+RUN npm rebuild argon2 --build-from-source
+RUN npm run db:generate
 RUN npm run build
 
 FROM node:20-bookworm-slim AS runner
