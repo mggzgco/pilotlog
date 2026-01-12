@@ -218,8 +218,39 @@ async function fetchAeroApi<T>(
   }
 
   if (!response.ok) {
+    let details: string | null = null;
+    try {
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        const payload = (await response.json().catch(() => null)) as any;
+        const candidate =
+          payload?.error ??
+          payload?.message ??
+          payload?.detail ??
+          payload?.title ??
+          null;
+        // If the provider only returns a generic "Error", include full payload for debugging.
+        if (
+          candidate &&
+          typeof candidate === "string" &&
+          candidate.trim().toLowerCase() !== "error"
+        ) {
+          details = candidate;
+        } else {
+          details = payload ? JSON.stringify(payload) : candidate;
+        }
+      } else {
+        const text = await response.text().catch(() => "");
+        details = text ? text.slice(0, 500) : null;
+      }
+    } catch {
+      // ignore
+    }
+
+    const suffix = details ? ` ${details}` : "";
+    const endpoint = `${url.pathname}${url.search ? url.search : ""}`;
     throw new AdsbProviderError(
-      `AeroAPI request failed with status ${response.status}.`,
+      `AeroAPI request failed with status ${response.status} (${endpoint}).${suffix}`,
       response.status
     );
   }
@@ -326,7 +357,14 @@ export class AeroApiAdsbProvider implements AdsbProvider {
         );
         flights = historyResponse.flights ?? [];
       } catch (error) {
-        if (!(error instanceof AdsbProviderError && error.status === 404)) {
+        // Some AeroAPI plans/keys return 400 for this endpoint even when the ident is valid.
+        // Treat that as "no results" and fall back to other endpoints, instead of crashing.
+        if (
+          !(
+            error instanceof AdsbProviderError &&
+            (error.status === 404 || error.status === 400)
+          )
+        ) {
           throw error;
         }
       }
@@ -344,7 +382,12 @@ export class AeroApiAdsbProvider implements AdsbProvider {
           );
           flights = flightsResponse.flights ?? [];
         } catch (error) {
-          if (!(error instanceof AdsbProviderError && error.status === 404)) {
+          if (
+            !(
+              error instanceof AdsbProviderError &&
+              (error.status === 404 || error.status === 400)
+            )
+          ) {
             throw error;
           }
         }

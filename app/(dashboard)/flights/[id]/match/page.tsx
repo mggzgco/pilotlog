@@ -47,9 +47,32 @@ export default async function FlightMatchPage({ params }: { params: { id: string
 
   const window = deriveAutoImportWindow(flight);
   const provider = getAdsbProvider();
-  const candidates = dedupeImportCandidates(
-    await provider.searchFlights(tailNumber, window.searchStart, window.searchEnd)
-  );
+  let candidates: ReturnType<typeof dedupeImportCandidates> = [];
+  try {
+    candidates = dedupeImportCandidates(
+      await provider.searchFlights(tailNumber, window.searchStart, window.searchEnd)
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ADS-B provider request failed.";
+    return (
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-slate-400">ADS-B matching</p>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-slate-300">
+            Unable to load ADS-B candidates right now.
+          </p>
+          <p className="rounded-md border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-300">
+            {message}
+          </p>
+          <Link href={`/flights/${flight.id}`} className="text-sm text-sky-400">
+            Return to flight
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
 
   candidates.sort(
     (a, b) =>
