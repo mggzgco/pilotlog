@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { isChecklistLocked, isChecklistAvailable } from "@/app/lib/checklists/lock";
+import { buildRedirectUrl } from "@/app/lib/http";
 
 const updateSchema = z.object({
   itemId: z.string().min(1),
@@ -20,7 +21,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const user = await requireUser();
-  const redirectUrl = new URL(`/flights/${params.id}`, request.url);
+  const redirectUrl = buildRedirectUrl(request, `/flights/${params.id}`);
   const wantsJson =
     request.headers.get("x-checklist-autosave") === "true" ||
     request.headers.get("accept")?.includes("application/json");
@@ -138,10 +139,29 @@ export async function POST(
   };
 
   if (item.inputType === "CHECK") {
-    updates.valueYesNo = Boolean(parsed.data.valueCheck);
-    // For CHECK items, a checked box is the completion signal.
-    updates.completed = updates.valueYesNo;
-    updates.completedAt = updates.valueYesNo ? new Date() : null;
+    // CHECK items support a tri-state: reject (no), neutral, accept (yes).
+    // Back-compat: valueCheck=on means accept.
+    if (parsed.data.valueYesNo !== undefined) {
+      const raw = String(parsed.data.valueYesNo).toLowerCase();
+      if (raw === "yes" || raw === "true" || raw === "1") {
+        updates.valueYesNo = true;
+        updates.completed = true;
+        updates.completedAt = new Date();
+      } else if (raw === "no" || raw === "false" || raw === "0") {
+        updates.valueYesNo = false;
+        updates.completed = true;
+        updates.completedAt = new Date();
+      } else {
+        updates.valueYesNo = null;
+        updates.completed = false;
+        updates.completedAt = null;
+      }
+    } else {
+      updates.valueYesNo = Boolean(parsed.data.valueCheck);
+      // For legacy CHECK items, a checked box is the completion signal.
+      updates.completed = updates.valueYesNo;
+      updates.completedAt = updates.valueYesNo ? new Date() : null;
+    }
   }
 
   if (item.inputType === "YES_NO") {

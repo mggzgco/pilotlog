@@ -356,7 +356,13 @@ export function ChecklistSection({
     };
 
     if (item.inputType === ChecklistInputType.CHECK) {
-      payload.valueCheck = state.valueYesNo ? "on" : "";
+      // Tri-state toggle for CHECK:
+      // - valueYesNo=yes => accepted (green)
+      // - valueYesNo=no => rejected (red)
+      // - valueYesNo="" => neutral (not completed)
+      if (state.valueYesNo === true) payload.valueYesNo = "yes";
+      else if (state.valueYesNo === false) payload.valueYesNo = "no";
+      else payload.valueYesNo = "";
     }
 
     if (item.inputType === ChecklistInputType.YES_NO) {
@@ -479,8 +485,8 @@ export function ChecklistSection({
       } else {
         updateItemState(
           item.id,
-          { valueYesNo: false, completed: false },
-          { complete: false, immediate: true }
+          { valueYesNo: false, completed: true },
+          { complete: true, immediate: true }
         );
       }
     }
@@ -514,25 +520,69 @@ export function ChecklistSection({
     const state = itemState[item.id];
 
     if (item.inputType === ChecklistInputType.CHECK) {
+      const value = state?.valueYesNo ?? null;
       return (
-        <label className="flex min-h-12 items-center gap-4 text-base font-medium text-slate-100">
-          <input
-            type="checkbox"
-            name="valueCheck"
-            className="h-7 w-7 rounded border-slate-600"
-            checked={state?.valueYesNo ?? false}
-            disabled={disabled}
-            onChange={(event) => {
-              const checked = event.target.checked;
-              updateItemState(
-                item.id,
-                { valueYesNo: checked, completed: checked },
-                { complete: checked, immediate: true }
-              );
-            }}
-          />
-          Checked
-        </label>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Outcome
+          </div>
+          <div className="inline-flex overflow-hidden rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <button
+              type="button"
+              disabled={disabled}
+              className={[
+                "px-3 py-2 text-xs font-semibold transition",
+                value === false
+                  ? "bg-rose-500/15 text-rose-700 dark:text-rose-200"
+                  : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900",
+                disabled ? "opacity-60" : ""
+              ].join(" ")}
+              onClick={() =>
+                updateItemState(item.id, { valueYesNo: false, completed: true }, { complete: true, immediate: true })
+              }
+              aria-label="Mark rejected"
+              title="Reject"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              disabled={disabled}
+              className={[
+                "px-3 py-2 text-xs font-semibold transition",
+                value === null
+                  ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+                  : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900",
+                disabled ? "opacity-60" : ""
+              ].join(" ")}
+              onClick={() =>
+                updateItemState(item.id, { valueYesNo: null, completed: false }, { complete: false, immediate: true })
+              }
+              aria-label="Clear selection"
+              title="Neutral"
+            >
+              —
+            </button>
+            <button
+              type="button"
+              disabled={disabled}
+              className={[
+                "px-3 py-2 text-xs font-semibold transition",
+                value === true
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200"
+                  : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900",
+                disabled ? "opacity-60" : ""
+              ].join(" ")}
+              onClick={() =>
+                updateItemState(item.id, { valueYesNo: true, completed: true }, { complete: true, immediate: true })
+              }
+              aria-label="Mark accepted"
+              title="Accept"
+            >
+              Accept
+            </button>
+          </div>
+        </div>
       );
     }
 
@@ -722,13 +772,29 @@ export function ChecklistSection({
     }
 
     const isLocked = run.status === ChecklistRunStatus.SIGNED;
-    const requiredRemaining = run.items
+    const remainingAll = run.items
       .filter((item) => item.kind !== "SECTION")
       .filter((item) => {
-      const state = itemState[item.id];
-      const completed = state?.completed ?? item.completed;
-      return item.required && !completed;
-    }).length;
+        const state = itemState[item.id];
+        const completed = state?.completed ?? item.completed;
+        const valueYesNo = state?.valueYesNo ?? item.valueYesNo;
+        if (item.inputType === ChecklistInputType.CHECK || item.inputType === ChecklistInputType.YES_NO) {
+          return valueYesNo === null;
+        }
+        return !completed;
+      }).length;
+
+    const remainingRequired = run.items
+      .filter((item) => item.kind !== "SECTION" && item.required)
+      .filter((item) => {
+        const state = itemState[item.id];
+        const completed = state?.completed ?? item.completed;
+        const valueYesNo = state?.valueYesNo ?? item.valueYesNo;
+        if (item.inputType === ChecklistInputType.CHECK || item.inputType === ChecklistInputType.YES_NO) {
+          return valueYesNo === null;
+        }
+        return !completed;
+      }).length;
 
     return (
       <div className="space-y-4">
@@ -868,6 +934,7 @@ export function ChecklistSection({
 
               const state = itemState[item.id];
               const completed = state?.completed ?? item.completed;
+              const valueYesNo = state?.valueYesNo ?? item.valueYesNo;
               const isDisabled = isLocked || !runStarted;
 
               return (
@@ -876,9 +943,11 @@ export function ChecklistSection({
                   onTouchStart={(event) => handleSwipeStart(item.id, event)}
                   onTouchEnd={(event) => handleSwipeEnd(item, isDisabled, event)}
                   className={`touch-pan-y rounded-xl border p-4 shadow-sm transition ${
-                    completed
+                    valueYesNo === true
                       ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10"
-                      : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+                      : valueYesNo === false
+                        ? "border-rose-200 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/10"
+                        : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
                   }`}
                 >
                   <div className="grid gap-3 md:grid-cols-[1fr,280px] md:items-start">
@@ -904,8 +973,16 @@ export function ChecklistSection({
                             Optional
                           </span>
                         )}
-                        {completed ? (
+                        {valueYesNo === true ? (
                           <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-200">
+                            Accepted
+                          </span>
+                        ) : valueYesNo === false ? (
+                          <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700 dark:text-rose-200">
+                            Rejected
+                          </span>
+                        ) : completed ? (
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             Done
                           </span>
                         ) : null}
@@ -923,7 +1000,7 @@ export function ChecklistSection({
                       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/30">
                         {renderInput(item, isDisabled)}
                         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                          Tip: swipe right to complete · swipe left to undo (CHECK / YES-NO / TEXT / NUMBER)
+                          Tip: swipe right to accept · swipe left to reject
                         </p>
                       </div>
                       <details className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
@@ -953,11 +1030,9 @@ export function ChecklistSection({
         {isLocked ? null : (
           <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-300">
             <p>
-              {requiredRemaining > 0
-                ? `${requiredRemaining} required item${
-                    requiredRemaining === 1 ? "" : "s"
-                  } remaining before sign-off.`
-                : "All required items are complete. You can sign when ready."}
+              {remainingAll > 0
+                ? `${remainingAll} item${remainingAll === 1 ? "" : "s"} remaining before sign-off.`
+                : "All items have an outcome. You can sign when ready."}
             </p>
           </div>
         )}
@@ -974,22 +1049,40 @@ export function ChecklistSection({
   const completedItems =
     activeRun?.items
       .filter((item) => item.kind !== "SECTION")
-      .filter((item) => itemState[item.id]?.completed ?? item.completed).length ?? 0;
+      .filter((item) => {
+        const state = itemState[item.id];
+        const completed = state?.completed ?? item.completed;
+        const valueYesNo = state?.valueYesNo ?? item.valueYesNo;
+        if (item.inputType === ChecklistInputType.CHECK || item.inputType === ChecklistInputType.YES_NO) {
+          return valueYesNo !== null;
+        }
+        return completed;
+      }).length ?? 0;
   const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-  const requiredRemaining =
+  const remainingAll =
     activeRun?.items
       .filter((item) => item.kind !== "SECTION")
       .filter((item) => {
         const state = itemState[item.id];
         const completed = state?.completed ?? item.completed;
-        return item.required && !completed;
+        const valueYesNo = state?.valueYesNo ?? item.valueYesNo;
+        if (item.inputType === ChecklistInputType.CHECK || item.inputType === ChecklistInputType.YES_NO) {
+          return valueYesNo === null;
+        }
+        return !completed;
       }).length ?? 0;
+
+  const hasRejectedItems =
+    activeRun?.items
+      .filter((item) => item.kind !== "SECTION")
+      .some((item) => (itemState[item.id]?.valueYesNo ?? item.valueYesNo) === false) ?? false;
 
   const isChecklistLocked = activeRun?.status === ChecklistRunStatus.SIGNED;
   const isChecklistStarted = Boolean(activeRun?.startedAt);
   const canDecide =
     activeRun?.status === ChecklistRunStatus.IN_PROGRESS && !isChecklistLocked && isChecklistStarted;
-  const canAccept = Boolean(canDecide && requiredRemaining === 0);
+  const canShowSignoff = Boolean(canDecide && remainingAll === 0);
+  const canAccept = Boolean(canShowSignoff && !hasRejectedItems);
   const showDecisionFooter =
     Boolean(activeRun) && activeRun?.status !== ChecklistRunStatus.NOT_AVAILABLE;
 
@@ -1039,79 +1132,43 @@ export function ChecklistSection({
 
       {renderChecklist(activeRun, activeTab)}
 
-      {showDecisionFooter && activeRun ? (
-        <div className="sticky bottom-0 z-30 rounded-t-2xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-              <div>
-                <p className="font-semibold text-slate-900 dark:text-slate-100">Checklist progress</p>
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  {completedItems}/{totalItems} complete ·{" "}
-                  {requiredRemaining === 0
-                    ? "All required items done"
-                    : `${requiredRemaining} required remaining`}
-                </p>
+      {showDecisionFooter && activeRun && isChecklistStarted ? (
+        <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="h-1 w-full rounded-full bg-slate-200 dark:bg-slate-800">
+                <div
+                  className="h-1 rounded-full bg-brand-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${
-                  saveStatus === "offline"
-                    ? "bg-amber-500/20 text-amber-200"
-                    : saveStatus === "saving"
-                      ? "bg-sky-500/20 text-sky-200"
-                      : "bg-emerald-500/20 text-emerald-200"
-                }`}
-              >
-                {statusLabel}
-              </span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-slate-800">
-              <div
-                className="h-2 rounded-full bg-brand-500"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            {isChecklistLocked ? (
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                Checklist is locked and read-only.
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                {completedItems}/{totalItems} decided · {statusLabel}
               </p>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Button
-                    type="button"
-                    size="lg"
-                    disabled={!canAccept}
-                    onClick={() => setSigningPhase(activeRun.phase)}
-                  >
-                    Accept & Sign
-                  </Button>
-                  <Button
-                    type="button"
-                    size="lg"
-                    variant="outline"
-                    disabled={!canDecide}
-                    onClick={() => {
-                      setRejectionNote("");
-                      setRejectingPhase(activeRun.phase);
-                    }}
-                  >
-                    Reject
-                  </Button>
-                </div>
+            </div>
+            {!isChecklistLocked && canShowSignoff ? (
+              <div className="flex gap-2">
                 <Button
                   type="button"
-                  size="lg"
-                  variant="ghost"
-                  disabled={!canDecide}
+                  size="sm"
+                  disabled={!canAccept}
+                  onClick={() => setSigningPhase(activeRun.phase)}
+                >
+                  Accept & Sign
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
                   onClick={() => {
-                    setClosingNote("");
-                    setClosingPhase(activeRun.phase);
+                    setRejectionNote("");
+                    setRejectingPhase(activeRun.phase);
                   }}
                 >
-                  Close without completing
+                  Reject
                 </Button>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       ) : null}

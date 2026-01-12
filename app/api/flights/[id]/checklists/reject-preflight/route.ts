@@ -4,6 +4,7 @@ import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { verifyPassword } from "@/app/lib/password";
 import { recordAuditEvent } from "@/app/lib/audit";
+import { buildRedirectUrl } from "@/app/lib/http";
 
 const rejectSchema = z.object({
   signatureName: z.string().min(1),
@@ -16,7 +17,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const user = await requireUser();
-  const redirectUrl = new URL(`/flights/${params.id}`, request.url);
+  const redirectUrl = buildRedirectUrl(request, `/flights/${params.id}`);
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
   const parsed = rejectSchema.safeParse(raw);

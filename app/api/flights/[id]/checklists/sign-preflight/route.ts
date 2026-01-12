@@ -4,6 +4,7 @@ import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { verifyPassword } from "@/app/lib/password";
 import { recordAuditEvent } from "@/app/lib/audit";
+import { buildRedirectUrl } from "@/app/lib/http";
 
 const signSchema = z.object({
   signatureName: z.string().min(1),
@@ -15,7 +16,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const user = await requireUser();
-  const redirectUrl = new URL(`/flights/${params.id}`, request.url);
+  const redirectUrl = buildRedirectUrl(request, `/flights/${params.id}`);
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
   const parsed = signSchema.safeParse(raw);
@@ -59,14 +60,18 @@ export async function POST(
     return NextResponse.redirect(redirectUrl);
   }
 
-  const remainingRequired = run.items.filter(
-    (item) => item.kind !== "SECTION" && item.required && !item.completed
-  );
-
-  if (remainingRequired.length > 0) {
+  const missingRequired = run.items.filter((item) => {
+    if (item.kind === "SECTION" || !item.required) return false;
+    if (item.inputType === "CHECK" || item.inputType === "YES_NO") {
+      // Tri-state: must be explicitly accepted for a successful sign-off.
+      return item.valueYesNo !== true;
+    }
+    return !item.completed;
+  });
+  if (missingRequired.length > 0) {
     redirectUrl.searchParams.set(
       "toast",
-      "Complete required items before signing the pre-flight checklist."
+      "All required items must be accepted before signing. If something failed, reject the checklist instead."
     );
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);

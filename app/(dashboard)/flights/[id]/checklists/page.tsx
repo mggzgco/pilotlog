@@ -16,7 +16,7 @@ export default async function FlightChecklistsPage({
 }) {
   const user = await requireUser();
 
-  const flight = await prisma.flight.findFirst({
+  const baseSelect = {
     where: { id: params.id, userId: user.id },
     include: {
       aircraft: {
@@ -28,10 +28,31 @@ export default async function FlightChecklistsPage({
       },
       checklistRuns: { include: { items: { orderBy: { personalOrder: "asc" } } } }
     }
-  });
+  } as const;
+
+  let flight = await prisma.flight.findFirst(baseSelect);
 
   if (!flight) {
     notFound();
+  }
+
+  // Auto-link aircraft by tail number if missing. This keeps checklist availability
+  // consistent even for flights imported before aircraft was created/linked.
+  if (!flight.aircraftId) {
+    const tail = (flight.tailNumberSnapshot ?? flight.tailNumber ?? "").trim();
+    if (tail) {
+      const aircraft = await prisma.aircraft.findFirst({
+        where: { userId: user.id, tailNumber: { equals: tail, mode: "insensitive" } },
+        select: { id: true }
+      });
+      if (aircraft) {
+        await prisma.flight.update({
+          where: { id: flight.id },
+          data: { aircraftId: aircraft.id }
+        });
+        flight = (await prisma.flight.findFirst(baseSelect))!;
+      }
+    }
   }
 
   const defaultSignatureName =

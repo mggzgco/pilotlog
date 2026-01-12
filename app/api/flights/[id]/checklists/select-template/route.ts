@@ -41,7 +41,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const template =
     templateId
       ? await prisma.checklistTemplate.findFirst({
-          where: { id: templateId, userId: user.id, phase: parsed.data.phase },
+          where: {
+            id: templateId,
+            phase: parsed.data.phase,
+            OR: [{ userId: user.id }, { userId: null }]
+          },
           include: { items: { orderBy: { personalOrder: "asc" } } }
         })
       : await selectChecklistTemplate({

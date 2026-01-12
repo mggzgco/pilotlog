@@ -3,13 +3,14 @@ import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { selectChecklistTemplate } from "@/app/lib/checklists/templates";
 import { createChecklistRunSnapshot, replaceChecklistRunItems } from "@/app/lib/checklists/snapshot";
+import { buildRedirectUrl } from "@/app/lib/http";
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   const user = await requireUser();
-  const redirectUrl = new URL(`/flights/${params.id}/checklists`, request.url);
+  const redirectUrl = buildRedirectUrl(request, `/flights/${params.id}/checklists`);
   redirectUrl.searchParams.set("tab", "postflight");
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
@@ -18,6 +19,8 @@ export async function POST(
       status: true,
       endTime: true,
       aircraftId: true,
+      tailNumber: true,
+      tailNumberSnapshot: true,
       statsJson: true,
       aircraft: {
         select: {
@@ -33,6 +36,26 @@ export async function POST(
     redirectUrl.searchParams.set("toast", "Flight not found.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // If the flight isn't linked to an aircraft yet, try to auto-link by tail number.
+  // This keeps pre/post-flight checklist assignment consistent with the flight details page.
+  let aircraftId = flight.aircraftId;
+  if (!aircraftId) {
+    const tail = (flight.tailNumberSnapshot ?? flight.tailNumber ?? "").trim();
+    if (tail) {
+      const match = await prisma.aircraft.findFirst({
+        where: { userId: user.id, tailNumber: { equals: tail, mode: "insensitive" } },
+        select: { id: true }
+      });
+      if (match) {
+        await prisma.flight.update({
+          where: { id: flight.id },
+          data: { aircraftId: match.id }
+        });
+        aircraftId = match.id;
+      }
+    }
   }
 
   const stats =
@@ -68,13 +91,7 @@ export async function POST(
     (run) => run.phase === "PREFLIGHT"
   );
 
-  if (!postflightRun) {
-    redirectUrl.searchParams.set("toast", "Post-flight checklist not found.");
-    redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  if (postflightRun.status !== "NOT_AVAILABLE") {
+  if (postflightRun && postflightRun.status !== "NOT_AVAILABLE") {
     redirectUrl.searchParams.set("toast", "Post-flight checklist already started.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl);
@@ -102,7 +119,7 @@ export async function POST(
         })
       : await selectChecklistTemplate({
           userId: user.id,
-          aircraftId: flight.aircraftId,
+          aircraftId,
           phase: "POSTFLIGHT"
         });
   if (!template || template.items.length === 0) {

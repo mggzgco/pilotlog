@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { recordAuditEvent } from "@/app/lib/audit";
+import { buildRedirectUrl } from "@/app/lib/http";
 
 const closeSchema = z.object({
   signatureName: z.string().min(1),
@@ -14,7 +15,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const user = await requireUser();
-  const redirectUrl = new URL(`/flights/${params.id}/checklists`, request.url);
+  const redirectUrl = buildRedirectUrl(request, `/flights/${params.id}/checklists`);
 
   const formData = await request.formData();
   const raw = Object.fromEntries(formData.entries());
