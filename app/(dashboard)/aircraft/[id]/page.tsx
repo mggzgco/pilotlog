@@ -246,7 +246,7 @@ export default async function AircraftDetailPage({
               <input type="hidden" name="aircraftId" value={aircraft.id} />
               <input type="hidden" name="phase" value="PREFLIGHT" />
               <input type="hidden" name="scope" value="aircraft" />
-              <label className="min-w-[260px] flex-1 text-sm text-slate-600 dark:text-slate-400">
+              <label className="w-full min-w-0 text-sm text-slate-600 dark:text-slate-400 sm:min-w-[260px] sm:flex-1">
                 <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Assigned template
                 </span>
@@ -280,7 +280,7 @@ export default async function AircraftDetailPage({
               <input type="hidden" name="aircraftId" value={aircraft.id} />
               <input type="hidden" name="phase" value="POSTFLIGHT" />
               <input type="hidden" name="scope" value="aircraft" />
-              <label className="min-w-[260px] flex-1 text-sm text-slate-600 dark:text-slate-400">
+              <label className="w-full min-w-0 text-sm text-slate-600 dark:text-slate-400 sm:min-w-[260px] sm:flex-1">
                 <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Assigned template
                 </span>

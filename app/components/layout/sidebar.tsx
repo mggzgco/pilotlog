@@ -45,7 +45,7 @@ export function Sidebar({ user }: { user: any }) {
   return (
     <aside
       className={[
-        "app-sidebar hidden h-screen flex-col border-r border-slate-200 bg-white py-6 dark:border-slate-800 dark:bg-slate-950 lg:flex",
+        "app-sidebar hidden h-dvh flex-col border-r border-slate-200 bg-white py-6 dark:border-slate-800 dark:bg-slate-950 lg:flex",
         collapsed ? "w-16 px-2" : "w-64 px-5"
       ].join(" ")}
     >

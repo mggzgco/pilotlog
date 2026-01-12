@@ -203,7 +203,7 @@ export function ChecklistTemplateEditor({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-[260px] flex-1">
+        <div className="w-full min-w-0 sm:min-w-[260px] sm:flex-1">
           <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Name</p>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Checklist name" />
         </div>

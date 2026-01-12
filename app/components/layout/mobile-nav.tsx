@@ -31,7 +31,7 @@ export function MobileNav({ user }: MobileNavProps) {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm dark:bg-slate-950/70" />
-        <Dialog.Content className="fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+        <Dialog.Content className="fixed inset-y-0 left-0 z-50 w-[min(18rem,85vw)] overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <FlightTraksMark className="h-9 w-9" />
