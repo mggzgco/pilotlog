@@ -17,7 +17,7 @@ export default function LoginPage({
       </div>
       {searchParams?.registered && (
         <div className="rounded-lg border border-brand-500/40 bg-brand-500/10 p-3 text-sm text-brand-200">
-          Registration received. Await approval.
+          Your account request was submitted successfully. You’ll be notified as soon as it’s activated.
         </div>
       )}
       {searchParams?.approved && (

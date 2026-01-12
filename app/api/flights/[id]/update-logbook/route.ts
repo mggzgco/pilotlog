@@ -4,6 +4,8 @@ import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { Prisma } from "@prisma/client";
+import { buildRedirectUrl } from "@/app/lib/http";
+import { normalizeTimeOfDay } from "@/app/lib/time";
 
 const emptyToNull = (value: unknown) =>
   value === "" || value === undefined ? null : value;
@@ -22,8 +24,20 @@ const logbookSchema = z.object({
   instrumentTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   simulatorTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   groundTime: z.preprocess(emptyToNull, z.number().min(0).nullable()),
-  timeOut: z.preprocess(emptyToNull, z.string().max(5).nullable()),
-  timeIn: z.preprocess(emptyToNull, z.string().max(5).nullable()),
+  timeOut: z.preprocess((v) => {
+    const value = emptyToNull(v);
+    if (value === null) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    return normalizeTimeOfDay(raw) ?? raw;
+  }, z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).max(5).nullable()),
+  timeIn: z.preprocess((v) => {
+    const value = emptyToNull(v);
+    if (value === null) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    return normalizeTimeOfDay(raw) ?? raw;
+  }, z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).max(5).nullable()),
   hobbsOut: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   hobbsIn: z.preprocess(emptyToNull, z.number().min(0).nullable()),
   dayTakeoffs: z.preprocess(emptyToNull, z.number().int().min(0).nullable()),
@@ -38,7 +52,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const redirectWithToast = (message: string, toastType: "success" | "error") => {
-    const redirectUrl = new URL(`/flights/${params.id}/logbook`, request.url);
+    const redirectUrl = buildRedirectUrl(request, `/flights/${params.id}/logbook`);
     redirectUrl.searchParams.set("toast", message);
     redirectUrl.searchParams.set("toastType", toastType);
     return NextResponse.redirect(redirectUrl, { status: 303 });

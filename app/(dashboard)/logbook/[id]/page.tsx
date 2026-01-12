@@ -174,16 +174,16 @@ export default async function LogbookEntryDetailPage({
               name="timeOut"
               type="text"
               inputMode="text"
-              placeholder="Time out (HH:MM)"
-              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+              placeholder="Time out (HH:MM or HHMM)"
+              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
               defaultValue={entry.timeOut ?? ""}
             />
             <Input
               name="timeIn"
               type="text"
               inputMode="text"
-              placeholder="Time in (HH:MM)"
-              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+              placeholder="Time in (HH:MM or HHMM)"
+              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
               defaultValue={entry.timeIn ?? ""}
             />
             <Input

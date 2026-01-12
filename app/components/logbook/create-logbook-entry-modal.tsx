@@ -83,15 +83,15 @@ export function CreateLogbookEntryModal({
               name="timeOut"
               type="text"
               inputMode="text"
-              placeholder="Time out (HH:MM)"
-              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+              placeholder="Time out (HH:MM or HHMM)"
+              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
             />
             <Input
               name="timeIn"
               type="text"
               inputMode="text"
-              placeholder="Time in (HH:MM)"
-              pattern="^([01]\\d|2[0-3]):[0-5]\\d$"
+              placeholder="Time in (HH:MM or HHMM)"
+              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
             />
             <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" />
             <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" />

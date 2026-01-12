@@ -4,10 +4,12 @@ import { getCurrentUser } from "@/app/lib/auth/session";
 import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 import { logbookSchema } from "@/app/lib/validation";
 import { Prisma } from "@prisma/client";
+import { buildRedirectUrl } from "@/app/lib/http";
+import { normalizeTimeOfDay } from "@/app/lib/time";
 
 export async function POST(request: Request) {
   const redirectWithToast = (message: string, toastType: "success" | "error") => {
-    const redirectUrl = new URL("/logbook", request.url);
+    const redirectUrl = buildRedirectUrl(request, "/logbook");
     redirectUrl.searchParams.set("toast", message);
     redirectUrl.searchParams.set("toastType", toastType);
     // 303 forces a GET, avoiding browser quirks around POST-redirect behavior
@@ -71,8 +73,8 @@ export async function POST(request: Request) {
       tailNumberSnapshot: flight?.tailNumberSnapshot ?? flight?.tailNumber ?? null,
       origin: flight?.origin ?? null,
       destination: flight?.destination ?? null,
-      timeOut: parsed.data.timeOut?.trim() || null,
-      timeIn: parsed.data.timeIn?.trim() || null,
+      timeOut: normalizeTimeOfDay(parsed.data.timeOut?.trim() || "") || null,
+      timeIn: normalizeTimeOfDay(parsed.data.timeIn?.trim() || "") || null,
       hobbsOut: toNumberOrNull(parsed.data.hobbsOut),
       hobbsIn: toNumberOrNull(parsed.data.hobbsIn),
       totalTime: toNumberOrNull(parsed.data.totalTime),

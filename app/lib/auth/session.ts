@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { lucia } from "@/app/lib/auth/lucia";
+import { prisma } from "@/app/lib/db";
 
 export type AppUserRole = "USER" | "ADMIN";
 export type AppUserStatus = "PENDING" | "ACTIVE" | "DISABLED";
@@ -24,7 +25,23 @@ export async function getCurrentUser(): Promise<{ session: any; user: AppUser | 
 
   const result = await lucia.validateSession(sessionId);
   try {
-    if (result.session && result.session.fresh) {
+    // SESSION-001: rolling session expiration ("idle timeout") via DB expiresAt + cookie refresh
+    if (result.session) {
+      const idleMinutes = Number(process.env.SESSION_IDLE_MINUTES ?? 120);
+      const idleMs =
+        Number.isFinite(idleMinutes) && idleMinutes > 0
+          ? idleMinutes * 60 * 1000
+          : 120 * 60 * 1000;
+      const nextExpiresAt = new Date(Date.now() + idleMs);
+      // Best-effort: extend expiry; if this fails we still keep the current session.
+      try {
+        await prisma.session.update({
+          where: { id: result.session.id },
+          data: { expiresAt: nextExpiresAt }
+        });
+      } catch {
+        // ignore
+      }
       const sessionCookie = lucia.createSessionCookie(result.session.id);
       cookies().set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
     }

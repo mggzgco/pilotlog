@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { costCategoryValues } from "@/app/lib/costs/categories";
+import { normalizeTimeOfDay } from "@/app/lib/time";
 
 export const passwordSchema = z
   .string()
@@ -90,8 +91,30 @@ export const logbookSchema = z.object({
   instrumentTime: z.string().optional(),
   simulatorTime: z.string().optional(),
   groundTime: z.string().optional(),
-  timeOut: z.string().optional(),
-  timeIn: z.string().optional(),
+  timeOut: z.preprocess(
+    (v) => {
+      if (v === null || v === undefined) return undefined;
+      const raw = String(v).trim();
+      if (!raw) return undefined;
+      return normalizeTimeOfDay(raw) ?? raw;
+    },
+    z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be HH:MM (or HHMM).")
+      .optional()
+  ),
+  timeIn: z.preprocess(
+    (v) => {
+      if (v === null || v === undefined) return undefined;
+      const raw = String(v).trim();
+      if (!raw) return undefined;
+      return normalizeTimeOfDay(raw) ?? raw;
+    },
+    z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be HH:MM (or HHMM).")
+      .optional()
+  ),
   hobbsOut: z.string().optional(),
   hobbsIn: z.string().optional(),
   dayTakeoffs: z.string().optional(),

@@ -100,8 +100,8 @@ export async function registerAction(formData: FormData): Promise<AuthFormState>
       rejectUrl
     });
   } catch (error) {
+    // If SMTP isn't configured, the admin can still approve via /admin/approvals.
     console.error("Failed to send approval email", error);
-    return { error: "Unable to send approval email. Please contact support." };
   }
 
   await recordAuditEvent({

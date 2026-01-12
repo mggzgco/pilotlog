@@ -35,11 +35,25 @@ if (isProduction) {
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: (
-        process.env.NEXT_ALLOWED_ORIGINS
+      allowedOrigins: (() => {
+        const configured = process.env.NEXT_ALLOWED_ORIGINS
           ? process.env.NEXT_ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
-          : ["localhost:3000", "127.0.0.1:3000"]
-      )
+          : [];
+        const derived = [];
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "";
+        if (appUrl) {
+          try {
+            derived.push(new URL(appUrl).host);
+          } catch {
+            // ignore
+          }
+        }
+        const base = ["localhost:3000", "127.0.0.1:3000"];
+        // In production, if nothing was configured, fall back to allowing the deployed host via APP_URL/NEXT_PUBLIC_APP_URL.
+        // Set NEXT_ALLOWED_ORIGINS explicitly for stricter control.
+        const out = Array.from(new Set([...configured, ...derived, ...base].filter(Boolean)));
+        return out.length > 0 ? out : base;
+      })()
     }
   },
   images: {
