@@ -1,0 +1,195 @@
+{
+  "phase": "PREFLIGHT",
+  "name": "Cirrus SR20 G7 — Preflight (POH Section 4)",
+  "makeModel": "Cirrus SR20 G7",
+  "sections": [
+    {
+      "title": "Preflight Inspection (General)",
+      "instructions": "WARNING: Before carrying out preflight inspections, ensure that all required maintenance has been accomplished. Review your flight plan and compute weight and balance and performance requirements. Throughout the walk-around: check all hinges, hinge pins, and bolts for security; check skin for damage, condition, and evidence of delamination; check all control surfaces for proper movement and excessive free play; check area around liquid reservoirs and lines for evidence of leaking.\n\nIn cold weather, remove all frost (polished or not), ice, snow, or slush from fuselage, wing, stabilizers, and control surfaces. Ensure that control surfaces are free of internal ice or debris. Check that wheel fairings are free of snow and ice accumulation.\n\nCAUTION: For serials without a probe heat switch: probe heat will be automatically activated for 10 seconds when BAT 1 is turned on. Repeated cycling of the BAT 1 switch will result in the pitot probe becoming very hot."
+    },
+    {
+      "title": "Cabin",
+      "steps": [
+        { "itemLabel": "Required Documents", "acceptanceCriteria": "CHECK" },
+        {
+          "itemLabel": "BAT 2 Switch",
+          "acceptanceCriteria": "ON",
+          "instructions": "Verify PFD, GTC 1, and GTC 2 power on. Verify MFD does not power on."
+        },
+        { "itemLabel": "Essential Bus Voltage", "acceptanceCriteria": "23–25 VOLTS" },
+        {
+          "itemLabel": "BAT 1 Switch",
+          "acceptanceCriteria": "ON",
+          "instructions": "Verify MFD powers on."
+        },
+        { "itemLabel": "Avionics Cooling Fan", "acceptanceCriteria": "AUDIBLE" },
+        { "itemLabel": "Fuel Quantity", "acceptanceCriteria": "CHECK" },
+        { "itemLabel": "Flaps", "acceptanceCriteria": "100%" },
+        { "itemLabel": "Lights", "acceptanceCriteria": "CHECK OPERATION" },
+        { "itemLabel": "Stall Warning System Inlet", "acceptanceCriteria": "UNOBSTRUCTED" },
+        {
+          "itemLabel": "Stall Warning",
+          "acceptanceCriteria": "TEST",
+          "instructions": "Test stall warning system by applying suction to the stall warning system inlet and noting the warning horn sounds."
+        },
+        { "itemLabel": "BAT 1 and BAT 2 Switches", "acceptanceCriteria": "OFF" },
+        { "itemLabel": "Alternate Static Source", "acceptanceCriteria": "NORMAL" },
+        { "itemLabel": "Circuit Breakers", "acceptanceCriteria": "IN" },
+        { "itemLabel": "Fire Extinguisher", "acceptanceCriteria": "CHARGED AND AVAILABLE" },
+        { "itemLabel": "Emergency Egress Hammer", "acceptanceCriteria": "STOWED" },
+        { "itemLabel": "STARTER DISABLE Switch", "acceptanceCriteria": "ENABLE" }
+      ]
+    },
+    {
+      "title": "Left Fuselage",
+      "steps": [
+        { "itemLabel": "Antennae", "acceptanceCriteria": "CONDITION AND ATTACHMENT" },
+        { "itemLabel": "Wing/Fuselage Fairing", "acceptanceCriteria": "CHECK" },
+        { "itemLabel": "Baggage Door", "acceptanceCriteria": "CLOSED AND SECURE" },
+        { "itemLabel": "Static Port", "acceptanceCriteria": "CONDITION, CLEAR" },
+        { "itemLabel": "Parachute Cover", "acceptanceCriteria": "SEALED AND SECURE" }
+      ]
+    },
+    {
+      "title": "Empennage",
+      "instructions": "NOTE: Verify tape covering the forward and aft inspection holes located on outboard ends of horizontal stabilizer is installed and securely attached.",
+      "steps": [
+        { "itemLabel": "Tiedown Rope", "acceptanceCriteria": "REMOVE" },
+        { "itemLabel": "Horizontal and Vertical Stabilizers", "acceptanceCriteria": "CONDITION" },
+        { "itemLabel": "Elevator", "acceptanceCriteria": "CONDITION, MOTION" },
+        { "itemLabel": "Elevator Trim Tab", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Elevator Static Wicks", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Rudder", "acceptanceCriteria": "CONDITION, MOTION" },
+        { "itemLabel": "Rudder Trim Tab", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Rudder Static Wicks", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Attachment hinges, bolts, and cotter pins", "acceptanceCriteria": "SECURE" }
+      ]
+    },
+    {
+      "title": "Right Fuselage",
+      "steps": [
+        { "itemLabel": "Static Port", "acceptanceCriteria": "CONDITION, CLEAR" },
+        { "itemLabel": "Wing/Fuselage Fairings", "acceptanceCriteria": "CHECK" }
+      ]
+    },
+    {
+      "title": "Right Wing Trailing Edge",
+      "instructions": "NOTE: Verify bolt located under the inboard edge of aileron is secured with safety wire.",
+      "steps": [
+        { "itemLabel": "Flap and Rub Strips", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Aileron", "acceptanceCriteria": "CONDITION, CLEAR" },
+        { "itemLabel": "Aileron Trim Tab", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Aileron Static Wicks", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Aileron Gap Seal", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Hinges, actuation arm, bolts, and cotter pins", "acceptanceCriteria": "SECURE" }
+      ]
+    },
+    {
+      "title": "Right Wing Tip",
+      "steps": [
+        { "itemLabel": "Tip", "acceptanceCriteria": "ATTACHMENT" },
+        { "itemLabel": "Wing Tip Light and Lens", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Wing Tip Static Wicks", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Fuel Vent (underside)", "acceptanceCriteria": "CLEAR" }
+      ]
+    },
+    {
+      "title": "Right Forward Wing and Main Gear",
+      "steps": [
+        { "itemLabel": "Stall Warning Port", "acceptanceCriteria": "CLEAR" },
+        { "itemLabel": "Leading Edge and Stall Strips", "acceptanceCriteria": "CONDITION" },
+        { "itemLabel": "Fuel Cap", "acceptanceCriteria": "CHECK FUEL LEVEL AND SECURE" },
+        { "itemLabel": "Fuel Drains (2 underside)", "acceptanceCriteria": "SAMPLE" },
+        { "itemLabel": "Wheel Fairings", "acceptanceCriteria": "SECURITY, ACCUMULATION OF DEBRIS" },
+        { "itemLabel": "Tire", "acceptanceCriteria": "CONDITION" },
+        {
+          "itemLabel": "Wheel and Brakes",
+          "acceptanceCriteria": "FLUID LEAKS, EVIDENCE OF OVERHEATING, GENERAL CONDITION, AND SECURITY"
+        },
+        { "itemLabel": "Chocks and Tiedown Ropes", "acceptanceCriteria": "REMOVE" }
+      ]
+    },
+    {
+      "title": "Nose, Right Side",
+      "instructions": "CAUTION: The engine must not be operated with less than six quarts of oil in the sump (dipstick indication). Seven quarts is recommended for extended flights.",
+      "steps": [
+        { "itemLabel": "Engine Oil", "acceptanceCriteria": "CHECK 6–7 QUARTS, LEAKS" },
+        { "itemLabel": "Engine Oil Dipstick/Filler Cap & Door", "acceptanceCriteria": "SECURE" },
+        { "itemLabel": "Ice Inspection Light", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Cowling", "acceptanceCriteria": "ATTACHMENTS SECURE" },
+        { "itemLabel": "Exhaust Pipe", "acceptanceCriteria": "CONDITION, SECURITY, AND CLEARANCE" }
+      ]
+    },
+    {
+      "title": "Nose Gear, Propeller, and Spinner",
+      "instructions": "WARNING: Keep clear of propeller rotation plane. Do not allow others to approach propeller.",
+      "steps": [
+        { "itemLabel": "Tow Bar", "acceptanceCriteria": "REMOVE AND STOW" },
+        { "itemLabel": "Strut", "acceptanceCriteria": "CONDITION" },
+        { "itemLabel": "Wheel Fairing", "acceptanceCriteria": "SECURITY, ACCUMULATION OF DEBRIS" },
+        { "itemLabel": "Wheel and Tire", "acceptanceCriteria": "CONDITION, INFLATION, AND WEAR" },
+        { "itemLabel": "Propeller", "acceptanceCriteria": "CONDITION (INDENTATIONS, NICKS, ETC.)" },
+        { "itemLabel": "Spinner", "acceptanceCriteria": "CONDITION, SECURITY, AND OIL LEAKS" },
+        { "itemLabel": "Air Inlets", "acceptanceCriteria": "UNOBSTRUCTED" }
+      ]
+    },
+    {
+      "title": "Nose, Left Side",
+      "steps": [
+        { "itemLabel": "Ice Inspection Light", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Cowling", "acceptanceCriteria": "ATTACHMENTS SECURE" },
+        { "itemLabel": "External Power", "acceptanceCriteria": "DOOR SECURE" },
+        { "itemLabel": "Gascolator (underside)", "acceptanceCriteria": "DRAIN FOR 3 SECONDS, SAMPLE" }
+      ]
+    },
+    {
+      "title": "Left Main Gear and Forward Wing",
+      "steps": [
+        { "itemLabel": "Wheel Fairings", "acceptanceCriteria": "SECURITY, ACCUMULATION OF DEBRIS" },
+        { "itemLabel": "Tire", "acceptanceCriteria": "CONDITION" },
+        {
+          "itemLabel": "Wheel and Brakes",
+          "acceptanceCriteria": "FLUID LEAKS, EVIDENCE OF OVERHEATING, GENERAL CONDITION, AND SECURITY"
+        },
+        { "itemLabel": "Chocks and Tiedown Ropes", "acceptanceCriteria": "REMOVE" },
+        { "itemLabel": "Fuel Drains (2 underside)", "acceptanceCriteria": "SAMPLE" },
+        { "itemLabel": "Fuel Cap", "acceptanceCriteria": "CHECK FUEL LEVEL AND SECURE" },
+        { "itemLabel": "Leading Edge and Stall Strips", "acceptanceCriteria": "CONDITION" }
+      ]
+    },
+    {
+      "title": "Left Wing Tip",
+      "steps": [
+        { "itemLabel": "Fuel Vent (underside)", "acceptanceCriteria": "CLEAR" },
+        { "itemLabel": "Pitot Probe", "acceptanceCriteria": "CLEAR" },
+        { "itemLabel": "Wing Tip Light and Lens", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Tip", "acceptanceCriteria": "ATTACHMENT" },
+        { "itemLabel": "Wing Tip Static Wicks", "acceptanceCriteria": "CONDITION AND SECURITY" }
+      ]
+    },
+    {
+      "title": "Left Wing Trailing Edge",
+      "instructions": "NOTE: Verify bolt located under the inboard edge of aileron is secured with safety wire.",
+      "steps": [
+        { "itemLabel": "Hinges, actuation arm, bolts, and cotter pins", "acceptanceCriteria": "SECURE" },
+        { "itemLabel": "Aileron Gap Seal", "acceptanceCriteria": "SECURITY" },
+        { "itemLabel": "Aileron Static Wicks", "acceptanceCriteria": "CONDITION AND SECURITY" },
+        { "itemLabel": "Aileron", "acceptanceCriteria": "CONDITION, MOTION" },
+        { "itemLabel": "Flap and Rub Strips", "acceptanceCriteria": "CONDITION AND SECURITY" }
+      ]
+    },
+    {
+      "title": "Before Engine Start",
+      "instructions": "NOTE: Ensure all the passengers have been fully briefed on smoking, the use of the seat belts, doors, emergency exits, egress hammer, Safe Return Autoland, and CAPS.\n\nWARNING: Crew seats must be locked in position and control handles fully down before flight. Ensure seat belt harnesses are not twisted.",
+      "steps": [
+        { "itemLabel": "Preflight Inspection", "acceptanceCriteria": "COMPLETE" },
+        { "itemLabel": "Passengers", "acceptanceCriteria": "BRIEFED" },
+        { "itemLabel": "Seats and Seat Belts", "acceptanceCriteria": "ADJUST AND SECURE" },
+        { "itemLabel": "Parking Brake", "acceptanceCriteria": "AS REQUIRED" },
+        { "itemLabel": "BAT 1 and BAT 2 Switches", "acceptanceCriteria": "ON" },
+        { "itemLabel": "External Power (If required)", "acceptanceCriteria": "CONNECT" }
+      ]
+    }
+  ]
+}
+
