@@ -141,6 +141,10 @@ export function ChecklistSection({
     "PREFLIGHT" | "POSTFLIGHT" | null
   >(null);
   const [closingNote, setClosingNote] = useState("");
+  const [skippingPhase, setSkippingPhase] = useState<
+    "PREFLIGHT" | "POSTFLIGHT" | null
+  >(null);
+  const [skippingNote, setSkippingNote] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [isOnline, setIsOnline] = useState(true);
   const [itemState, setItemState] = useState<Record<string, ChecklistItemState>>({});
@@ -708,16 +712,25 @@ export function ChecklistSection({
           <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
             Post-flight checklist will be available after you start it.
           </div>
-          {canStartPostflight && (
-            <form
-              action={`/api/flights/${flightId}/checklists/start-postflight`}
-              method="post"
-            >
-              <FormSubmitButton type="submit" pendingText="Starting checklist...">
-                Start Post-Flight Checklist
-              </FormSubmitButton>
-            </form>
-          )}
+          {canStartPostflight ? (
+            <div className="flex flex-wrap gap-3">
+              <form action={`/api/flights/${flightId}/checklists/start-postflight`} method="post">
+                <FormSubmitButton type="submit" pendingText="Starting checklist...">
+                  Start Post-Flight Checklist
+                </FormSubmitButton>
+              </form>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSkippingNote("");
+                  setSkippingPhase("POSTFLIGHT");
+                }}
+              >
+                Skip checklist
+              </Button>
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -803,16 +816,28 @@ export function ChecklistSection({
             <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-300">
               Checklist is ready to start. Items are read-only until you start it.
             </div>
-            <form
-              action={`/api/flights/${flightId}/checklists/${
-                phase === "PREFLIGHT" ? "start-preflight" : "start-postflight"
-              }`}
-              method="post"
-            >
-              <FormSubmitButton type="submit" pendingText="Starting checklist...">
-                Start {phase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight"} Checklist
-              </FormSubmitButton>
-            </form>
+            <div className="flex flex-wrap gap-3">
+              <form
+                action={`/api/flights/${flightId}/checklists/${
+                  phase === "PREFLIGHT" ? "start-preflight" : "start-postflight"
+                }`}
+                method="post"
+              >
+                <FormSubmitButton type="submit" pendingText="Starting checklist...">
+                  Start {phase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight"} Checklist
+                </FormSubmitButton>
+              </form>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSkippingNote("");
+                  setSkippingPhase(phase);
+                }}
+              >
+                Skip checklist
+              </Button>
+            </div>
           </div>
         ) : null}
 
@@ -843,11 +868,23 @@ export function ChecklistSection({
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {run.status === ChecklistRunStatus.SIGNED
-                ? `${run.decision === "REJECTED" ? "Rejected" : run.decision === "ACCEPTED" ? "Accepted" : "Signed"}${
-                    run.signedAt && isMounted
-                      ? ` · ${formatDateTime24(new Date(run.signedAt))}`
-                      : ""
-                  }`
+                ? (() => {
+                    const skipped =
+                      run.decision === "REJECTED" &&
+                      Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"));
+                    const label = skipped
+                      ? "Skipped"
+                      : run.decision === "REJECTED"
+                        ? "Rejected"
+                        : run.decision === "ACCEPTED"
+                          ? "Accepted"
+                          : "Signed";
+                    return `${label}${
+                      run.signedAt && isMounted
+                        ? ` · ${formatDateTime24(new Date(run.signedAt))}`
+                        : ""
+                    }`;
+                  })()
                 : run.startedAt
                   ? isMounted
                     ? `Started · ${formatDateTime24(new Date(run.startedAt))}`
@@ -859,20 +896,28 @@ export function ChecklistSection({
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${
               run.status === ChecklistRunStatus.SIGNED
-                ? run.decision === "REJECTED"
-                  ? "bg-rose-500/15 text-rose-700 dark:text-rose-200"
-                  : run.decision === "ACCEPTED"
-                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200"
-                    : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                ? (() => {
+                    const skipped =
+                      run.decision === "REJECTED" &&
+                      Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"));
+                    if (skipped) return "bg-amber-500/15 text-amber-800 dark:text-amber-100";
+                    if (run.decision === "REJECTED") return "bg-rose-500/15 text-rose-700 dark:text-rose-200";
+                    if (run.decision === "ACCEPTED") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200";
+                    return "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
+                  })()
                 : "bg-brand-500/15 text-brand-700 dark:text-brand-200"
             }`}
           >
             {run.status === ChecklistRunStatus.SIGNED
-              ? run.decision === "REJECTED"
-                ? "Rejected"
-                : run.decision === "ACCEPTED"
-                  ? "Accepted"
-                  : "Signed"
+              ? (() => {
+                  const skipped =
+                    run.decision === "REJECTED" &&
+                    Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"));
+                  if (skipped) return "Skipped";
+                  if (run.decision === "REJECTED") return "Rejected";
+                  if (run.decision === "ACCEPTED") return "Accepted";
+                  return "Signed";
+                })()
               : "In progress"}
           </span>
         </div>
@@ -880,22 +925,28 @@ export function ChecklistSection({
         {run.status === ChecklistRunStatus.SIGNED ? (
           <div
             className={`rounded-lg border px-4 py-3 text-sm ${
-              run.decision === "REJECTED"
-                ? "border-rose-500/40 bg-rose-500/10 text-rose-100"
-                : run.decision === "ACCEPTED"
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
-                  : "border-slate-700 bg-slate-900/50 text-slate-200"
+              run.decision === "REJECTED" &&
+              Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"))
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-100"
+                : run.decision === "REJECTED"
+                  ? "border-rose-500/40 bg-rose-500/10 text-rose-100"
+                  : run.decision === "ACCEPTED"
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+                    : "border-slate-700 bg-slate-900/50 text-slate-200"
             }`}
           >
             <p className="font-semibold">
-              {run.decision === "REJECTED"
-                ? "Checklist rejected"
-                : run.decision === "ACCEPTED"
-                  ? "Checklist accepted"
-                  : "Checklist signed"}
+              {run.decision === "REJECTED" &&
+              Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"))
+                ? "Checklist skipped"
+                : run.decision === "REJECTED"
+                  ? "Checklist rejected"
+                  : run.decision === "ACCEPTED"
+                    ? "Checklist accepted"
+                    : "Checklist signed"}
             </p>
             {run.decisionNote ? (
-              <p className="mt-1 text-xs text-rose-100/80">{run.decisionNote}</p>
+              <p className="mt-1 text-xs text-slate-200/80">{run.decisionNote}</p>
             ) : null}
           </div>
         ) : null}
@@ -1147,7 +1198,7 @@ export function ChecklistSection({
               </p>
             </div>
             {!isChecklistLocked && canShowSignoff ? (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   size="sm"
@@ -1166,6 +1217,17 @@ export function ChecklistSection({
                   }}
                 >
                   Reject
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setClosingNote("");
+                    setClosingPhase(activeRun.phase);
+                  }}
+                >
+                  Close
                 </Button>
               </div>
             ) : null}
@@ -1328,6 +1390,66 @@ export function ChecklistSection({
                   type="button"
                   variant="outline"
                   onClick={() => setClosingPhase(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {skippingPhase ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-slate-800 bg-slate-950 p-6">
+            <h3 className="text-lg font-semibold text-slate-100">
+              Skip {skippingPhase === "PREFLIGHT" ? "Pre-Flight" : "Post-Flight"} checklist
+            </h3>
+            <p className="mt-2 text-sm text-slate-400">
+              Use this when the checklist was completed without using the app. The checklist will show as “Skipped”.
+            </p>
+            <form
+              action={`/api/flights/${flightId}/checklists/${
+                skippingPhase === "PREFLIGHT" ? "skip-preflight" : "skip-postflight"
+              }`}
+              method="post"
+              className="mt-4 grid gap-3"
+            >
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Note (optional)
+                </label>
+                <textarea
+                  name="note"
+                  className="min-h-[120px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-base text-slate-100"
+                  value={skippingNote}
+                  onChange={(event) => setSkippingNote(event.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Signature name
+                </label>
+                <Input
+                  name="signatureName"
+                  defaultValue={defaultSignatureName}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs uppercase text-slate-400">
+                  Password confirmation
+                </label>
+                <Input name="password" type="password" required />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <FormSubmitButton type="submit" pendingText="Saving...">
+                  Skip checklist
+                </FormSubmitButton>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSkippingPhase(null)}
                 >
                   Cancel
                 </Button>

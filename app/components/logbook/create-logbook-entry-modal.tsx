@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { TimeOfDayInput } from "@/app/components/forms/time-of-day-input";
 
 type FlightOption = {
   id: string;
@@ -79,20 +80,8 @@ export function CreateLogbookEntryModal({
             </select>
 
             <Input name="date" type="date" required defaultValue={defaultDate} />
-            <Input
-              name="timeOut"
-              type="text"
-              inputMode="text"
-              placeholder="Time out (HH:MM or HHMM)"
-              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
-            />
-            <Input
-              name="timeIn"
-              type="text"
-              inputMode="text"
-              placeholder="Time in (HH:MM or HHMM)"
-              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
-            />
+            <TimeOfDayInput name="timeOut" placeholder="Time out (HHMM or HH:MM)" />
+            <TimeOfDayInput name="timeIn" placeholder="Time in (HHMM or HH:MM)" />
             <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" />
             <Input name="hobbsIn" type="number" step="0.1" placeholder="Hobbs in" />
             <Input name="totalTime" type="number" step="0.1" placeholder="Total time" />

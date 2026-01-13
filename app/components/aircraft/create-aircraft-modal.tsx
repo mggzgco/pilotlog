@@ -8,15 +8,11 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { useToast } from "@/app/components/ui/toast-provider";
 
-type AircraftTypeOption = { id: string; name: string };
-
 type CreateAircraftModalProps = {
-  aircraftTypes: AircraftTypeOption[];
   triggerLabel?: string;
 };
 
 export function CreateAircraftModal({
-  aircraftTypes,
   triggerLabel = "Create aircraft"
 }: CreateAircraftModalProps) {
   const router = useRouter();
@@ -29,14 +25,12 @@ export function CreateAircraftModal({
   const [manufacturer, setManufacturer] = useState("");
   const [model, setModel] = useState("");
   const [category, setCategory] = useState("SINGLE_ENGINE_PISTON");
-  const [aircraftTypeId, setAircraftTypeId] = useState("");
 
   const reset = () => {
     setTailNumber("");
     setManufacturer("");
     setModel("");
     setCategory("SINGLE_ENGINE_PISTON");
-    setAircraftTypeId("");
     setErrorMessage(null);
   };
 
@@ -57,8 +51,7 @@ export function CreateAircraftModal({
           tailNumber: tailNumber.trim(),
           manufacturer: manufacturer.trim() || undefined,
           model: model.trim() || undefined,
-          category,
-          aircraftTypeId: aircraftTypeId.trim() || undefined
+          category
         })
       });
 
@@ -97,7 +90,7 @@ export function CreateAircraftModal({
                 Create aircraft
               </Dialog.Title>
               <Dialog.Description className="text-sm text-slate-600 dark:text-slate-400">
-                Add tail number, aircraft details, and an optional checklist profile.
+                Add tail number and aircraft details.
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
@@ -157,23 +150,6 @@ export function CreateAircraftModal({
                   <option value="HELICOPTER">Helicopter</option>
                   <option value="GLIDER">Glider</option>
                   <option value="OTHER">Other</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
-                  Checklist profile (optional)
-                </label>
-                <select
-                  className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                  value={aircraftTypeId}
-                  onChange={(e) => setAircraftTypeId(e.target.value)}
-                >
-                  <option value="">No profile selected</option>
-                  {aircraftTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
                 </select>
               </div>
             </div>

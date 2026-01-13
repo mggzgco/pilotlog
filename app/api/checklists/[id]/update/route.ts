@@ -26,14 +26,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const template = await prisma.checklistTemplate.findFirst({
     where: { id: params.id },
-    select: { id: true, userId: true }
+    select: { id: true, userId: true, name: true, phase: true, makeModel: true }
   });
   if (!template) {
     return NextResponse.json({ error: "Checklist template not found." }, { status: 404 });
   }
-  const canEdit =
-    template.userId === user.id || (template.userId === null && user.role === "ADMIN");
-  if (!canEdit) {
+  const isGlobal = template.userId === null;
+  const isOwner = template.userId === user.id;
+  const isAdmin = user.role === "ADMIN";
+  if (!isOwner && !(isGlobal && isAdmin) && !isGlobal) {
     return NextResponse.json({ error: "Checklist template not found." }, { status: 404 });
   }
 
@@ -75,14 +76,53 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "At least one step is required." }, { status: 400 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.checklistTemplate.update({
-      where: { id: template.id },
-      data: { name }
-    });
+  const result = await prisma.$transaction(async (tx) => {
+    // Non-admin users cannot modify global templates; saving creates a personal copy instead.
+    const targetTemplateId = (() => {
+      if (isGlobal && !isAdmin) return null;
+      return template.id;
+    })();
+
+    let effectiveTemplateId = targetTemplateId;
+    let newTemplateId: string | null = null;
+
+    if (!effectiveTemplateId) {
+      const baseName = name;
+      const existing = await tx.checklistTemplate.findMany({
+        where: { userId: user.id, name: { startsWith: baseName } },
+        select: { name: true }
+      });
+      const taken = new Set(existing.map((t) => t.name.toLowerCase()));
+      let candidate = `${baseName} (Copy)`;
+      if (!taken.has(candidate.toLowerCase())) {
+        // ok
+      } else {
+        let n = 2;
+        while (taken.has(`${baseName} (Copy ${n})`.toLowerCase())) n += 1;
+        candidate = `${baseName} (Copy ${n})`;
+      }
+
+      const created = await tx.checklistTemplate.create({
+        data: {
+          userId: user.id,
+          name: candidate,
+          phase: template.phase,
+          isDefault: false,
+          makeModel: template.makeModel ?? null
+        },
+        select: { id: true }
+      });
+      effectiveTemplateId = created.id;
+      newTemplateId = created.id;
+    } else {
+      await tx.checklistTemplate.update({
+        where: { id: effectiveTemplateId },
+        data: { name }
+      });
+    }
 
     // Replace all items; this keeps ordering and hierarchy consistent.
-    await tx.checklistTemplateItem.deleteMany({ where: { templateId: template.id } });
+    await tx.checklistTemplateItem.deleteMany({ where: { templateId: effectiveTemplateId } });
 
     let personalCounter = 1;
 
@@ -92,7 +132,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
       const createdSection = await tx.checklistTemplateItem.create({
         data: {
-          templateId: template.id,
+          templateId: effectiveTemplateId,
           kind: "SECTION",
           parentId: null,
           personalOrder: sectionPersonal,
@@ -112,7 +152,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
         await tx.checklistTemplateItem.create({
           data: {
-            templateId: template.id,
+            templateId: effectiveTemplateId,
             kind: "STEP",
             parentId: createdSection.id,
             personalOrder: stepPersonal,
@@ -128,8 +168,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
         });
       }
     }
+    return { newTemplateId };
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, newTemplateId: result.newTemplateId });
 }
 

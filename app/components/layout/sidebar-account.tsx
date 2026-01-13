@@ -43,11 +43,20 @@ export function SidebarAccount({ user, onLogout, collapsed = false }: SidebarAcc
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 dark:focus-visible:ring-offset-slate-950"
+          className={[
+            "flex w-full items-center rounded-lg border border-slate-200 bg-white text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 dark:focus-visible:ring-offset-slate-950",
+            collapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2"
+          ].join(" ")}
           aria-label="Open account menu"
           title={collapsed && email ? `${displayName} · ${email}` : displayName}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white shadow-lg shadow-brand-600/20">
+          <div
+            className={[
+              "flex items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white shadow-lg shadow-brand-600/20",
+              "aspect-square shrink-0",
+              collapsed ? "h-9 w-9" : "h-9 w-9"
+            ].join(" ")}
+          >
             {initials}
           </div>
           {!collapsed ? (

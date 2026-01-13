@@ -490,9 +490,7 @@ export default async function DashboardPage() {
         <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-semibold">Dashboard</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Your pilot overview—hours, spend, recent activity, and what’s next.
-            </p>
+          <p className="text-sm text-slate-600 dark:text-slate-400" />
           </div>
           <Button asChild>
             <Link href="/import">Import ADS-B flight</Link>
@@ -527,9 +525,7 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Dashboard</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Clean pilot overview—hours, currency, spend, recent flights.
-          </p>
+          <p className="text-sm text-slate-600 dark:text-slate-400" />
         </div>
         <div className="flex flex-wrap gap-2">
         <Button asChild>

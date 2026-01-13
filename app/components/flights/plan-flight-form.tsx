@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { useToast } from "@/app/components/ui/toast-provider";
 
 type AircraftOption = {
   id: string;
@@ -81,6 +83,8 @@ export function PlanFlightForm({
   cancelHref = "/flights",
   onCancel
 }: PlanFlightFormProps) {
+  const router = useRouter();
+  const { addToast } = useToast();
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [tailNumber, setTailNumber] = useState("");
   const [unassignedConfirmed, setUnassignedConfirmed] = useState(false);
@@ -89,15 +93,42 @@ export function PlanFlightForm({
   const [peopleParticipants, setPeopleParticipants] = useState<ParticipantRow[]>([]);
   const [plannedStartClock, setPlannedStartClock] = useState("");
   const [plannedEndClock, setPlannedEndClock] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const aircraftById = useMemo(() => {
     return new Map(aircraftOptions.map((aircraft) => [aircraft.id, aircraft]));
   }, [aircraftOptions]);
 
+  const handleInlineSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(null);
+    setSubmitting(true);
+    try {
+      const formData = new FormData(event.currentTarget);
+      const res = await fetch("/api/flights/create-planned-inline", {
+        method: "POST",
+        body: formData,
+        headers: { accept: "application/json" }
+      });
+      const json = (await res.json().catch(() => null)) as { flightId?: string; error?: string } | null;
+      if (!res.ok) {
+        setErrorMessage(json?.error ?? "Unable to create planned flight.");
+        return;
+      }
+      addToast("Planned flight created.", "success");
+      onCancel?.(); // closes the drawer
+      router.refresh(); // refresh dashboard widgets
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <form
-      action="/api/flights/create-planned"
-      method="post"
+      action={onCancel ? undefined : "/api/flights/create-planned"}
+      method={onCancel ? undefined : "post"}
+      onSubmit={onCancel ? handleInlineSubmit : undefined}
       className="grid gap-4 lg:grid-cols-2"
     >
       {/* If the airport code is recognized, the server will automatically use that airport’s time zone (DST-aware).
@@ -436,7 +467,7 @@ export function PlanFlightForm({
         )}
       </div>
       <div className="lg:col-span-2 flex flex-wrap gap-3">
-        <FormSubmitButton type="submit" pendingText="Planning flight...">
+        <FormSubmitButton type="submit" pendingText="Planning flight..." disabled={submitting}>
           Create planned flight
         </FormSubmitButton>
         {onCancel ? (
@@ -449,6 +480,12 @@ export function PlanFlightForm({
           </Button>
         )}
       </div>
+
+      {errorMessage ? (
+        <div className="lg:col-span-2 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+          {errorMessage}
+        </div>
+      ) : null}
     </form>
   );
 }

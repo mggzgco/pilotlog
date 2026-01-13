@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { AircraftDocumentViewer } from "@/app/components/aircraft/aircraft-document-viewer";
 import { CreateAircraftChecklistModal } from "@/app/components/aircraft/create-aircraft-checklist-modal";
 
 const categoryOptions = [
@@ -220,7 +221,7 @@ export default async function AircraftDetailPage({
                     return (
                       <>
                         {grouped.global.length > 0 ? (
-                          <optgroup label="Admin templates">
+                          <optgroup label="Global Checklists">
                             {grouped.global.map((t) => (
                               <option key={t.id} value={t.id}>
                                 {t.name}
@@ -273,7 +274,7 @@ export default async function AircraftDetailPage({
                     return (
                       <>
                         {grouped.global.length > 0 ? (
-                          <optgroup label="Admin templates">
+                          <optgroup label="Global Checklists">
                             {grouped.global.map((t) => (
                               <option key={t.id} value={t.id}>
                                 {t.name}
@@ -370,11 +371,17 @@ export default async function AircraftDetailPage({
                       </td>
                       <td className="px-4 py-3 text-slate-400">{doc.createdAt.toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
-                        <form action={`/api/aircraft/documents/${doc.id}/delete`} method="post">
-                          <FormSubmitButton type="submit" pendingText="Deleting...">
-                            Delete
-                          </FormSubmitButton>
-                        </form>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <AircraftDocumentViewer
+                            docId={doc.id}
+                            filename={doc.originalFilename}
+                          />
+                          <form action={`/api/aircraft/documents/${doc.id}/delete`} method="post">
+                            <FormSubmitButton type="submit" pendingText="Deleting...">
+                              Delete
+                            </FormSubmitButton>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   ))}

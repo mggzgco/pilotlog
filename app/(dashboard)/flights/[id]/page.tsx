@@ -13,7 +13,8 @@ import { Input } from "@/app/components/ui/input";
 import { FlightChecklistTemplateSelector } from "@/app/components/flights/flight-checklist-template-selector";
 import { formatFlightRouteLabel } from "@/app/lib/flights/route-label";
 import { formatDateTime24 } from "@/app/lib/utils";
-import { EditAircraftFromFlightModal } from "@/app/components/aircraft/edit-aircraft-from-flight-modal";
+import { EditFlightModal } from "@/app/components/flights/edit-flight-modal";
+import { FlightPhotoThumbGrid } from "@/app/components/flights/flight-photo-lightbox";
 
 const formatPersonName = (person: {
   name?: string | null;
@@ -25,6 +26,9 @@ const formatPersonName = (person: {
   [person.firstName, person.lastName].filter(Boolean).join(" ") ||
   person.email ||
   "—";
+
+const formatUserLabel = (u: any) =>
+  [u.firstName, u.lastName].filter(Boolean).join(" ") || u.name || u.email || "—";
 
 export default async function FlightDetailPage({
   params,
@@ -79,6 +83,23 @@ export default async function FlightDetailPage({
   if (!flight) {
     notFound();
   }
+
+  const [aircraftOptions, users, people] = await Promise.all([
+    prisma.aircraft.findMany({
+      where: { userId: user.id },
+      orderBy: { tailNumber: "asc" },
+      select: { id: true, tailNumber: true, model: true }
+    }),
+    prisma.user.findMany({
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true, name: true, email: true }
+    }),
+    prisma.person.findMany({
+      where: { userId: user.id },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true }
+    })
+  ]);
 
   // If this flight isn't linked to an aircraft yet, try to link it now based on tail number.
   // This ensures ADS-B imported flights immediately show aircraft photo/details if the aircraft
@@ -395,17 +416,52 @@ export default async function FlightDetailPage({
               </p>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Quick links
-            </span>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/flights/${flight.id}/match`}
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                ADS-B match
-              </Link>
+          <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Quick actions
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <Button asChild size="sm" variant="outline" className="justify-start">
+                <Link href={`/flights/${flight.id}/match`}>ADS-B match</Link>
+              </Button>
+
+              <EditFlightModal
+                flightId={flight.id}
+                triggerLabel="Edit flight"
+                triggerClassName="w-full justify-start"
+                aircraftOptions={aircraftOptions}
+                participantOptions={users.map((u) => ({
+                  id: u.id,
+                  label: formatUserLabel(u)
+                }))}
+                personOptions={people.map((p) => ({
+                  id: p.id,
+                  label: p.name || p.email || "—"
+                }))}
+                initial={{
+                  aircraftId: flight.aircraftId,
+                  tailNumber: flight.tailNumberSnapshot ?? flight.tailNumber,
+                  origin: flight.origin,
+                  destination: flight.destination,
+                  plannedStartTime: flight.plannedStartTime
+                    ? flight.plannedStartTime.toISOString().slice(0, 16)
+                    : null,
+                  plannedEndTime: flight.plannedEndTime
+                    ? flight.plannedEndTime.toISOString().slice(0, 16)
+                    : null,
+                  startTime: flight.startTime ? flight.startTime.toISOString().slice(0, 16) : null,
+                  endTime: flight.endTime ? flight.endTime.toISOString().slice(0, 16) : null,
+                  stops: flight.stops.map((s) => s.label),
+                  participants: flight.participants
+                    .filter((p) => p.userId !== user.id)
+                    .map((p) => ({ id: p.userId, role: p.role })),
+                  peopleParticipants: flight.peopleParticipants.map((p) => ({
+                    id: p.personId,
+                    role: p.role
+                  }))
+                }}
+              />
+
               {flight.importedProvider === "aeroapi" && flight.providerFlightId ? (
                 <form action={`/api/flights/${flight.id}/adsb/refresh`} method="post">
                   <FormSubmitButton
@@ -413,56 +469,38 @@ export default async function FlightDetailPage({
                     size="sm"
                     variant="outline"
                     pendingText="Refreshing..."
-                    className="h-auto rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
+                    className="w-full justify-start"
                   >
                     Refresh ADS-B
                   </FormSubmitButton>
                 </form>
               ) : null}
-              <Link
-                href={`/import?flightId=${flight.id}`}
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                Manual import
-              </Link>
+
+              <Button asChild size="sm" variant="outline" className="justify-start">
+                <Link href={`/import?flightId=${flight.id}`}>Manual import</Link>
+              </Button>
+
               {hasAnyAssignedChecklistTemplate ? (
-                <Link
-                  href={`/flights/${flight.id}/checklists`}
-                  className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-                >
-                  Checklists
-                </Link>
+                <Button asChild size="sm" variant="outline" className="justify-start">
+                  <Link href={`/flights/${flight.id}/checklists`}>Checklists</Link>
+                </Button>
               ) : null}
-              <Link
-                href={`/flights/${flight.id}/costs`}
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                Costs
-              </Link>
-              <Link
-                href={`/flights/${flight.id}/logbook`}
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                Logbook
-              </Link>
-              <Link
-                href="#stats"
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                Stats
-              </Link>
-              <Link
-                href="#notes"
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                Notes
-              </Link>
-              <Link
-                href="#photos"
-                className="rounded-md border border-slate-800 bg-slate-950/30 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-900"
-              >
-                Photos
-              </Link>
+
+              <Button asChild size="sm" variant="outline" className="justify-start">
+                <Link href={`/flights/${flight.id}/costs`}>Costs</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="justify-start">
+                <Link href={`/flights/${flight.id}/logbook`}>Logbook</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="justify-start">
+                <Link href="#stats">Stats</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="justify-start">
+                <Link href="#notes">Notes</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="justify-start">
+                <Link href="#photos">Photos</Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -540,16 +578,6 @@ export default async function FlightDetailPage({
                   </p>
                   {aircraftForDisplay ? (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <EditAircraftFromFlightModal
-                        flightId={flight.id}
-                        aircraft={{
-                          id: aircraftForDisplay.id,
-                          tailNumber: aircraftForDisplay.tailNumber,
-                          manufacturer: aircraftForDisplay.manufacturer,
-                          model: aircraftForDisplay.model,
-                          category: aircraftForDisplay.category as any
-                        }}
-                      />
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/aircraft/${aircraftForDisplay.id}`}>Full aircraft page</Link>
                       </Button>
@@ -804,41 +832,40 @@ export default async function FlightDetailPage({
                 No photos uploaded yet.
                   </div>
                 ) : (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {flight.receiptDocuments.map((photo) => (
-                  <div key={photo.id} className="rounded-lg border border-slate-800 bg-slate-950/30 p-2">
-                    {photo.contentType?.startsWith("image/") ? (
-                      <Link href={`/api/receipts/${photo.id}/download`} className="block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`/api/receipts/${photo.id}/preview`}
-                          alt={photo.originalFilename}
-                          className="h-32 w-full rounded-md object-cover"
-                        />
-                      </Link>
-                    ) : (
-                      <div className="h-32 rounded-md border border-dashed border-slate-800 p-3 text-xs text-slate-400">
-                        Preview not available.
-                        </div>
-                    )}
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <p className="truncate text-xs text-slate-300" title={photo.originalFilename}>
+              <div className="mt-4 space-y-3">
+                <FlightPhotoThumbGrid
+                  photos={flight.receiptDocuments
+                    .filter((p) => p.contentType?.startsWith("image/"))
+                    .map((p) => ({ id: p.id, originalFilename: p.originalFilename }))}
+                />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {flight.receiptDocuments.map((photo) => (
+                    <div
+                      key={photo.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-3 py-2"
+                    >
+                      <p className="min-w-0 truncate text-xs text-slate-300" title={photo.originalFilename}>
                         {photo.originalFilename}
                       </p>
-                      <form action={`/api/receipts/${photo.id}/delete`} method="post">
-                            <FormSubmitButton
-                              type="submit"
-                              size="sm"
-                              variant="outline"
-                              pendingText="Deleting..."
-                            >
-                              Delete
-                            </FormSubmitButton>
-                          </form>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Button asChild size="sm" variant="ghost">
+                          <Link href={`/api/receipts/${photo.id}/download`}>Download</Link>
+                        </Button>
+                        <form action={`/api/receipts/${photo.id}/delete`} method="post">
+                          <FormSubmitButton
+                            type="submit"
+                            size="sm"
+                            variant="outline"
+                            pendingText="Deleting..."
+                          >
+                            Delete
+                          </FormSubmitButton>
+                        </form>
                       </div>
-                ))}
+                    </div>
+                  ))}
                 </div>
+              </div>
               )}
         </CardContent>
       </Card>

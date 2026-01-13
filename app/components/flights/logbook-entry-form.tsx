@@ -1,5 +1,6 @@
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
+import { TimeOfDayInput } from "@/app/components/forms/time-of-day-input";
 
 type LogbookEntryFormProps = {
   flightId: string;
@@ -72,20 +73,14 @@ export function LogbookEntryForm({
         <option value="CLOSED">Closed</option>
       </select>
       <Input name="date" type="date" required defaultValue={defaultDate} />
-      <Input
+      <TimeOfDayInput
         name="timeOut"
-        type="text"
-        inputMode="text"
-        placeholder="Time out (HH:MM or HHMM)"
-        pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
+        placeholder="Time out (HHMM or HH:MM)"
         defaultValue={defaultTimeOut}
       />
-      <Input
+      <TimeOfDayInput
         name="timeIn"
-        type="text"
-        inputMode="text"
-        placeholder="Time in (HH:MM or HHMM)"
-        pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
+        placeholder="Time in (HHMM or HH:MM)"
         defaultValue={defaultTimeIn}
       />
       <Input name="hobbsOut" type="number" step="0.1" placeholder="Hobbs out" defaultValue={defaultHobbsOut} />

@@ -193,6 +193,12 @@ export function ChecklistTemplateEditor({
         addToast(payload.error ?? "Failed to save checklist.", "error");
         return;
       }
+      if (payload?.newTemplateId) {
+        addToast("Saved as your own checklist copy.", "success");
+        router.push(`/checklists/${payload.newTemplateId}`);
+        router.refresh();
+        return;
+      }
       addToast("Checklist saved.", "success");
       router.refresh();
     } finally {

@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/app/lib/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
+import { TimeOfDayInput } from "@/app/components/forms/time-of-day-input";
 
 const formatRoute = (origin?: string | null, destination?: string | null) => {
   if (!origin && !destination) return "—";
@@ -170,20 +171,14 @@ export default async function LogbookEntryDetailPage({
               required
               defaultValue={entry.date.toISOString().slice(0, 10)}
             />
-            <Input
+            <TimeOfDayInput
               name="timeOut"
-              type="text"
-              inputMode="text"
-              placeholder="Time out (HH:MM or HHMM)"
-              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
+              placeholder="Time out (HHMM or HH:MM)"
               defaultValue={entry.timeOut ?? ""}
             />
-            <Input
+            <TimeOfDayInput
               name="timeIn"
-              type="text"
-              inputMode="text"
-              placeholder="Time in (HH:MM or HHMM)"
-              pattern="^([01]\\d|2[0-3]):?[0-5]\\d$"
+              placeholder="Time in (HHMM or HH:MM)"
               defaultValue={entry.timeIn ?? ""}
             />
             <Input

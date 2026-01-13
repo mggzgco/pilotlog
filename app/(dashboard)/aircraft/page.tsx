@@ -30,7 +30,7 @@ export default async function AircraftPage({ searchParams }: { searchParams?: Ai
   ]);
   const categoryFilter = allowedCategories.has(category) ? category : "";
 
-  const [aircraft, aircraftTypes] = await Promise.all([
+  const [aircraft] = await Promise.all([
     prisma.aircraft.findMany({
       where: {
         userId: user.id,
@@ -56,10 +56,6 @@ export default async function AircraftPage({ searchParams }: { searchParams?: Ai
         postflightChecklistTemplate: true
       },
       orderBy: { createdAt: "desc" }
-    }),
-    prisma.aircraftType.findMany({
-      where: { userId: user.id },
-      orderBy: { name: "asc" }
     })
   ]);
 
@@ -107,7 +103,7 @@ export default async function AircraftPage({ searchParams }: { searchParams?: Ai
           <p className="text-sm text-slate-400">Maintain your fleet list.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <CreateAircraftModal aircraftTypes={aircraftTypes} triggerLabel="Create aircraft" />
+          <CreateAircraftModal triggerLabel="Create aircraft" />
           <Button asChild variant="outline">
             <Link href="/checklists">Manage checklists</Link>
           </Button>
