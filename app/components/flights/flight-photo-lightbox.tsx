@@ -157,7 +157,6 @@ export function FlightPhotoThumbGrid({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    // @ts-expect-error - reuse click handler
                     e.currentTarget.click();
                   }
                 }}

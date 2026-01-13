@@ -779,36 +779,9 @@ export default async function FlightDetailPage({
               </div>
             </div>
 
-            {currentUserParticipantId ? (
-              <form
-                action={`/api/flights/${flight.id}/update-logbook`}
-                method="post"
-                className="mt-4 flex flex-wrap items-end gap-3"
-              >
-                <input type="hidden" name="participantId" value={currentUserParticipantId} />
-                <input type="hidden" name="status" value="OPEN" />
-                <input type="hidden" name="date" value={flight.startTime.toISOString().slice(0, 10)} />
-                <label className="min-w-0 flex-1 text-sm text-slate-600 dark:text-slate-400 sm:min-w-[240px]">
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Total time (hrs)
-                  </span>
-                  <Input
-                    name="totalTime"
-                    type="number"
-                    step="0.1"
-                    placeholder="1.4"
-                    defaultValue={currentUserLogbookEntry?.totalTime?.toString?.() ?? ""}
-                  />
-                </label>
-                <FormSubmitButton type="submit" pendingText="Saving...">
-                  Save
-                </FormSubmitButton>
-              </form>
-            ) : (
-              <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-                Add yourself as a flight participant to log hours.
-              </p>
-            )}
+            <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+              Edit total time inside the logbook entry (Open logbook).
+            </p>
 
             {!hasAnyLogbookEntry ? (
               <div className="mt-4 rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
@@ -828,7 +801,7 @@ export default async function FlightDetailPage({
             <form action={`/api/flights/${flight.id}/notes`} method="post" className="grid gap-3">
               <textarea
                 name="notes"
-                className="min-h-[160px] w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                className="min-h-[160px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-transparent dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
                 placeholder="Notes about this flight (training focus, weather, debrief, squawks, learnings)"
                 defaultValue={flightNotes}
               />

@@ -24,7 +24,10 @@ const formatHours = (value: number | string | { toString(): string } | null | un
   return numeric === null ? "—" : numeric.toFixed(1);
 };
 
-const computeHobbsTotal = (hobbsOut: unknown, hobbsIn: unknown) => {
+const computeHobbsTotal = (
+  hobbsOut: number | string | { toString(): string } | null | undefined,
+  hobbsIn: number | string | { toString(): string } | null | undefined
+) => {
   const out = toHours(hobbsOut);
   const inn = toHours(hobbsIn);
   if (out === null || inn === null) return null;

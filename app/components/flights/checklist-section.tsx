@@ -22,7 +22,7 @@ const ChecklistRunStatus = {
 
 type ChecklistInputType = (typeof ChecklistInputType)[keyof typeof ChecklistInputType];
 type ChecklistRunStatus = (typeof ChecklistRunStatus)[keyof typeof ChecklistRunStatus];
-type ChecklistDecision = "ACCEPTED" | "REJECTED";
+type ChecklistDecision = "ACCEPTED" | "REJECTED" | "SKIPPED";
 type ChecklistItemKind = "SECTION" | "STEP";
 
 type SaveStatus = "saved" | "saving" | "offline";
@@ -712,25 +712,25 @@ export function ChecklistSection({
           <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
             Post-flight checklist will be available after you start it.
           </div>
-          {canStartPostflight ? (
-            <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3">
+            {canStartPostflight ? (
               <form action={`/api/flights/${flightId}/checklists/start-postflight`} method="post">
                 <FormSubmitButton type="submit" pendingText="Starting checklist...">
                   Start Post-Flight Checklist
                 </FormSubmitButton>
               </form>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setSkippingNote("");
-                  setSkippingPhase("POSTFLIGHT");
-                }}
-              >
-                Skip checklist
-              </Button>
-            </div>
-          ) : null}
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setSkippingNote("");
+                setSkippingPhase("POSTFLIGHT");
+              }}
+            >
+              Skip checklist
+            </Button>
+          </div>
         </div>
       );
     }
@@ -870,8 +870,9 @@ export function ChecklistSection({
               {run.status === ChecklistRunStatus.SIGNED
                 ? (() => {
                     const skipped =
-                      run.decision === "REJECTED" &&
-                      Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"));
+                      run.decision === "SKIPPED" ||
+                      (run.decision === "REJECTED" &&
+                        Boolean(run.decisionNote?.toLowerCase().startsWith("skipped")));
                     const label = skipped
                       ? "Skipped"
                       : run.decision === "REJECTED"
@@ -898,8 +899,9 @@ export function ChecklistSection({
               run.status === ChecklistRunStatus.SIGNED
                 ? (() => {
                     const skipped =
-                      run.decision === "REJECTED" &&
-                      Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"));
+                      run.decision === "SKIPPED" ||
+                      (run.decision === "REJECTED" &&
+                        Boolean(run.decisionNote?.toLowerCase().startsWith("skipped")));
                     if (skipped) return "bg-amber-500/15 text-amber-800 dark:text-amber-100";
                     if (run.decision === "REJECTED") return "bg-rose-500/15 text-rose-700 dark:text-rose-200";
                     if (run.decision === "ACCEPTED") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200";
@@ -911,8 +913,9 @@ export function ChecklistSection({
             {run.status === ChecklistRunStatus.SIGNED
               ? (() => {
                   const skipped =
-                    run.decision === "REJECTED" &&
-                    Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"));
+                    run.decision === "SKIPPED" ||
+                    (run.decision === "REJECTED" &&
+                      Boolean(run.decisionNote?.toLowerCase().startsWith("skipped")));
                   if (skipped) return "Skipped";
                   if (run.decision === "REJECTED") return "Rejected";
                   if (run.decision === "ACCEPTED") return "Accepted";
@@ -925,8 +928,9 @@ export function ChecklistSection({
         {run.status === ChecklistRunStatus.SIGNED ? (
           <div
             className={`rounded-lg border px-4 py-3 text-sm ${
-              run.decision === "REJECTED" &&
-              Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"))
+              (run.decision === "SKIPPED" ||
+                (run.decision === "REJECTED" &&
+                  Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"))))
                 ? "border-amber-500/40 bg-amber-500/10 text-amber-100"
                 : run.decision === "REJECTED"
                   ? "border-rose-500/40 bg-rose-500/10 text-rose-100"
@@ -936,8 +940,9 @@ export function ChecklistSection({
             }`}
           >
             <p className="font-semibold">
-              {run.decision === "REJECTED" &&
-              Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"))
+              {(run.decision === "SKIPPED" ||
+                (run.decision === "REJECTED" &&
+                  Boolean(run.decisionNote?.toLowerCase().startsWith("skipped"))))
                 ? "Checklist skipped"
                 : run.decision === "REJECTED"
                   ? "Checklist rejected"
@@ -1050,9 +1055,6 @@ export function ChecklistSection({
                     <div className="space-y-3">
                       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/30">
                         {renderInput(item, isDisabled)}
-                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                          Tip: swipe right to accept · swipe left to reject
-                        </p>
                       </div>
                       <details className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
                           <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">

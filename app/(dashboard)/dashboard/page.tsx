@@ -180,8 +180,6 @@ export default async function DashboardPage() {
           userId: user.id,
           startTime: { gte: days90 },
           logbookEntries: { some: { status: "CLOSED" } }
-          ,
-          OR: [{ status: "COMPLETED" }, { endTime: { not: null } }]
         }
       }),
       prisma.flight.count({
@@ -911,8 +909,18 @@ export default async function DashboardPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                  <span>{formatDuration(flight.durationMinutes)}</span>
-                  <span>{flight.distanceNm ? `${flight.distanceNm} nm` : "—"}</span>
+                  <span>
+                    {flight.status === "PLANNED" && !flight.durationMinutes
+                      ? "Planned"
+                      : formatDuration(flight.durationMinutes)}
+                  </span>
+                  <span>
+                    {flight.status === "PLANNED" && !flight.distanceNm
+                      ? ""
+                      : flight.distanceNm
+                        ? `${flight.distanceNm} nm`
+                        : "—"}
+                  </span>
                   <ArrowRight className="h-4 w-4 text-slate-400" />
                 </div>
               </Link>

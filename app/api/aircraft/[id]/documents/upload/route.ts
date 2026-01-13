@@ -3,6 +3,7 @@ import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import { MAX_UPLOAD_BYTES, getReceiptExtensionFrom, storeUpload } from "@/app/lib/storage";
 import { recordAuditEvent } from "@/app/lib/audit";
+import { buildRedirectUrl } from "@/app/lib/http";
 
 export async function POST(
   request: Request,
@@ -14,11 +15,7 @@ export async function POST(
     toastType: "success" | "error",
     fallbackPath: string
   ) => {
-    const origin = new URL(request.url).origin;
-    const referer = request.headers.get("referer");
-    const refererUrl = referer ? new URL(referer) : null;
-    const redirectUrl =
-      refererUrl && refererUrl.origin === origin ? refererUrl : new URL(fallbackPath, request.url);
+    const redirectUrl = buildRedirectUrl(request, fallbackPath);
     redirectUrl.searchParams.set("toast", message);
     redirectUrl.searchParams.set("toastType", toastType);
     return NextResponse.redirect(redirectUrl, { status: 303 });

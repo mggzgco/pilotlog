@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { ChecklistSection } from "@/app/components/flights/checklist-section";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
+import { selectChecklistTemplate } from "@/app/lib/checklists/templates";
+import { createChecklistRunSnapshot } from "@/app/lib/checklists/snapshot";
 
 export default async function FlightChecklistsPage({
   params,
@@ -35,11 +37,12 @@ export default async function FlightChecklistsPage({
   if (!flight) {
     notFound();
   }
+  let flightData = flight as NonNullable<typeof flight>;
 
   // Auto-link aircraft by tail number if missing. This keeps checklist availability
   // consistent even for flights imported before aircraft was created/linked.
-  if (!flight.aircraftId) {
-    const tail = (flight.tailNumberSnapshot ?? flight.tailNumber ?? "").trim();
+  if (!flightData.aircraftId) {
+    const tail = (flightData.tailNumberSnapshot ?? flightData.tailNumber ?? "").trim();
     if (tail) {
       const aircraft = await prisma.aircraft.findFirst({
         where: { userId: user.id, tailNumber: { equals: tail, mode: "insensitive" } },
@@ -47,10 +50,11 @@ export default async function FlightChecklistsPage({
       });
       if (aircraft) {
         await prisma.flight.update({
-          where: { id: flight.id },
+          where: { id: flightData.id },
           data: { aircraftId: aircraft.id }
         });
         flight = (await prisma.flight.findFirst(baseSelect))!;
+        flightData = flight as NonNullable<typeof flight>;
       }
     }
   }
@@ -60,7 +64,8 @@ export default async function FlightChecklistsPage({
     (user as any).email ||
     "Pilot";
 
-  const toChecklistRunView = (run: typeof flight.checklistRuns[number]) => ({
+  type ChecklistRun = NonNullable<typeof flight>["checklistRuns"][number];
+  const toChecklistRunView = (run: ChecklistRun) => ({
     id: run.id,
     phase: run.phase,
     status: run.status,
@@ -92,19 +97,77 @@ export default async function FlightChecklistsPage({
   });
 
   const assignedPreflightTemplateId =
-    flight.aircraft?.preflightChecklistTemplateId ??
-    flight.aircraft?.aircraftType?.defaultPreflightTemplateId ??
+    flightData.aircraft?.preflightChecklistTemplateId ??
+    flightData.aircraft?.aircraftType?.defaultPreflightTemplateId ??
     null;
   const assignedPostflightTemplateId =
-    flight.aircraft?.postflightChecklistTemplateId ??
-    flight.aircraft?.aircraftType?.defaultPostflightTemplateId ??
+    flightData.aircraft?.postflightChecklistTemplateId ??
+    flightData.aircraft?.aircraftType?.defaultPostflightTemplateId ??
     null;
 
+  // Ensure checklist runs exist (older flights may not have snapshots until first start).
+  if (
+    flightData.aircraftId &&
+    ((assignedPreflightTemplateId &&
+      !flightData.checklistRuns.some((r) => r.phase === "PREFLIGHT")) ||
+      (assignedPostflightTemplateId &&
+        !flightData.checklistRuns.some((r) => r.phase === "POSTFLIGHT")))
+  ) {
+    await prisma.$transaction(async (tx) => {
+      if (
+        assignedPreflightTemplateId &&
+        !flightData.checklistRuns.some((r) => r.phase === "PREFLIGHT")
+      ) {
+        const template = await selectChecklistTemplate({
+          userId: user.id,
+          aircraftId: flightData.aircraftId,
+          phase: "PREFLIGHT",
+          client: tx
+        });
+        if (template && template.items.length > 0) {
+          await createChecklistRunSnapshot({
+            client: tx,
+            flightId: flightData.id,
+            phase: "PREFLIGHT",
+            status: "IN_PROGRESS",
+            startedAt: null,
+            template
+          });
+        }
+      }
+      if (
+        assignedPostflightTemplateId &&
+        !flightData.checklistRuns.some((r) => r.phase === "POSTFLIGHT")
+      ) {
+        const template = await selectChecklistTemplate({
+          userId: user.id,
+          aircraftId: flightData.aircraftId,
+          phase: "POSTFLIGHT",
+          client: tx
+        });
+        if (template && template.items.length > 0) {
+          await createChecklistRunSnapshot({
+            client: tx,
+            flightId: flightData.id,
+            phase: "POSTFLIGHT",
+            status: "NOT_AVAILABLE",
+            startedAt: null,
+            template
+          });
+        }
+      }
+    });
+
+    // Re-fetch after creating snapshots so the UI can show Start/Skip.
+    flight = (await prisma.flight.findFirst(baseSelect))!;
+    flightData = flight as NonNullable<typeof flight>;
+  }
+
   const preflightRun = assignedPreflightTemplateId
-    ? flight.checklistRuns.find((run) => run.phase === "PREFLIGHT") ?? null
+    ? flightData.checklistRuns.find((run) => run.phase === "PREFLIGHT") ?? null
     : null;
   const postflightRun = assignedPostflightTemplateId
-    ? flight.checklistRuns.find((run) => run.phase === "POSTFLIGHT") ?? null
+    ? flightData.checklistRuns.find((run) => run.phase === "POSTFLIGHT") ?? null
     : null;
 
   const defaultTab =

@@ -36,11 +36,13 @@ export async function getRecentFlights(userId: string, take = 10) {
       id: true,
       origin: true,
       destination: true,
+      status: true,
       durationMinutes: true,
       distanceNm: true,
       startTime: true,
       endTime: true,
-      tailNumber: true
+      tailNumber: true,
+      tailNumberSnapshot: true
     }
   });
 }

@@ -11,6 +11,7 @@ import {
 } from "@/app/lib/costs/utils";
 import { MAX_UPLOAD_BYTES, getReceiptExtensionFrom, storeUpload } from "@/app/lib/storage";
 import { recordAuditEvent } from "@/app/lib/audit";
+import { buildRedirectUrl } from "@/app/lib/http";
 
 const costCreateSchema = z.object({
   category: z.string().min(1),
@@ -26,13 +27,8 @@ const costCreateSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const wantsJson = request.headers.get("accept")?.includes("application/json") ?? false;
   const redirectWithToast = (message: string, toastType: "success" | "error") => {
-    const origin = new URL(request.url).origin;
-    const referer = request.headers.get("referer");
-    const refererUrl = referer ? new URL(referer) : null;
-    const redirectUrl =
-      refererUrl && refererUrl.origin === origin ? refererUrl : new URL("/costs", request.url);
+    const redirectUrl = buildRedirectUrl(request, "/costs");
     redirectUrl.searchParams.set("toast", message);
     redirectUrl.searchParams.set("toastType", toastType);
     return NextResponse.redirect(redirectUrl, { status: 303 });
@@ -45,32 +41,23 @@ export async function POST(request: Request) {
 
   const { user, session } = await getCurrentUser();
   if (!user || !session || user.status !== "ACTIVE") {
-    return wantsJson
-      ? NextResponse.json({ error: "Unauthorized." }, { status: 401 })
-      : redirectWithToast("Unauthorized.", "error");
+    return redirectWithToast("Unauthorized.", "error");
   }
 
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch {
-    return wantsJson
-      ? NextResponse.json(
-          { error: "Upload too large or malformed form data." },
-          { status: 400 }
-        )
-      : redirectWithToast(
-          "Upload too large or malformed. Try a smaller file (max 20MB each).",
-          "error"
-        );
+    return redirectWithToast(
+      "Upload too large or malformed. Try a smaller file (max 20MB each).",
+      "error"
+    );
   }
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = costCreateSchema.safeParse(raw);
   if (!parsed.success) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid cost data." }, { status: 400 })
-      : redirectWithToast("Invalid cost data.", "error");
+    return redirectWithToast("Invalid cost data.", "error");
   }
 
   const normalizedCategory = parsed.data.category.trim().toLowerCase();
@@ -89,48 +76,30 @@ export async function POST(request: Request) {
   const fuelPriceCents = parseOptionalAmountToCents(parsed.data.fuelPrice);
 
   if (rateRaw && rateCents === null) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid rate." }, { status: 400 })
-      : redirectWithToast("Invalid rate.", "error");
+    return redirectWithToast("Invalid rate.", "error");
   }
   if (quantityHoursRaw && quantityHours === null) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid hours." }, { status: 400 })
-      : redirectWithToast("Invalid hours.", "error");
+    return redirectWithToast("Invalid hours.", "error");
   }
   if (fuelGallonsRaw && fuelGallons === null) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid fuel gallons." }, { status: 400 })
-      : redirectWithToast("Invalid fuel gallons.", "error");
+    return redirectWithToast("Invalid fuel gallons.", "error");
   }
   if (fuelPriceRaw && fuelPriceCents === null) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid fuel price." }, { status: 400 })
-      : redirectWithToast("Invalid fuel price.", "error");
+    return redirectWithToast("Invalid fuel price.", "error");
   }
 
   if (
     (rateCents !== null || quantityHours !== null) &&
     (rateCents === null || quantityHours === null)
   ) {
-    return wantsJson
-      ? NextResponse.json(
-          { error: "Rate and hours are required together." },
-          { status: 400 }
-        )
-      : redirectWithToast("Rate and hours are required together.", "error");
+    return redirectWithToast("Rate and hours are required together.", "error");
   }
 
   if (
     (fuelGallons !== null || fuelPriceCents !== null) &&
     (fuelGallons === null || fuelPriceCents === null)
   ) {
-    return wantsJson
-      ? NextResponse.json(
-          { error: "Fuel gallons and price are required together." },
-          { status: 400 }
-        )
-      : redirectWithToast("Fuel gallons and price are required together.", "error");
+    return redirectWithToast("Fuel gallons and price are required together.", "error");
   }
 
   let amountCents: number | null = null;
@@ -143,16 +112,12 @@ export async function POST(request: Request) {
   }
 
   if (amountCents === null) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid cost amount." }, { status: 400 })
-      : redirectWithToast("Invalid cost amount.", "error");
+    return redirectWithToast("Invalid cost amount.", "error");
   }
 
   const parsedDate = new Date(parsed.data.date);
   if (Number.isNaN(parsedDate.getTime())) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid cost date." }, { status: 400 })
-      : redirectWithToast("Invalid cost date.", "error");
+    return redirectWithToast("Invalid cost date.", "error");
   }
 
   const flight = await prisma.flight.findFirst({
@@ -160,9 +125,7 @@ export async function POST(request: Request) {
     select: { id: true }
   });
   if (!flight) {
-    return wantsJson
-      ? NextResponse.json({ error: "Invalid flight selection." }, { status: 400 })
-      : redirectWithToast("Invalid flight selection.", "error");
+    return redirectWithToast("Invalid flight selection.", "error");
   }
 
   const costItem = await prisma.costItem.create({
@@ -187,18 +150,11 @@ export async function POST(request: Request) {
 
   for (const file of files) {
     if (file.size > MAX_UPLOAD_BYTES) {
-      return wantsJson
-        ? NextResponse.json(
-            { error: `File exceeds size limit (${MAX_UPLOAD_BYTES} bytes).` },
-            { status: 400 }
-          )
-        : redirectWithToast("File exceeds size limit (20MB each).", "error");
+      return redirectWithToast("File exceeds size limit (20MB each).", "error");
     }
     const extension = getReceiptExtensionFrom(file.type, file.name);
     if (!extension) {
-      return wantsJson
-        ? NextResponse.json({ error: "Unsupported file type." }, { status: 400 })
-        : redirectWithToast("Unsupported file type.", "error");
+      return redirectWithToast("Unsupported file type.", "error");
     }
     const buffer = Buffer.from(await file.arrayBuffer());
     const storagePath = await storeUpload(buffer, extension);
