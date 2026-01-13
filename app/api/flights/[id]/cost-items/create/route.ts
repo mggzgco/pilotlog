@@ -164,5 +164,5 @@ export async function POST(
     isUpdate ? "Cost item updated." : "Cost item added."
   );
   redirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(redirectUrl, { status: 303 });
 }

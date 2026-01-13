@@ -212,7 +212,7 @@ export default async function DashboardPage() {
       })
     ]);
 
-  const [profile, aircraftOptions, users, people] = await Promise.all([
+  const [profile, aircraftOptions, people] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
       select: { homeAirport: true, homeTimeZone: true }
@@ -222,10 +222,6 @@ export default async function DashboardPage() {
       orderBy: { tailNumber: "asc" },
       select: { id: true, tailNumber: true, model: true }
     }),
-    prisma.user.findMany({
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      select: { id: true, firstName: true, lastName: true, name: true, email: true }
-    }),
     prisma.person.findMany({
       where: { userId: user.id },
       orderBy: { name: "asc" },
@@ -233,13 +229,6 @@ export default async function DashboardPage() {
     })
   ]);
 
-  const participantOptions = users.map((entry) => ({
-    id: entry.id,
-    label:
-      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
-      entry.name ||
-      entry.email
-  }));
   const personOptions = people.map((entry) => ({
     id: entry.id,
     label: entry.email ? `${entry.name} · ${entry.email}` : entry.name
@@ -687,7 +676,6 @@ export default async function DashboardPage() {
               <PlanFlightModal
                 triggerLabel="Plan a flight"
                 aircraftOptions={aircraftOptions}
-                participantOptions={participantOptions}
                 personOptions={personOptions}
                 defaultDepartureLabel={profile?.homeAirport ?? ""}
                 defaultTimeZone={profile?.homeTimeZone ?? ""}

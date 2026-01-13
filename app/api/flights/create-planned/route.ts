@@ -1,3 +1,4 @@
+import { FlightParticipantRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/db";
@@ -6,9 +7,7 @@ import { selectChecklistTemplate } from "@/app/lib/checklists/templates";
 import { createChecklistRunSnapshot } from "@/app/lib/checklists/snapshot";
 import { recordAuditEvent } from "@/app/lib/audit";
 import {
-  normalizeParticipants,
   normalizePersonParticipants,
-  parseParticipantFormData,
   parsePersonParticipantFormData
 } from "@/app/lib/flights/participants";
 import { lookupAirportByCode } from "@/app/lib/airports/lookup";
@@ -27,7 +26,8 @@ const plannedFlightSchema = z.object({
   plannedEndDate: z.string().optional(),
   plannedEndClock: z.string().optional(),
   departureLabel: z.string().optional(),
-  arrivalLabel: z.string().optional()
+  arrivalLabel: z.string().optional(),
+  selfRole: z.string().optional()
 });
 
 function parseClockHHMM(value: string | null): { hour: number; minute: number } | null {
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     redirectUrl.searchParams.set("toast", "Invalid planned flight details.");
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
 
   const tailNumberInput = String(parsed.data.tailNumber ?? "").trim();
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
       "Select an aircraft or confirm the flight is unassigned."
     );
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
 
   let tailNumber = tailNumberInput;
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
     if (!aircraft) {
       redirectUrl.searchParams.set("toast", "Selected aircraft was not found.");
       redirectUrl.searchParams.set("toastType", "error");
-      return NextResponse.redirect(redirectUrl);
+      return NextResponse.redirect(redirectUrl, { status: 303 });
     }
     tailNumber = aircraft.tailNumber;
   }
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
   if (!tailNumber) {
     redirectUrl.searchParams.set("toast", "Tail number is required.");
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
 
   // If the flight was marked unassigned but the tail number matches an aircraft in the user's fleet,
@@ -210,22 +210,22 @@ export async function POST(request: Request) {
   if ((parsed.data.plannedStartDate && !plannedStartClock) || (!parsed.data.plannedStartDate && plannedStartClock)) {
     redirectUrl.searchParams.set("toast", "Planned start requires both date and time (HH:MM).");
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
   if ((parsed.data.plannedEndDate && !plannedEndClock) || (!parsed.data.plannedEndDate && plannedEndClock)) {
     redirectUrl.searchParams.set("toast", "Planned end requires both date and time (HH:MM).");
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
   if (plannedStartLegacy && Number.isNaN(plannedStartLegacy.getTime())) {
     redirectUrl.searchParams.set("toast", "Invalid planned start time.");
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
   if (plannedEndLegacy && Number.isNaN(plannedEndLegacy.getTime())) {
     redirectUrl.searchParams.set("toast", "Invalid planned end time.");
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
 
   const departureLabel = String(parsed.data.departureLabel ?? "").trim();
@@ -271,7 +271,7 @@ export async function POST(request: Request) {
       "Invalid planned start date/time for the departure airport time zone."
     );
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
   if (parsed.data.plannedEndDate && plannedEndFromParts === null) {
     redirectUrl.searchParams.set(
@@ -279,17 +279,24 @@ export async function POST(request: Request) {
       "Invalid planned end date/time for the arrival airport time zone."
     );
     redirectUrl.searchParams.set("toastType", "error");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
 
   const startTime = plannedStart ?? new Date();
-  const participantInputs = normalizeParticipants(
-    user.id,
-    parseParticipantFormData(formData)
-  );
   const personParticipantInputs = normalizePersonParticipants(
     parsePersonParticipantFormData(formData)
   );
+  const selfRoleRaw = String(formData.get("selfRole") ?? "PIC").trim().toUpperCase();
+  const allowedSelfRoles = new Set<FlightParticipantRole>([
+    "PIC",
+    "SIC",
+    "INSTRUCTOR",
+    "STUDENT",
+    "PASSENGER"
+  ]);
+  const selfRole = allowedSelfRoles.has(selfRoleRaw as FlightParticipantRole)
+    ? (selfRoleRaw as FlightParticipantRole)
+    : "PIC";
 
   // Ensure all person IDs belong to the current user.
   if (personParticipantInputs.length > 0) {
@@ -303,7 +310,7 @@ export async function POST(request: Request) {
     if (missing.length > 0) {
       redirectUrl.searchParams.set("toast", "One or more selected people were not found.");
       redirectUrl.searchParams.set("toastType", "error");
-      return NextResponse.redirect(redirectUrl);
+      return NextResponse.redirect(redirectUrl, { status: 303 });
     }
   }
 
@@ -334,13 +341,7 @@ export async function POST(request: Request) {
           endTimeZone
         },
         participants: {
-          create: [
-            { userId: user.id, role: "PIC" },
-            ...participantInputs.map((participant) => ({
-              userId: participant.userId,
-              role: participant.role
-            }))
-          ]
+          create: [{ userId: user.id, role: selfRole }]
         },
         peopleParticipants: {
           create: personParticipantInputs.map((participant) => ({
@@ -403,5 +404,5 @@ export async function POST(request: Request) {
   const successRedirectUrl = new URL(`/flights/${flight.id}`, request.url);
   successRedirectUrl.searchParams.set("toast", "Planned flight created.");
   successRedirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(successRedirectUrl);
+  return NextResponse.redirect(successRedirectUrl, { status: 303 });
 }

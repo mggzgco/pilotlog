@@ -87,6 +87,6 @@ export async function POST(
       : new URL(`/aircraft/${aircraft.id}`, request.url);
   redirectUrl.searchParams.set("toast", "Aircraft photo updated.");
   redirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(redirectUrl, { status: 303 });
 }
 

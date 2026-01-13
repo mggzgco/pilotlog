@@ -27,9 +27,6 @@ const formatPersonName = (person: {
   person.email ||
   "—";
 
-const formatUserLabel = (u: any) =>
-  [u.firstName, u.lastName].filter(Boolean).join(" ") || u.name || u.email || "—";
-
 export default async function FlightDetailPage({
   params,
 }: {
@@ -84,15 +81,11 @@ export default async function FlightDetailPage({
     notFound();
   }
 
-  const [aircraftOptions, users, people] = await Promise.all([
+  const [aircraftOptions, people] = await Promise.all([
     prisma.aircraft.findMany({
       where: { userId: user.id },
       orderBy: { tailNumber: "asc" },
       select: { id: true, tailNumber: true, model: true }
-    }),
-    prisma.user.findMany({
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      select: { id: true, firstName: true, lastName: true, name: true, email: true }
     }),
     prisma.person.findMany({
       where: { userId: user.id },
@@ -430,10 +423,6 @@ export default async function FlightDetailPage({
                 triggerLabel="Edit flight"
                 triggerClassName="w-full justify-start"
                 aircraftOptions={aircraftOptions}
-                participantOptions={users.map((u) => ({
-                  id: u.id,
-                  label: formatUserLabel(u)
-                }))}
                 personOptions={people.map((p) => ({
                   id: p.id,
                   label: p.name || p.email || "—"
@@ -443,6 +432,8 @@ export default async function FlightDetailPage({
                   tailNumber: flight.tailNumberSnapshot ?? flight.tailNumber,
                   origin: flight.origin,
                   destination: flight.destination,
+                  selfRole:
+                    flight.participants.find((p) => p.userId === user.id)?.role ?? "PIC",
                   plannedStartTime: flight.plannedStartTime
                     ? flight.plannedStartTime.toISOString().slice(0, 16)
                     : null,
@@ -452,9 +443,6 @@ export default async function FlightDetailPage({
                   startTime: flight.startTime ? flight.startTime.toISOString().slice(0, 16) : null,
                   endTime: flight.endTime ? flight.endTime.toISOString().slice(0, 16) : null,
                   stops: flight.stops.map((s) => s.label),
-                  participants: flight.participants
-                    .filter((p) => p.userId !== user.id)
-                    .map((p) => ({ id: p.userId, role: p.role })),
                   peopleParticipants: flight.peopleParticipants.map((p) => ({
                     id: p.personId,
                     role: p.role
@@ -823,7 +811,7 @@ export default async function FlightDetailPage({
                 <FormSubmitButton type="submit" pendingText="Uploading photos...">
                   Upload photos
                 </FormSubmitButton>
-                <span>JPG/PNG up to 10MB each.</span>
+                     <span>JPG/PNG up to 20MB each.</span>
             </div>
             </form>
 

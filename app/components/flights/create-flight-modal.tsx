@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
-import { participantRoleOptions } from "@/app/lib/flights/participants";
 import { useToast } from "@/app/components/ui/toast-provider";
 
 type AircraftOption = {
@@ -21,11 +20,6 @@ type PersonOption = {
   label: string;
 };
 
-type ParticipantOption = {
-  id: string;
-  label: string;
-};
-
 type ParticipantRow = {
   id: string;
   role: string;
@@ -33,12 +27,14 @@ type ParticipantRow = {
 
 type CreateFlightModalProps = {
   aircraftOptions: AircraftOption[];
-  participantOptions: ParticipantOption[];
   personOptions: PersonOption[];
   triggerLabel?: string;
   defaultOriginLabel?: string;
   defaultTimeZone?: string;
 };
+
+const selfRoleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT", "PASSENGER"] as const;
+const personRoleOptions = ["PASSENGER", "PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
 
 const newOptionValue = "__create__";
 
@@ -84,7 +80,6 @@ function normalizeClockInput(raw: string): string | null {
 
 export function CreateFlightModal({
   aircraftOptions,
-  participantOptions,
   personOptions,
   triggerLabel = "Create Flight",
   defaultOriginLabel,
@@ -100,9 +95,7 @@ export function CreateFlightModal({
   const [pendingPersonIndex, setPendingPersonIndex] = useState<number | null>(null);
   const [aircraftList, setAircraftList] = useState<AircraftOption[]>(aircraftOptions);
   const [peopleList, setPeopleList] = useState<PersonOption[]>(personOptions);
-  const [userParticipants, setUserParticipants] = useState<ParticipantRow[]>([
-    { id: "", role: "SIC" }
-  ]);
+  const [selfRole, setSelfRole] = useState<(typeof selfRoleOptions)[number]>("PIC");
   const [peopleParticipants, setPeopleParticipants] = useState<ParticipantRow[]>([
     { id: "", role: "PASSENGER" }
   ]);
@@ -127,7 +120,7 @@ export function CreateFlightModal({
 
   const resetForm = () => {
     setSelectedAircraftId("");
-    setUserParticipants([{ id: "", role: "SIC" }]);
+    setSelfRole("PIC");
     setPeopleParticipants([{ id: "", role: "PASSENGER" }]);
     setPlannedStartDate("");
     setPlannedStartClock("");
@@ -161,6 +154,7 @@ export function CreateFlightModal({
         formData.set("plannedEndClock", normalizedEnd);
         setPlannedEndClock(normalizedEnd);
       }
+      formData.set("selfRole", selfRole);
 
       // Normalize stop labels from client-side state (ensures removed rows don't submit stale values).
       formData.delete("stopLabel");
@@ -450,85 +444,24 @@ export function CreateFlightModal({
               </div>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">App users</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setUserParticipants((prev) => [...prev, { id: "", role: "SIC" }])
-                      }
+                  <div className="grid gap-2">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">
+                      Your role
+                    </p>
+                    <select
+                      name="selfRole"
+                      className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                      value={selfRole}
+                      onChange={(event) => setSelfRole(event.target.value as any)}
+                      required
                     >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add user
-                    </Button>
+                      {selfRoleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  {userParticipants.map((participant, index) => (
-                    <div
-                      key={`user-${index}`}
-                      className="grid gap-3 rounded-md border border-slate-800 p-3 md:grid-cols-[2fr,1fr,auto]"
-                    >
-                      <select
-                        name="participantUserId"
-                        className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                        value={participant.id}
-                        onChange={(event) =>
-                          setUserParticipants((prev) =>
-                            prev.map((entry, entryIndex) =>
-                              entryIndex === index
-                                ? { ...entry, id: event.target.value }
-                                : entry
-                            )
-                          )
-                        }
-                      >
-                        <option value="">Select a user</option>
-                        {participantOptions.map((participantOption) => (
-                          <option key={participantOption.id} value={participantOption.id}>
-                            {participantOption.label}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        name="participantUserRole"
-                        className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                        value={participant.role}
-                        onChange={(event) =>
-                          setUserParticipants((prev) =>
-                            prev.map((entry, entryIndex) =>
-                              entryIndex === index
-                                ? { ...entry, role: event.target.value }
-                                : entry
-                            )
-                          )
-                        }
-                      >
-                        {participantRoleOptions.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="self-center text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                        onClick={() =>
-                          setUserParticipants((prev) =>
-                            prev.length === 1
-                              ? prev.map((entry, entryIndex) =>
-                                  entryIndex === index ? { ...entry, id: "" } : entry
-                                )
-                              : prev.filter((_, entryIndex) => entryIndex !== index)
-                          )
-                        }
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
                 </div>
 
                 <div className="space-y-2">
@@ -597,7 +530,7 @@ export function CreateFlightModal({
                           )
                         }
                       >
-                        {participantRoleOptions.map((role) => (
+                        {personRoleOptions.map((role) => (
                           <option key={role} value={role}>
                             {role}
                           </option>

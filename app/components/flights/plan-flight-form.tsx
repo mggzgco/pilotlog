@@ -21,7 +21,6 @@ type ParticipantOption = {
 
 type PlanFlightFormProps = {
   aircraftOptions: AircraftOption[];
-  participantOptions: ParticipantOption[];
   personOptions: ParticipantOption[];
   defaultDepartureLabel: string;
   defaultTimeZone: string;
@@ -29,8 +28,8 @@ type PlanFlightFormProps = {
   onCancel?: () => void;
 };
 
-const roleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
-const personRoleOptions = ["PASSENGER", ...roleOptions] as const;
+const selfRoleOptions = ["PIC", "SIC", "INSTRUCTOR", "STUDENT", "PASSENGER"] as const;
+const personRoleOptions = ["PASSENGER", "PIC", "SIC", "INSTRUCTOR", "STUDENT"] as const;
 
 type ParticipantRow = { id: string; role: string };
 
@@ -76,7 +75,6 @@ function normalizeClockInput(raw: string): string | null {
 
 export function PlanFlightForm({
   aircraftOptions,
-  participantOptions,
   personOptions,
   defaultDepartureLabel,
   defaultTimeZone,
@@ -89,8 +87,8 @@ export function PlanFlightForm({
   const [tailNumber, setTailNumber] = useState("");
   const [unassignedConfirmed, setUnassignedConfirmed] = useState(false);
   const [stops, setStops] = useState<string[]>([]);
-  const [userParticipants, setUserParticipants] = useState<ParticipantRow[]>([]);
   const [peopleParticipants, setPeopleParticipants] = useState<ParticipantRow[]>([]);
+  const [selfRole, setSelfRole] = useState<(typeof selfRoleOptions)[number]>("PIC");
   const [plannedStartClock, setPlannedStartClock] = useState("");
   const [plannedEndClock, setPlannedEndClock] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -134,6 +132,7 @@ export function PlanFlightForm({
       {/* If the airport code is recognized, the server will automatically use that airport’s time zone (DST-aware).
           This hidden fallback is only used when the airport time zone can't be derived. */}
       <input type="hidden" name="timeZone" value={defaultTimeZone || "UTC"} />
+      <input type="hidden" name="selfRole" value={selfRole} />
       <div className="lg:col-span-2 space-y-3">
         {aircraftOptions.length > 0 ? (
           <div>
@@ -142,7 +141,7 @@ export function PlanFlightForm({
             </label>
             <select
               name="aircraftId"
-              className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+              className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
               required={!unassignedConfirmed}
               value={selectedAircraftId}
               onChange={(event) => {
@@ -201,6 +200,24 @@ export function PlanFlightForm({
           readOnly={Boolean(selectedAircraftId)}
           required={!selectedAircraftId}
         />
+      </div>
+      <div>
+        <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
+          Your role
+        </label>
+        <select
+          name="selfRole"
+          value={selfRole}
+          onChange={(e) => setSelfRole(e.target.value as any)}
+          className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+          required
+        >
+          {selfRoleOptions.map((role) => (
+            <option key={role} value={role}>
+              {role}
+            </option>
+          ))}
+        </select>
       </div>
       <div>
         <label className="mb-2 block text-xs font-semibold uppercase text-slate-400">
@@ -313,81 +330,6 @@ export function PlanFlightForm({
       </div>
       <div className="lg:col-span-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase text-slate-400">App users</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setUserParticipants((prev) => [...prev, { id: "", role: "SIC" }])}
-          >
-            Add user
-          </Button>
-        </div>
-        {userParticipants.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Add instructors/students/PIC/SIC who have FlightTraks accounts.
-          </p>
-        ) : (
-          <div className="mt-2 grid gap-3 lg:grid-cols-2">
-            {userParticipants.map((participant, index) => (
-              <div
-                key={`user-${index}`}
-                className="grid gap-2 rounded-md border border-slate-800 p-3"
-              >
-                <select
-                  name="participantUserId"
-                  className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
-                  value={participant.id}
-                  onChange={(event) =>
-                    setUserParticipants((prev) =>
-                      prev.map((row, i) =>
-                        i === index ? { ...row, id: event.target.value } : row
-                      )
-                    )
-                  }
-                >
-                  <option value="">Select a user</option>
-                  {participantOptions.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="grid grid-cols-[1fr,auto] gap-2">
-                  <select
-                    name="participantRole"
-                    className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
-                    value={participant.role}
-                    onChange={(event) =>
-                      setUserParticipants((prev) =>
-                        prev.map((row, i) =>
-                          i === index ? { ...row, role: event.target.value } : row
-                        )
-                      )
-                    }
-                  >
-                    {roleOptions.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setUserParticipants((prev) => prev.filter((_, i) => i !== index))}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="lg:col-span-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase text-slate-400">People</p>
           <Button
             type="button"
@@ -417,7 +359,7 @@ export function PlanFlightForm({
               >
                 <select
                   name="participantPersonId"
-                  className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                  className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                   value={participant.id}
                   onChange={(event) =>
                     setPeopleParticipants((prev) =>
@@ -437,7 +379,7 @@ export function PlanFlightForm({
                 <div className="grid grid-cols-[1fr,auto] gap-2">
                   <select
                     name="participantPersonRole"
-                    className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+                    className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                     value={participant.role}
                     onChange={(event) =>
                       setPeopleParticipants((prev) =>

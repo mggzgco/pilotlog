@@ -121,5 +121,5 @@ export async function POST(
       : new URL(fallbackPath, request.url);
   redirectUrl.searchParams.set("toast", isPhotoUpload ? "Photos uploaded." : "Receipts uploaded.");
   redirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(redirectUrl, { status: 303 });
 }

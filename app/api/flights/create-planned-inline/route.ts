@@ -1,3 +1,4 @@
+import { FlightParticipantRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/db";
@@ -6,9 +7,7 @@ import { selectChecklistTemplate } from "@/app/lib/checklists/templates";
 import { createChecklistRunSnapshot } from "@/app/lib/checklists/snapshot";
 import { recordAuditEvent } from "@/app/lib/audit";
 import {
-  normalizeParticipants,
   normalizePersonParticipants,
-  parseParticipantFormData,
   parsePersonParticipantFormData
 } from "@/app/lib/flights/participants";
 import { lookupAirportByCode } from "@/app/lib/airports/lookup";
@@ -26,7 +25,8 @@ const plannedFlightSchema = z.object({
   plannedEndClock: z.string().optional(),
   origin: z.string().optional(),
   destination: z.string().optional(),
-  stopLabel: z.union([z.string(), z.array(z.string())]).optional()
+  stopLabel: z.union([z.string(), z.array(z.string())]).optional(),
+  selfRole: z.string().optional()
 });
 
 function parseClockHHMM(value: string | null): { hour: number; minute: number } | null {
@@ -260,13 +260,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const participantInputs = normalizeParticipants(
-    user.id,
-    parseParticipantFormData(formData)
-  );
   const personParticipantInputs = normalizePersonParticipants(
     parsePersonParticipantFormData(formData)
   );
+  const selfRoleRaw = String(formData.get("selfRole") ?? "PIC").trim().toUpperCase();
+  const allowedSelfRoles = new Set<FlightParticipantRole>([
+    "PIC",
+    "SIC",
+    "INSTRUCTOR",
+    "STUDENT",
+    "PASSENGER"
+  ]);
+  const selfRole = allowedSelfRoles.has(selfRoleRaw as FlightParticipantRole)
+    ? (selfRoleRaw as FlightParticipantRole)
+    : "PIC";
 
   const flight = await prisma.$transaction(async (tx) => {
     const created = await tx.flight.create({
@@ -295,13 +302,7 @@ export async function POST(request: Request) {
           endTimeZone
         },
         participants: {
-          create: [
-            { userId: user.id, role: "PIC" },
-            ...participantInputs.map((participant) => ({
-              userId: participant.userId,
-              role: participant.role
-            }))
-          ]
+          create: [{ userId: user.id, role: selfRole }]
         },
         peopleParticipants: {
           create: personParticipantInputs.map((participant) => ({

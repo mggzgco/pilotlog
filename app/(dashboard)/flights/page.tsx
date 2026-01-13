@@ -123,7 +123,7 @@ export default async function FlightsPage({
     }
   })();
 
-  const [flights, aircraft, users, people] = await Promise.all([
+  const [flights, aircraft, people] = await Promise.all([
     prisma.flight.findMany({
       where: {
         userId: user.id,
@@ -152,10 +152,6 @@ export default async function FlightsPage({
       where: { userId: user.id },
       orderBy: { tailNumber: "asc" },
       select: { id: true, tailNumber: true, model: true }
-    }),
-    prisma.user.findMany({
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      select: { id: true, firstName: true, lastName: true, name: true, email: true }
     }),
     prisma.person.findMany({
       where: { userId: user.id },
@@ -263,14 +259,6 @@ export default async function FlightsPage({
     };
   });
 
-  const participantOptions = users.map((entry) => ({
-    id: entry.id,
-    label:
-      [entry.firstName, entry.lastName].filter(Boolean).join(" ") ||
-      entry.name ||
-      entry.email
-  }));
-
   const personOptions = people.map((entry) => ({
     id: entry.id,
     label: entry.email ? `${entry.name} · ${entry.email}` : entry.name
@@ -296,7 +284,6 @@ export default async function FlightsPage({
         </div>
         <CreateFlightModal
           aircraftOptions={aircraft}
-          participantOptions={participantOptions}
           personOptions={personOptions}
           defaultOriginLabel={profile?.homeAirport ?? ""}
           defaultTimeZone={profile?.homeTimeZone ?? ""}
@@ -413,7 +400,6 @@ export default async function FlightsPage({
             flights.length === 0 ? (
               <CreateFlightModal
                 aircraftOptions={aircraft}
-                participantOptions={participantOptions}
                 personOptions={personOptions}
                 triggerLabel="Create Flight"
                 defaultOriginLabel={profile?.homeAirport ?? ""}

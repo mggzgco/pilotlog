@@ -11,7 +11,7 @@ type AircraftOption = {
   model: string | null;
 };
 
-type Option = {
+type PersonOption = {
   id: string;
   label: string;
 };
@@ -19,15 +19,13 @@ type Option = {
 export function PlanFlightModal({
   triggerLabel = "Plan a flight",
   aircraftOptions,
-  participantOptions,
   personOptions,
   defaultDepartureLabel,
   defaultTimeZone
 }: {
   triggerLabel?: string;
   aircraftOptions: AircraftOption[];
-  participantOptions: Option[];
-  personOptions: Option[];
+  personOptions: PersonOption[];
   defaultDepartureLabel: string;
   defaultTimeZone: string;
 }) {
@@ -56,7 +54,6 @@ export function PlanFlightModal({
           <div className="mt-6">
             <PlanFlightForm
               aircraftOptions={aircraftOptions}
-              participantOptions={participantOptions}
               personOptions={personOptions}
               defaultDepartureLabel={defaultDepartureLabel}
               defaultTimeZone={defaultTimeZone}

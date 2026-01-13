@@ -148,7 +148,7 @@ export default async function AircraftDetailPage({
                 Upload photo
               </FormSubmitButton>
               <p className="text-xs text-slate-500">
-                JPG/PNG up to 10MB. This photo will appear on flight details for this aircraft.
+                JPG/PNG up to 20MB. This photo will appear on flight details for this aircraft.
               </p>
             </form>
           </div>
@@ -194,7 +194,12 @@ export default async function AircraftDetailPage({
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-600 dark:text-slate-400">Checklists</p>
-            <CreateAircraftChecklistModal aircraftId={aircraft.id} />
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/checklists">Manage checklists</Link>
+              </Button>
+              <CreateAircraftChecklistModal aircraftId={aircraft.id} />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -335,7 +340,7 @@ export default async function AircraftDetailPage({
               </FormSubmitButton>
             </div>
             <p className="lg:col-span-3 text-xs text-slate-500">
-              PDF/JPG/PNG up to 10MB each. Great for POH/manuals, checklists, etc.
+              PDF/JPG/PNG up to 20MB each. Great for POH/manuals, checklists, etc.
             </p>
           </form>
 

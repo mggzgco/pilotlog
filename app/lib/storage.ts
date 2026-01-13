@@ -8,7 +8,7 @@ const uploadDir = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.join(process.cwd(), "uploads");
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 export const ALLOWED_RECEIPT_MIME_TYPES: Record<string, string> = {
   "application/pdf": ".pdf",
   "image/jpeg": ".jpg",

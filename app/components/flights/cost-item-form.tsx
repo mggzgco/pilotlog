@@ -126,7 +126,7 @@ export function CostItemForm({
           name="category"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
-          className="h-11 w-full rounded-md border border-slate-800 bg-transparent px-3 py-2 text-sm text-slate-100"
+          className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
           required
         >
           <option value="">Select category</option>

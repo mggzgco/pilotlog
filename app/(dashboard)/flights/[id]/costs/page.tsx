@@ -311,7 +311,7 @@ export default async function FlightCostsPage({
               <FormSubmitButton type="submit" pendingText="Uploading...">
                 Upload receipts
               </FormSubmitButton>
-              <span>PDF, JPG, PNG up to 10MB each.</span>
+              <span>PDF, JPG, PNG up to 20MB each.</span>
             </div>
           </form>
 
