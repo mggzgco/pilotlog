@@ -28,7 +28,13 @@ type AltitudePoint = {
   groundspeedKt?: number | null;
 };
 
-export function AltitudeChart({ points }: { points: AltitudePoint[] }) {
+export function AltitudeChart({
+  points,
+  className = "h-64"
+}: {
+  points: AltitudePoint[];
+  className?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const labels = useMemo(
     () =>
@@ -116,7 +122,7 @@ export function AltitudeChart({ points }: { points: AltitudePoint[] }) {
   }, [labels, points]);
 
   return (
-    <div className="h-64">
+    <div className={className}>
       <canvas ref={canvasRef} />
     </div>
   );

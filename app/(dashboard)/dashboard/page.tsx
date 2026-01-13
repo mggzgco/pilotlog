@@ -13,6 +13,8 @@ import { HoursLineChart } from "@/app/components/charts/HoursLineChart";
 import { PlanFlightModal } from "@/app/components/flights/plan-flight-modal";
 import { formatDateTime24, formatTime24 } from "@/app/lib/utils";
 import { ArrowRight, Calendar, Radar, TriangleAlert, Wallet } from "lucide-react";
+import { AltitudeChart } from "@/app/components/charts/AltitudeChart";
+import { FlightWeatherStrip } from "@/app/components/weather/flight-weather-strip";
 
 function formatDuration(durationMinutes: number | null) {
   if (!durationMinutes) {
@@ -601,11 +603,34 @@ export default async function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-72">
-            <FlightMap
-              polyline={latestFlight?.routePolyline}
-              track={latestFlight?.trackPoints ?? undefined}
-            />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="h-72 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
+              <FlightMap
+                polyline={latestFlight?.routePolyline}
+                track={latestFlight?.trackPoints ?? undefined}
+              />
+            </div>
+            <div className="h-72 space-y-2">
+              <div className="h-[calc(100%-92px)] overflow-hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                {latestFlight?.trackPoints && latestFlight.trackPoints.length > 1 ? (
+                  <AltitudeChart
+                    className="h-full"
+                    points={latestFlight.trackPoints.map((point) => ({
+                      recordedAt: point.recordedAt.toISOString(),
+                      altitudeFeet: point.altitudeFeet,
+                      groundspeedKt: point.groundspeedKt
+                    }))}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-600 dark:text-slate-400">
+                    No altitude profile available.
+                  </div>
+                )}
+              </div>
+              <div className="h-20">
+                <FlightWeatherStrip flightId={latestFlight?.id ?? null} />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

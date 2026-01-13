@@ -8,6 +8,7 @@ import { dedupeImportCandidates } from "@/app/lib/flights/imports";
 import { attachAdsbCandidateToFlight, deriveAutoImportWindow } from "@/app/lib/flights/auto-import";
 import { recordAuditEvent } from "@/app/lib/audit";
 import { handleApiError } from "@/src/lib/security/errors";
+import { saveFlightWeatherSnapshot } from "@/app/lib/weather/snapshot";
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
@@ -130,6 +131,10 @@ export async function POST(
       provider,
       candidate: match
     });
+
+    // Capture and persist weather (historical METAR lookup around the flight time).
+    // Best-effort: failure should not block the attach flow.
+    saveFlightWeatherSnapshot({ flightId: updated.id }).catch(() => {});
 
     if (flight.autoImportStatus === "AMBIGUOUS" || flight.autoImportStatus === "RUNNING") {
       await recordAuditEvent({

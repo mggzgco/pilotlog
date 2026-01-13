@@ -6,6 +6,7 @@ import { prisma } from "@/app/lib/db";
 import { computeDistanceNm, computeDurationMinutes } from "@/app/lib/flights/compute";
 import { recordAuditEvent } from "@/app/lib/audit";
 import { handleApiError } from "@/src/lib/security/errors";
+import { saveFlightWeatherSnapshot } from "@/app/lib/weather/snapshot";
 
 const trackPointSchema = z.object({
   recordedAt: z.string().min(1),
@@ -157,6 +158,10 @@ export async function POST(request: Request) {
         tailNumber: candidate.tailNumber
       }
     });
+
+    // Capture and persist weather (historical METAR lookup around the flight time).
+    // Best-effort: failure should not block import.
+    saveFlightWeatherSnapshot({ flightId: flight.id }).catch(() => {});
 
     return NextResponse.json({ id: flight.id });
   } catch (error) {

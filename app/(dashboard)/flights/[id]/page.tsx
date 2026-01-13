@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { FlightMap } from "@/app/components/maps/flight-map";
 import { Button } from "@/app/components/ui/button";
 import { AltitudeChart } from "@/app/components/charts/AltitudeChart";
+import { FlightWeatherStrip } from "@/app/components/weather/flight-weather-strip";
 import { EmptyState } from "@/app/components/ui/empty-state";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
@@ -679,14 +680,23 @@ export default async function FlightDetailPage({
             <p className="text-sm text-slate-400">Altitude profile</p>
           </CardHeader>
           <CardContent>
-            {altitudePointsDisplay.length > 1 ? (
-              <AltitudeChart points={plotPointsDisplay} />
-            ) : (
-              <EmptyState
-                title="No altitude profile yet"
-                description="Import ADS-B data to see the altitude profile."
-              />
-            )}
+            <div className="h-96 space-y-2">
+              <div className="h-[calc(100%-92px)] overflow-hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                {altitudePointsDisplay.length > 1 ? (
+                  <AltitudeChart className="h-full" points={plotPointsDisplay} />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <EmptyState
+                      title="No altitude profile yet"
+                      description="Import ADS-B data to see the altitude profile."
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="h-20">
+                <FlightWeatherStrip flightId={flight.id} />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
