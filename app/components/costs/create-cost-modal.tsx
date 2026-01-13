@@ -2,11 +2,15 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
-import { costCategoryOptions } from "@/app/lib/costs/categories";
+import {
+  costCategoryOptions,
+  costCategoryValues,
+  getCostCategoryLabel
+} from "@/app/lib/costs/categories";
 
 type FlightOption = {
   id: string;
@@ -29,6 +33,59 @@ export function CreateCostModal({
   triggerLabel = "Add expense"
 }: CreateCostModalProps) {
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("");
+  const [amount, setAmount] = useState("");
+  const [rate, setRate] = useState("");
+  const [quantityHours, setQuantityHours] = useState("");
+  const [fuelGallons, setFuelGallons] = useState("");
+  const [fuelPrice, setFuelPrice] = useState("");
+
+  const normalizedCategory = useMemo(
+    () => category.trim().toLowerCase(),
+    [category]
+  );
+  const showRateFields = ["rental", "instruction"].includes(normalizedCategory);
+  const showFuelFields = normalizedCategory === "fuel";
+
+  const categoryOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string }> = [...costCategoryOptions];
+    if (
+      category.trim() &&
+      !costCategoryValues.includes(
+        category.trim().toLowerCase() as (typeof costCategoryValues)[number]
+      )
+    ) {
+      options.push({ value: category, label: getCostCategoryLabel(category) });
+    }
+    return options;
+  }, [category]);
+
+  const parseDecimalInput = (value: string) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  useEffect(() => {
+    if (showRateFields) {
+      const parsedRate = parseDecimalInput(rate);
+      const parsedHours = parseDecimalInput(quantityHours);
+      if (parsedRate !== null && parsedHours !== null) {
+        setAmount((parsedRate * parsedHours).toFixed(2));
+      }
+      return;
+    }
+    if (showFuelFields) {
+      const parsedGallons = parseDecimalInput(fuelGallons);
+      const parsedPrice = parseDecimalInput(fuelPrice);
+      if (parsedGallons !== null && parsedPrice !== null) {
+        setAmount((parsedGallons * parsedPrice).toFixed(2));
+      }
+    }
+  }, [showRateFields, showFuelFields, rate, quantityHours, fuelGallons, fuelPrice]);
+
+  const amountIsAutoCalculated =
+    !!((showRateFields && rate.trim() && quantityHours.trim()) ||
+    (showFuelFields && fuelGallons.trim() && fuelPrice.trim()));
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -80,18 +137,71 @@ export function CreateCostModal({
 
             <select
               name="category"
-              defaultValue=""
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
               className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
               required
             >
               <option value="">Select category</option>
-              {costCategoryOptions.map((option) => (
+              {categoryOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
-            <Input name="amount" placeholder="Amount" type="number" step="0.01" required />
+
+            {showRateFields ? (
+              <>
+                <Input
+                  name="rate"
+                  placeholder="Rate ($/hr)"
+                  type="number"
+                  step="0.01"
+                  value={rate}
+                  onChange={(event) => setRate(event.target.value)}
+                />
+                <Input
+                  name="quantityHours"
+                  placeholder="Hours"
+                  type="number"
+                  step="0.01"
+                  value={quantityHours}
+                  onChange={(event) => setQuantityHours(event.target.value)}
+                />
+              </>
+            ) : null}
+
+            {showFuelFields ? (
+              <>
+                <Input
+                  name="fuelGallons"
+                  placeholder="Fuel gallons"
+                  type="number"
+                  step="0.01"
+                  value={fuelGallons}
+                  onChange={(event) => setFuelGallons(event.target.value)}
+                />
+                <Input
+                  name="fuelPrice"
+                  placeholder="Fuel price ($/gal)"
+                  type="number"
+                  step="0.01"
+                  value={fuelPrice}
+                  onChange={(event) => setFuelPrice(event.target.value)}
+                />
+              </>
+            ) : null}
+
+            <Input
+              name="amount"
+              placeholder="Amount"
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              readOnly={amountIsAutoCalculated}
+              required={!amountIsAutoCalculated}
+            />
             <Input name="date" type="date" defaultValue={defaultDate} required />
             <Input name="vendor" placeholder="Vendor" />
             <Input name="notes" placeholder="Notes" className="lg:col-span-2" />

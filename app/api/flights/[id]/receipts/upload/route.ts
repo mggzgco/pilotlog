@@ -3,7 +3,7 @@ import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import {
   MAX_UPLOAD_BYTES,
-  getReceiptExtension,
+  getReceiptExtensionFrom,
   storeUpload
 } from "@/app/lib/storage";
 import { recordAuditEvent } from "@/app/lib/audit";
@@ -12,9 +12,27 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const wantsJson = request.headers.get("accept")?.includes("application/json") ?? false;
+  const redirectWithToast = (
+    message: string,
+    toastType: "success" | "error",
+    fallbackPath: string
+  ) => {
+    const origin = new URL(request.url).origin;
+    const referer = request.headers.get("referer");
+    const refererUrl = referer ? new URL(referer) : null;
+    const redirectUrl =
+      refererUrl && refererUrl.origin === origin ? refererUrl : new URL(fallbackPath, request.url);
+    redirectUrl.searchParams.set("toast", message);
+    redirectUrl.searchParams.set("toastType", toastType);
+    return NextResponse.redirect(redirectUrl, { status: 303 });
+  };
+
   const { user, session } = await getCurrentUser();
   if (!user || !session || user.status !== "ACTIVE") {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return wantsJson
+      ? NextResponse.json({ error: "Unauthorized." }, { status: 401 })
+      : redirectWithToast("Unauthorized.", "error", "/login");
   }
   const flight = await prisma.flight.findFirst({
     where: { id: params.id, userId: user.id },
@@ -22,10 +40,26 @@ export async function POST(
   });
 
   if (!flight) {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return wantsJson
+      ? NextResponse.json({ error: "Not found." }, { status: 404 })
+      : redirectWithToast("Flight not found.", "error", "/flights");
   }
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return wantsJson
+      ? NextResponse.json(
+          { error: "Upload too large or malformed form data." },
+          { status: 400 }
+        )
+      : redirectWithToast(
+          "Upload too large or malformed. Try a smaller file (max 20MB each).",
+          "error",
+          `/flights/${flight.id}`
+        );
+  }
   const kindRaw = formData.get("kind");
   const kind = typeof kindRaw === "string" ? kindRaw.trim().toLowerCase() : "receipt";
   const isPhotoUpload = kind === "photo";
@@ -35,10 +69,16 @@ export async function POST(
       ? costItemIdRaw
       : null;
   if (isPhotoUpload && costItemId) {
-    return NextResponse.json(
-      { error: "Photos cannot be linked to a cost item." },
-      { status: 400 }
-    );
+    return wantsJson
+      ? NextResponse.json(
+          { error: "Photos cannot be linked to a cost item." },
+          { status: 400 }
+        )
+      : redirectWithToast(
+          "Photos cannot be linked to a cost item.",
+          "error",
+          `/flights/${flight.id}`
+        );
   }
   if (!isPhotoUpload && costItemId) {
     const costItem = await prisma.costItem.findFirst({
@@ -46,10 +86,16 @@ export async function POST(
       select: { id: true }
     });
     if (!costItem) {
-      return NextResponse.json(
-        { error: "Invalid cost item selection." },
-        { status: 400 }
-      );
+      return wantsJson
+        ? NextResponse.json(
+            { error: "Invalid cost item selection." },
+            { status: 400 }
+          )
+        : redirectWithToast(
+            "Invalid cost item selection.",
+            "error",
+            `/flights/${flight.id}/costs`
+          );
     }
   }
   const files = formData
@@ -57,28 +103,48 @@ export async function POST(
     .filter((value): value is File => value instanceof File);
 
   if (files.length === 0) {
-    return NextResponse.json({ error: "No files uploaded." }, { status: 400 });
+    return wantsJson
+      ? NextResponse.json({ error: "No files uploaded." }, { status: 400 })
+      : redirectWithToast("No files uploaded.", "error", `/flights/${flight.id}`);
   }
 
   for (const file of files) {
     if (file.size > MAX_UPLOAD_BYTES) {
-      return NextResponse.json(
-        { error: "File exceeds size limit." },
-        { status: 400 }
-      );
+      return wantsJson
+        ? NextResponse.json(
+            { error: `File exceeds size limit (${MAX_UPLOAD_BYTES} bytes).` },
+            { status: 400 }
+          )
+        : redirectWithToast(
+            "File exceeds size limit (20MB each).",
+            "error",
+            isPhotoUpload ? `/flights/${flight.id}` : `/flights/${flight.id}/costs`
+          );
     }
     if (isPhotoUpload && !file.type.startsWith("image/")) {
-      return NextResponse.json(
-        { error: "Photos must be an image file." },
-        { status: 400 }
-      );
+      return wantsJson
+        ? NextResponse.json(
+            { error: "Photos must be an image file." },
+            { status: 400 }
+          )
+        : redirectWithToast(
+            "Photos must be an image file.",
+            "error",
+            `/flights/${flight.id}`
+          );
     }
-    const extension = getReceiptExtension(file.type);
+    const extension = getReceiptExtensionFrom(file.type, file.name);
     if (!extension) {
-      return NextResponse.json(
-        { error: "Unsupported file type." },
-        { status: 400 }
-      );
+      return wantsJson
+        ? NextResponse.json(
+            { error: `Unsupported file type (${file.type || "unknown"}).` },
+            { status: 400 }
+          )
+        : redirectWithToast(
+            `Unsupported file type (${file.type || "unknown"}).`,
+            "error",
+            isPhotoUpload ? `/flights/${flight.id}` : `/flights/${flight.id}/costs`
+          );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

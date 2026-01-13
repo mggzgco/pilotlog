@@ -77,7 +77,19 @@ export async function POST(request: Request) {
       timeIn: normalizeTimeOfDay(parsed.data.timeIn?.trim() || "") || null,
       hobbsOut: toNumberOrNull(parsed.data.hobbsOut),
       hobbsIn: toNumberOrNull(parsed.data.hobbsIn),
-      totalTime: toNumberOrNull(parsed.data.totalTime),
+      totalTime: (() => {
+        const explicit = toNumberOrNull(parsed.data.totalTime);
+        if (explicit !== null) return explicit;
+        const hobbsOut = toNumberOrNull(parsed.data.hobbsOut);
+        const hobbsIn = toNumberOrNull(parsed.data.hobbsIn);
+        if (hobbsOut !== null && hobbsIn !== null) {
+          const diff = hobbsIn - hobbsOut;
+          if (Number.isFinite(diff) && diff >= 0) {
+            return Math.round(diff * 10) / 10;
+          }
+        }
+        return null;
+      })(),
       picTime: toNumberOrNull(parsed.data.picTime),
       sicTime: toNumberOrNull(parsed.data.sicTime),
       dualReceivedTime: toNumberOrNull(parsed.data.dualReceivedTime),

@@ -1,5 +1,5 @@
 import { MobileNav } from "@/app/components/layout/mobile-nav";
-import { FlightTraksMark } from "@/app/components/branding/flighttraks-mark";
+import { FlightTraksMarkInverted } from "@/app/components/branding/flighttraks-mark";
 
 interface TopbarProps {
   user: any;
@@ -13,7 +13,7 @@ export function Topbar({ user }: TopbarProps) {
         <div className="flex items-center gap-3">
           <MobileNav user={user} />
           <div className="hidden sm:block">
-            <FlightTraksMark className="h-8 w-8" />
+            <FlightTraksMarkInverted className="h-8 w-8" />
           </div>
           <div>
             <h1 className="text-base font-semibold tracking-tight text-slate-100">FlightTraks</h1>

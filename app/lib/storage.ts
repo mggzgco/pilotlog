@@ -19,10 +19,28 @@ const safeExtensionPattern = /^[a-z0-9.]+$/i;
 const safePrefixPattern = /^[a-z0-9._-]+$/i;
 
 export function getReceiptExtension(contentType: string | null | undefined) {
-  if (!contentType) {
-    return null;
+  return getReceiptExtensionFrom(contentType, undefined);
+}
+
+export function getReceiptExtensionFrom(
+  contentType: string | null | undefined,
+  filename?: string | null
+) {
+  const byMime =
+    contentType && ALLOWED_RECEIPT_MIME_TYPES[contentType]
+      ? ALLOWED_RECEIPT_MIME_TYPES[contentType]
+      : null;
+  if (byMime) return byMime;
+
+  // Some browsers/devices send an empty or generic MIME type for PDFs.
+  if (filename) {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith(".pdf")) return ".pdf";
+    if (lower.endsWith(".png")) return ".png";
+    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return ".jpg";
   }
-  return ALLOWED_RECEIPT_MIME_TYPES[contentType] ?? null;
+
+  return null;
 }
 
 export function isSafeStorageName(name: string) {

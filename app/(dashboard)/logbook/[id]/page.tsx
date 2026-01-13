@@ -24,6 +24,15 @@ const formatHours = (value: number | string | { toString(): string } | null | un
   return numeric === null ? "—" : numeric.toFixed(1);
 };
 
+const computeHobbsTotal = (hobbsOut: unknown, hobbsIn: unknown) => {
+  const out = toHours(hobbsOut);
+  const inn = toHours(hobbsIn);
+  if (out === null || inn === null) return null;
+  const diff = inn - out;
+  if (!Number.isFinite(diff) || diff < 0) return null;
+  return Math.round(diff * 10) / 10;
+};
+
 export default async function LogbookEntryDetailPage({
   params
 }: {
@@ -74,6 +83,10 @@ export default async function LogbookEntryDetailPage({
     linkedFlight?.tailNumber ||
     entry.tailNumberSnapshot ||
     "—";
+
+  const suggestedTotalTime =
+    toHours(entry.totalTime) ??
+    computeHobbsTotal(entry.hobbsOut, entry.hobbsIn);
 
   return (
     <div className="space-y-6">
@@ -143,7 +156,7 @@ export default async function LogbookEntryDetailPage({
               className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
             >
               <option value="OPEN">Open</option>
-              <option value="CLOSED">Closed</option>
+              <option value="CLOSED">Completed</option>
             </select>
 
             <select
@@ -196,9 +209,17 @@ export default async function LogbookEntryDetailPage({
               defaultValue={entry.hobbsIn?.toString?.() ?? ""}
             />
 
+            <Input
+              name="totalTime"
+              type="number"
+              step="0.1"
+              placeholder="Total time (hrs)"
+              defaultValue={suggestedTotalTime?.toString?.() ?? ""}
+            />
+
             <div className="lg:col-span-3">
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Total time is computed when you save (Hobbs or Time In/Out preferred; otherwise time buckets).
+                Total time defaults from Hobbs (Hobbs in − Hobbs out), but you can override it.
               </p>
             </div>
 

@@ -92,7 +92,16 @@ export default async function FlightLogbookPage({
   const logbookDefaultTimeIn = (logbookEntry as any)?.timeIn ?? "";
   const logbookDefaultHobbsOut = (logbookEntry as any)?.hobbsOut?.toString?.() ?? "";
   const logbookDefaultHobbsIn = (logbookEntry as any)?.hobbsIn?.toString?.() ?? "";
-  const logbookDefaultTotalTime = (logbookEntry as any)?.totalTime?.toString?.() ?? "";
+  const logbookDefaultTotalTime =
+    (logbookEntry as any)?.totalTime?.toString?.() ??
+    (() => {
+      const out = Number(logbookDefaultHobbsOut);
+      const inn = Number(logbookDefaultHobbsIn);
+      if (!Number.isFinite(out) || !Number.isFinite(inn)) return "";
+      const diff = inn - out;
+      if (!Number.isFinite(diff) || diff < 0) return "";
+      return (Math.round(diff * 10) / 10).toString();
+    })();
   const logbookDefaultDayTakeoffs = (logbookEntry as any)?.dayTakeoffs?.toString?.() ?? "";
   const logbookDefaultDayLandings = (logbookEntry as any)?.dayLandings?.toString?.() ?? "";
   const logbookDefaultNightTakeoffs = (logbookEntry as any)?.nightTakeoffs?.toString?.() ?? "";

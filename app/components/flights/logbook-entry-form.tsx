@@ -70,7 +70,7 @@ export function LogbookEntryForm({
         className="h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950 lg:col-span-3"
       >
         <option value="OPEN">Open</option>
-        <option value="CLOSED">Closed</option>
+        <option value="CLOSED">Completed</option>
       </select>
       <Input name="date" type="date" required defaultValue={defaultDate} />
       <TimeOfDayInput

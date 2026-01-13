@@ -35,6 +35,9 @@ if (isProduction) {
 const nextConfig = {
   experimental: {
     serverActions: {
+      // Allows larger multipart/form-data payloads for form posts / server actions.
+      // We support up to 20MB per uploaded file (plus overhead).
+      bodySizeLimit: "25mb",
       allowedOrigins: (() => {
         const configured = process.env.NEXT_ALLOWED_ORIGINS
           ? process.env.NEXT_ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)

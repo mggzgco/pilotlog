@@ -518,7 +518,7 @@ export default async function LogbookPage({
                         </td>
                         <td className="px-4 py-3">
                           <Link href={entryHref} className="block">
-                            {entry.status === "CLOSED" ? "Closed" : "Open"}
+                            {entry.status === "CLOSED" ? "Completed" : "Open"}
                           </Link>
                         </td>
                         <td className="px-4 py-3">

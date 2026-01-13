@@ -882,33 +882,9 @@ export default async function FlightDetailPage({
                     .filter((p) => p.contentType?.startsWith("image/"))
                     .map((p) => ({ id: p.id, originalFilename: p.originalFilename }))}
                 />
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {flight.receiptDocuments.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-3 py-2"
-                    >
-                      <p className="min-w-0 truncate text-xs text-slate-300" title={photo.originalFilename}>
-                        {photo.originalFilename}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Button asChild size="sm" variant="ghost">
-                          <Link href={`/api/receipts/${photo.id}/download`}>Download</Link>
-                        </Button>
-                        <form action={`/api/receipts/${photo.id}/delete`} method="post">
-                          <FormSubmitButton
-                            type="submit"
-                            size="sm"
-                            variant="outline"
-                            pendingText="Deleting..."
-                          >
-                            Delete
-                          </FormSubmitButton>
-                        </form>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs text-slate-400">
+                  Tip: click a photo to view. Hover a photo thumbnail to delete it.
+                </p>
               </div>
               )}
         </CardContent>
