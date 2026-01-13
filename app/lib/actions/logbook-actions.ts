@@ -6,11 +6,21 @@ import { requireUser } from "@/app/lib/session";
 import { logbookSchema } from "@/app/lib/validation";
 import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
 
+function redirectWithToast(
+  path: string,
+  message: string,
+  toastType: "success" | "error" | "info"
+) {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}toast=${encodeURIComponent(message)}&toastType=${toastType}`);
+}
+
 export async function createLogbookEntryAction(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
   const parsed = logbookSchema.safeParse(raw);
   if (!parsed.success) {
-    return { error: "Invalid logbook data." };
+    redirectWithToast("/logbook", "Invalid logbook data.", "error");
+    return;
   }
 
   const user = await requireUser();
@@ -22,7 +32,7 @@ export async function createLogbookEntryAction(formData: FormData) {
       })
     : null;
   if (flightId && !flight) {
-    return { error: "Flight not found." };
+    redirectWithToast("/logbook", "Flight not found.", "error");
   }
   const linkedFlightId = flight?.id ?? null;
 
@@ -95,5 +105,5 @@ export async function createLogbookEntryAction(formData: FormData) {
   }
 
   // LOG-001: capture pilot logbook entries
-  redirect("/logbook");
+  redirectWithToast("/logbook", "Logbook saved.", "success");
 }

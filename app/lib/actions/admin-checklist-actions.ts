@@ -7,6 +7,15 @@ import { requireAdmin } from "@/app/lib/auth/session";
 import { validateCsrf } from "@/app/lib/auth/csrf";
 import { recordAuditEvent } from "@/app/lib/audit";
 
+function redirectWithToast(
+  path: string,
+  message: string,
+  toastType: "success" | "error" | "info"
+) {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}toast=${encodeURIComponent(message)}&toastType=${toastType}`);
+}
+
 const createSchema = z.object({
   name: z.string().min(1),
   phase: z.enum(["PREFLIGHT", "POSTFLIGHT"]),
@@ -19,7 +28,14 @@ const templateIdSchema = z.object({
 
 export async function adminCreateGlobalChecklistTemplateAction(formData: FormData) {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast(
+      "/admin/checklists",
+      csrf.error ?? "CSRF validation failed.",
+      "error"
+    );
+    return;
+  }
   const admin = await requireAdmin();
 
   const parsed = createSchema.safeParse({
@@ -27,7 +43,10 @@ export async function adminCreateGlobalChecklistTemplateAction(formData: FormDat
     phase: String(formData.get("phase") || "").trim(),
     isDefault: formData.get("isDefault") === "on"
   });
-  if (!parsed.success) return { error: "Invalid template data." };
+  if (!parsed.success) {
+    redirectWithToast("/admin/checklists", "Invalid template data.", "error");
+    return;
+  }
 
   const created = await prisma.$transaction(async (tx) => {
     if (parsed.data.isDefault) {
@@ -56,23 +75,36 @@ export async function adminCreateGlobalChecklistTemplateAction(formData: FormDat
     metadata: { name: created.name, phase: created.phase, scope: "global" }
   });
 
-  redirect(`/admin/checklists/${created.id}`);
+  redirectWithToast(`/admin/checklists/${created.id}`, "Template created.", "success");
 }
 
 export async function adminSetGlobalChecklistTemplateDefaultAction(formData: FormData) {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast(
+      "/admin/checklists",
+      csrf.error ?? "CSRF validation failed.",
+      "error"
+    );
+    return;
+  }
   const admin = await requireAdmin();
 
   const parsed = templateIdSchema.safeParse({
     templateId: String(formData.get("templateId") || "")
   });
-  if (!parsed.success) return { error: "Template is required." };
+  if (!parsed.success) {
+    redirectWithToast("/admin/checklists", "Template is required.", "error");
+    return;
+  }
 
   const template = await prisma.checklistTemplate.findFirst({
     where: { id: parsed.data.templateId, userId: null }
   });
-  if (!template) return { error: "Template not found." };
+  if (!template) {
+    redirectWithToast("/admin/checklists", "Template not found.", "error");
+    return;
+  }
 
   await prisma.$transaction([
     prisma.checklistTemplate.updateMany({
@@ -93,23 +125,36 @@ export async function adminSetGlobalChecklistTemplateDefaultAction(formData: For
     metadata: { phase: template.phase, scope: "global" }
   });
 
-  redirect("/admin/checklists");
+  redirectWithToast("/admin/checklists", "Default updated.", "success");
 }
 
 export async function adminDeleteGlobalChecklistTemplateAction(formData: FormData) {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast(
+      "/admin/checklists",
+      csrf.error ?? "CSRF validation failed.",
+      "error"
+    );
+    return;
+  }
   const admin = await requireAdmin();
 
   const parsed = templateIdSchema.safeParse({
     templateId: String(formData.get("templateId") || "")
   });
-  if (!parsed.success) return { error: "Template is required." };
+  if (!parsed.success) {
+    redirectWithToast("/admin/checklists", "Template is required.", "error");
+    return;
+  }
 
   const template = await prisma.checklistTemplate.findFirst({
     where: { id: parsed.data.templateId, userId: null }
   });
-  if (!template) return { error: "Template not found." };
+  if (!template) {
+    redirectWithToast("/admin/checklists", "Template not found.", "error");
+    return;
+  }
 
   await prisma.checklistTemplate.delete({ where: { id: template.id } });
 
@@ -121,12 +166,19 @@ export async function adminDeleteGlobalChecklistTemplateAction(formData: FormDat
     metadata: { phase: template.phase, name: template.name, scope: "global" }
   });
 
-  redirect("/admin/checklists");
+  redirectWithToast("/admin/checklists", "Template deleted.", "success");
 }
 
 export async function adminImportGroendykmSr20TemplatesAction() {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast(
+      "/admin/checklists",
+      csrf.error ?? "CSRF validation failed.",
+      "error"
+    );
+    return;
+  }
   const admin = await requireAdmin();
 
   const owner = await prisma.user.findUnique({

@@ -9,6 +9,7 @@ import {
   useMemo,
   useState
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Info, XCircle } from "lucide-react";
 import { cn } from "@/app/lib/utils";
 
@@ -36,6 +37,9 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const addToast = useCallback((message: string, variant: ToastVariant = "info") => {
     const id = `toast-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -46,24 +50,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Avoid next/navigation hooks here to prevent server-side rendering context issues.
-    // Read from window after mount and then clean the query string via history API.
-    const params = new URLSearchParams(window.location.search);
-    const message = params.get("toast");
+    // React to client-side navigations/redirects by watching searchParams.
+    const message = searchParams.get("toast");
     if (!message) {
       return;
     }
 
-    const variant = (params.get("toastType") as ToastVariant | null) ?? "success";
+    const variant = (searchParams.get("toastType") as ToastVariant | null) ?? "success";
     addToast(message, variant);
 
-    const nextParams = new URLSearchParams(params);
+    const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete("toast");
     nextParams.delete("toastType");
     const nextQuery = nextParams.toString();
-    const nextUrl = nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname;
-    window.history.replaceState(null, "", nextUrl);
-  }, [addToast]);
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }, [addToast, pathname, router, searchParams]);
 
   const value = useMemo(() => ({ addToast }), [addToast]);
 

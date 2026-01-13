@@ -7,6 +7,15 @@ import { requireAdmin } from "@/app/lib/auth/session";
 import { recordAuditEvent } from "@/app/lib/audit";
 import { validateCsrf } from "@/app/lib/auth/csrf";
 
+function redirectWithToast(
+  path: string,
+  message: string,
+  toastType: "success" | "error" | "info"
+) {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}toast=${encodeURIComponent(message)}&toastType=${toastType}`);
+}
+
 const approvalSchema = z.object({
   userId: z.string().min(1)
 });
@@ -14,7 +23,8 @@ const approvalSchema = z.object({
 export async function approveUserAction(formData: FormData) {
   const csrf = validateCsrf();
   if (!csrf.ok) {
-    return { error: csrf.error };
+    redirectWithToast("/admin/approvals", csrf.error ?? "CSRF validation failed.", "error");
+    return;
   }
 
   const admin = await requireAdmin();
@@ -23,7 +33,8 @@ export async function approveUserAction(formData: FormData) {
     userId: String(formData.get("userId") || "")
   });
   if (!parsed.success) {
-    return { error: "Missing user id." };
+    redirectWithToast("/admin/approvals", "Missing user id.", "error");
+    return;
   }
 
   // ADMIN-001: approve pending accounts
@@ -46,13 +57,14 @@ export async function approveUserAction(formData: FormData) {
     }
   });
 
-  redirect("/admin/approvals");
+  redirectWithToast("/admin/approvals", "User approved.", "success");
 }
 
 export async function rejectUserAction(formData: FormData) {
   const csrf = validateCsrf();
   if (!csrf.ok) {
-    return { error: csrf.error };
+    redirectWithToast("/admin/approvals", csrf.error ?? "CSRF validation failed.", "error");
+    return;
   }
 
   const admin = await requireAdmin();
@@ -61,7 +73,8 @@ export async function rejectUserAction(formData: FormData) {
     userId: String(formData.get("userId") || "")
   });
   if (!parsed.success) {
-    return { error: "Missing user id." };
+    redirectWithToast("/admin/approvals", "Missing user id.", "error");
+    return;
   }
 
   const updated = await prisma.user.update({
@@ -83,5 +96,5 @@ export async function rejectUserAction(formData: FormData) {
     }
   });
 
-  redirect("/admin/approvals");
+  redirectWithToast("/admin/approvals", "User rejected.", "success");
 }

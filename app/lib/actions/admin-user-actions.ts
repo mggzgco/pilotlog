@@ -10,6 +10,15 @@ import { hashResetToken } from "@/app/lib/auth/password-reset";
 import { sendPasswordResetEmail } from "@/app/lib/auth/email";
 import { recordAuditEvent } from "@/app/lib/audit";
 
+function redirectWithToast(
+  path: string,
+  message: string,
+  toastType: "success" | "error" | "info"
+) {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}toast=${encodeURIComponent(message)}&toastType=${toastType}`);
+}
+
 const updateRoleSchema = z.object({
   userId: z.string().min(1),
   role: z.enum(["USER", "ADMIN"])
@@ -26,17 +35,24 @@ const userIdSchema = z.object({
 
 export async function adminUpdateUserRoleAction(formData: FormData) {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast("/admin/users", csrf.error ?? "CSRF validation failed.", "error");
+    return;
+  }
   const admin = await requireAdmin();
 
   const parsed = updateRoleSchema.safeParse({
     userId: String(formData.get("userId") || ""),
     role: String(formData.get("role") || "")
   });
-  if (!parsed.success) return { error: "Invalid role update." };
+  if (!parsed.success) {
+    redirectWithToast("/admin/users", "Invalid role update.", "error");
+    return;
+  }
 
   if (parsed.data.userId === admin.id && parsed.data.role !== "ADMIN") {
-    return { error: "You cannot remove your own admin role." };
+    redirectWithToast("/admin/users", "You cannot remove your own admin role.", "error");
+    return;
   }
 
   const updated = await prisma.user.update({
@@ -57,17 +73,28 @@ export async function adminUpdateUserRoleAction(formData: FormData) {
 
 export async function adminUpdateUserStatusAction(formData: FormData) {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast("/admin/users", csrf.error ?? "CSRF validation failed.", "error");
+    return;
+  }
   const admin = await requireAdmin();
 
   const parsed = updateStatusSchema.safeParse({
     userId: String(formData.get("userId") || ""),
     status: String(formData.get("status") || "")
   });
-  if (!parsed.success) return { error: "Invalid status update." };
+  if (!parsed.success) {
+    redirectWithToast("/admin/users", "Invalid status update.", "error");
+    return;
+  }
 
   if (parsed.data.userId === admin.id && parsed.data.status !== "ACTIVE") {
-    return { error: "You cannot change your own status away from ACTIVE." };
+    redirectWithToast(
+      "/admin/users",
+      "You cannot change your own status away from ACTIVE.",
+      "error"
+    );
+    return;
   }
 
   // We currently store account status as PENDING/ACTIVE/DISABLED.
@@ -100,17 +127,29 @@ export async function adminUpdateUserStatusAction(formData: FormData) {
 
 export async function adminForcePasswordResetAction(formData: FormData) {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast("/admin/users", csrf.error ?? "CSRF validation failed.", "error");
+    return;
+  }
   const admin = await requireAdmin();
 
   const parsed = userIdSchema.safeParse({
     userId: String(formData.get("userId") || "")
   });
-  if (!parsed.success) return { error: "Missing user id." };
+  if (!parsed.success) {
+    redirectWithToast("/admin/users", "Missing user id.", "error");
+    return;
+  }
 
   const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
-  if (!user) return { error: "User not found." };
-  if (user.status !== "ACTIVE") return { error: "User must be ACTIVE to reset password." };
+  if (!user) {
+    redirectWithToast("/admin/users", "User not found.", "error");
+    return;
+  }
+  if (user.status !== "ACTIVE") {
+    redirectWithToast("/admin/users", "User must be ACTIVE to reset password.", "error");
+    return;
+  }
 
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = hashResetToken(token);
@@ -145,20 +184,30 @@ export async function adminForcePasswordResetAction(formData: FormData) {
 
 export async function adminDeleteUserAction(formData: FormData) {
   const csrf = validateCsrf();
-  if (!csrf.ok) return { error: csrf.error };
+  if (!csrf.ok) {
+    redirectWithToast("/admin/users", csrf.error ?? "CSRF validation failed.", "error");
+    return;
+  }
   const admin = await requireAdmin();
 
   const parsed = userIdSchema.safeParse({
     userId: String(formData.get("userId") || "")
   });
-  if (!parsed.success) return { error: "Missing user id." };
+  if (!parsed.success) {
+    redirectWithToast("/admin/users", "Missing user id.", "error");
+    return;
+  }
 
   if (parsed.data.userId === admin.id) {
-    return { error: "You cannot delete your own account." };
+    redirectWithToast("/admin/users", "You cannot delete your own account.", "error");
+    return;
   }
 
   const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
-  if (!user) return { error: "User not found." };
+  if (!user) {
+    redirectWithToast("/admin/users", "User not found.", "error");
+    return;
+  }
 
   await prisma.user.delete({ where: { id: user.id } });
 

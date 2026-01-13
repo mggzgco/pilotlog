@@ -4,6 +4,15 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 
+function redirectWithToast(
+  path: string,
+  message: string,
+  toastType: "success" | "error" | "info"
+) {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}toast=${encodeURIComponent(message)}&toastType=${toastType}`);
+}
+
 export async function updateProfileAction(formData: FormData) {
   const firstName = String(formData.get("firstName") || "").trim();
   const lastName = String(formData.get("lastName") || "").trim();
@@ -21,5 +30,5 @@ export async function updateProfileAction(formData: FormData) {
     }
   });
 
-  redirect("/profile");
+  redirectWithToast("/profile", "Profile updated.", "success");
 }

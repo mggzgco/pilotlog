@@ -6,13 +6,22 @@ import { requireUser } from "@/app/lib/session";
 
 const validPhases = new Set(["PREFLIGHT", "POSTFLIGHT"]);
 
+function redirectWithToast(
+  path: string,
+  message: string,
+  toastType: "success" | "error" | "info"
+) {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}toast=${encodeURIComponent(message)}&toastType=${toastType}`);
+}
+
 export async function createChecklistTemplateAction(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const phase = String(formData.get("phase") || "").trim();
   const isDefault = formData.get("isDefault") === "on";
 
   if (!name || !validPhases.has(phase)) {
-    return { error: "Invalid template data." };
+    redirectWithToast("/checklists", "Invalid template data.", "error");
   }
 
   const user = await requireUser();
@@ -38,7 +47,7 @@ export async function createChecklistTemplateAction(formData: FormData) {
     });
   });
 
-  redirect("/checklists");
+  redirectWithToast("/checklists", "Checklist template created.", "success");
 }
 
 export async function addChecklistTemplateItemAction(formData: FormData) {
@@ -46,7 +55,7 @@ export async function addChecklistTemplateItemAction(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
 
   if (!templateId || !title) {
-    return { error: "Checklist item requires a title." };
+    redirectWithToast("/checklists", "Checklist item requires a title.", "error");
   }
 
   const user = await requireUser();
@@ -56,7 +65,7 @@ export async function addChecklistTemplateItemAction(formData: FormData) {
   });
 
   if (!template) {
-    return { error: "Checklist template not found." };
+    redirectWithToast("/checklists", "Checklist template not found.", "error");
   }
 
   const lastItem = await prisma.checklistTemplateItem.findFirst({
@@ -80,7 +89,7 @@ export async function addChecklistTemplateItemAction(formData: FormData) {
     }
   });
 
-  redirect("/checklists");
+  redirectWithToast("/checklists", "Checklist item added.", "success");
 }
 
 export async function moveChecklistTemplateItemAction(formData: FormData) {
@@ -88,7 +97,8 @@ export async function moveChecklistTemplateItemAction(formData: FormData) {
   const direction = String(formData.get("direction") || "").trim();
 
   if (!itemId || !["up", "down"].includes(direction)) {
-    return { error: "Invalid item move." };
+    redirectWithToast("/checklists", "Invalid item move.", "error");
+    return;
   }
 
   const user = await requireUser();
@@ -98,7 +108,8 @@ export async function moveChecklistTemplateItemAction(formData: FormData) {
   });
 
   if (!item || item.template.userId !== user.id) {
-    return { error: "Checklist item not found." };
+    redirectWithToast("/checklists", "Checklist item not found.", "error");
+    return;
   }
 
   const target = await prisma.checklistTemplateItem.findFirst({
@@ -111,7 +122,8 @@ export async function moveChecklistTemplateItemAction(formData: FormData) {
   });
 
   if (!target) {
-    redirect("/checklists");
+    redirectWithToast("/checklists", "Checklist item cannot be moved further.", "info");
+    return;
   }
 
   await prisma.$transaction([
@@ -125,14 +137,15 @@ export async function moveChecklistTemplateItemAction(formData: FormData) {
     })
   ]);
 
-  redirect("/checklists");
+  redirectWithToast("/checklists", "Checklist reordered.", "success");
 }
 
 export async function setChecklistTemplateDefaultAction(formData: FormData) {
   const templateId = String(formData.get("templateId") || "").trim();
 
   if (!templateId) {
-    return { error: "Template is required." };
+    redirectWithToast("/checklists", "Template is required.", "error");
+    return;
   }
 
   const user = await requireUser();
@@ -141,7 +154,8 @@ export async function setChecklistTemplateDefaultAction(formData: FormData) {
   });
 
   if (!template) {
-    return { error: "Template not found." };
+    redirectWithToast("/checklists", "Template not found.", "error");
+    return;
   }
 
   await prisma.$transaction([
@@ -159,5 +173,5 @@ export async function setChecklistTemplateDefaultAction(formData: FormData) {
     })
   ]);
 
-  redirect("/checklists");
+  redirectWithToast("/checklists", "Default checklist updated.", "success");
 }
