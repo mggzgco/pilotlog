@@ -143,6 +143,7 @@ export default async function FlightsPage({
             status: true,
             decision: true,
             decisionNote: true,
+            startedAt: true,
             items: { select: { required: true, inputType: true, valueYesNo: true } }
           }
         }
