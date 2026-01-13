@@ -680,8 +680,8 @@ export default async function FlightDetailPage({
             <p className="text-sm text-slate-400">Altitude profile</p>
           </CardHeader>
           <CardContent>
-            <div className="h-96 space-y-2">
-              <div className="h-[calc(100%-92px)] overflow-hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/40">
+            <div className="flex h-96 flex-col gap-2">
+              <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/40">
                 {altitudePointsDisplay.length > 1 ? (
                   <AltitudeChart className="h-full" points={plotPointsDisplay} />
                 ) : (
@@ -693,7 +693,7 @@ export default async function FlightDetailPage({
                   </div>
                 )}
               </div>
-              <div className="h-20">
+              <div className="h-20 shrink-0 overflow-hidden">
                 <FlightWeatherStrip flightId={flight.id} />
               </div>
             </div>

@@ -610,8 +610,8 @@ export default async function DashboardPage() {
                 track={latestFlight?.trackPoints ?? undefined}
               />
             </div>
-            <div className="h-72 space-y-2">
-              <div className="h-[calc(100%-92px)] overflow-hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/40">
+            <div className="flex h-72 flex-col gap-2">
+              <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/40">
                 {latestFlight?.trackPoints && latestFlight.trackPoints.length > 1 ? (
                   <AltitudeChart
                     className="h-full"
@@ -627,7 +627,7 @@ export default async function DashboardPage() {
                   </div>
                 )}
               </div>
-              <div className="h-20">
+              <div className="h-20 shrink-0 overflow-hidden">
                 <FlightWeatherStrip flightId={latestFlight?.id ?? null} />
               </div>
             </div>

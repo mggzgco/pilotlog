@@ -264,6 +264,7 @@ export async function GET(
       startTime: true,
       endTime: true,
       plannedStartTime: true,
+      plannedEndTime: true,
       statsJson: true
     }
   });
@@ -284,6 +285,7 @@ export async function GET(
 
   const now = new Date();
   const plannedAt = flight.plannedStartTime ?? null;
+  const plannedArrAt = flight.plannedEndTime ?? plannedAt;
 
   // Planned flights: show forecast via the generic aviation endpoint (live).
   if (plannedAt && plannedAt.getTime() > now.getTime()) {
@@ -308,7 +310,7 @@ export async function GET(
           : null;
     const destForecast =
       destStation && destTaf?.rawText
-        ? parseTafForTime(destTaf.rawText, destStation, plannedAt, destTempC)
+        ? parseTafForTime(destTaf.rawText, destStation, plannedArrAt ?? plannedAt, destTempC)
         : destStation && destMetar?.rawText
           ? parseMetar(destMetar.rawText, destStation, destMetar.observedAt)
           : null;

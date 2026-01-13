@@ -101,9 +101,11 @@ function tempLabel(metar: MetarParsed | null, unit: TempUnit) {
 }
 
 export function FlightWeatherStrip({
-  flightId
+  flightId,
+  className
 }: {
   flightId: string | null;
+  className?: string;
 }) {
   const [unit, setUnit] = useLocalStorageState<TempUnit>("pilotlog.tempUnit", "F");
   const [stationChoice, setStationChoice] = useState<StationChoice>("origin");
@@ -164,7 +166,7 @@ export function FlightWeatherStrip({
     "ARR";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
+    <div className={cn("h-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40", className)}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs dark:border-slate-800 dark:bg-slate-900/60">
