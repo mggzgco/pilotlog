@@ -300,16 +300,15 @@ export default async function FlightDetailPage({
   const needsLogbook = !hasAnyLogbookEntry;
   const needsCosts = !hasCosts;
   const needsReceipts = !hasReceipts;
-  const preflightIsAccepted =
-    preflightRun?.status === "SIGNED" && preflightRun.decision !== "REJECTED";
-  const canStartPostflight = preflightIsAccepted || flight.status === "COMPLETED" || flight.endTime;
-  const postflightIsAccepted =
-    postflightRun?.status === "SIGNED" && postflightRun.decision !== "REJECTED";
+  // Any SIGNED checklist run (accepted/rejected/skipped) is a closed/complete state.
+  const preflightComplete = preflightRun?.status === "SIGNED";
+  const canStartPostflight = preflightComplete || flight.status === "COMPLETED" || flight.endTime;
+  const postflightComplete = postflightRun?.status === "SIGNED";
   const needsPreflightChecklist = Boolean(
-    assignedPreflightTemplateId && !preflightIsAccepted
+    assignedPreflightTemplateId && !preflightComplete
   );
   const needsPostflightChecklist = Boolean(
-    assignedPostflightTemplateId && canStartPostflight && !postflightIsAccepted
+    assignedPostflightTemplateId && canStartPostflight && !postflightComplete
   );
   const checklistSummary = flight.checklistRuns.reduce<
     Record<"PREFLIGHT" | "POSTFLIGHT", string>
@@ -325,7 +324,16 @@ export default async function FlightDetailPage({
     if (!run) return "Not started";
     if (run.status === "IN_PROGRESS") return "In progress";
     if (run.status === "SIGNED") {
-      return run.decision === "REJECTED" ? "Closed (incomplete)" : "Signed";
+      if (run.decision === "REJECTED" && run.decisionNote?.toLowerCase().startsWith("skipped")) {
+        return "Complete (skipped)";
+      }
+      if (run.decision === "REJECTED") {
+        return "Complete (rejected)";
+      }
+      if (run.decision === "ACCEPTED") {
+        return "Complete";
+      }
+      return "Complete";
     }
     return "Not available";
   };

@@ -98,7 +98,7 @@ export async function POST(
   }
 
   const canStart =
-    (preflightRun?.status === "SIGNED" && preflightRun.decision !== "REJECTED") ||
+    preflightRun?.status === "SIGNED" ||
     flight.status === "COMPLETED" ||
     Boolean(flight.endTime);
 

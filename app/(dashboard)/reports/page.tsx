@@ -120,7 +120,7 @@ export default async function ReportsPage({
             <p className="text-sm text-slate-400">Flight time totals</p>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 text-sm text-slate-200">
+            <div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200">
               <div className="flex items-center justify-between">
                 <span>Total time</span>
                 <span>{summary.totalTime.toFixed(1)} hrs</span>
@@ -150,18 +150,18 @@ export default async function ReportsPage({
             <p className="text-sm text-slate-400">Cost totals</p>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 text-sm text-slate-200">
+            <div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200">
               <div className="flex items-center justify-between">
                 <span>Total cost</span>
                 <span>{currencyFormatter.format(summary.costTotalCents / 100)}</span>
               </div>
               {costCategories.length === 0 ? (
-                <p className="text-sm text-slate-500">No costs in this range.</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">No costs in this range.</p>
               ) : (
                 costCategories.map((category) => (
                   <div
                     key={category}
-                    className="flex items-center justify-between text-slate-300"
+                    className="flex items-center justify-between text-slate-600 dark:text-slate-300"
                   >
                     <span>{category}</span>
                     <span>

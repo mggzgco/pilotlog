@@ -129,7 +129,7 @@ export default async function FlightChecklistsPage({
             client: tx,
             flightId: flightData.id,
             phase: "PREFLIGHT",
-            status: "IN_PROGRESS",
+            status: "NOT_AVAILABLE",
             startedAt: null,
             template
           });

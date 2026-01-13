@@ -77,7 +77,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   // flight is completed, or there's an endTime.
   const preflightRun = flight.checklistRuns.find((r) => r.phase === "PREFLIGHT") ?? null;
   const canSkip =
-    (preflightRun?.status === "SIGNED" && preflightRun.decision !== "REJECTED") ||
+    preflightRun?.status === "SIGNED" ||
     flight.status === "COMPLETED" ||
     Boolean(flight.endTime);
   if (!canSkip) {

@@ -12,6 +12,7 @@ import { getCostCategoryLabel } from "@/app/lib/costs/categories";
 import { FlightStatusBadge } from "@/app/components/flights/flight-status-badge";
 import { formatDateTime24 } from "@/app/lib/utils";
 import { Receipt } from "lucide-react";
+import { ReceiptViewer } from "@/app/components/flights/receipt-viewer";
 
 export default async function FlightCostsPage({
   params,
@@ -115,7 +116,7 @@ export default async function FlightCostsPage({
         </div>
         <p className="text-sm text-slate-400">
           {flight.tailNumberSnapshot ?? flight.tailNumber} · {flight.origin} →{" "}
-          {flight.destination ?? "TBD"}
+          {flight.destination ?? "TBD"} · {formatDateTime24(flight.startTime)}
         </p>
       </div>
 
@@ -367,6 +368,11 @@ export default async function FlightCostsPage({
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-wrap justify-end gap-2">
+                          <ReceiptViewer
+                            receiptId={receipt.id}
+                            filename={receipt.originalFilename}
+                            triggerLabel="View"
+                          />
                           <Button size="sm" variant="outline" asChild>
                             <Link href={`/api/receipts/${receipt.id}/download`}>
                               Download

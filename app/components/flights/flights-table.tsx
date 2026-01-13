@@ -13,8 +13,9 @@ export interface FlightRow {
   destination: string | null;
   routeLabel: string;
   status: string;
-  preflightDecision: string;
-  postflightDecision: string;
+  checklistsStatus: string;
+  logbookStatus: string;
+  costsStatus: string;
   adsbStatus: string;
   nextAction:
     | { type: "link"; label: string; href: string }
@@ -59,17 +60,31 @@ export function FlightsTable({ flights, currentSort, searchParams }: FlightsTabl
     );
   };
   const decisionBadge = (decision: string) => {
-    if (decision === "Accepted") {
+    if (decision === "Complete") {
       return (
         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
-          Accepted
+          Complete
         </span>
       );
     }
-    if (decision === "Rejected") {
+    if (decision === "Added") {
       return (
-        <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
-          Rejected
+        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
+          Added
+        </span>
+      );
+    }
+    if (decision === "In progress" || decision === "Open") {
+      return (
+        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+          {decision}
+        </span>
+      );
+    }
+    if (decision === "Pending") {
+      return (
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          Pending
         </span>
       );
     }
@@ -94,8 +109,9 @@ export function FlightsTable({ flights, currentSort, searchParams }: FlightsTabl
               <th className="px-4 py-3 text-left font-medium">
                 {sortLabel("Status", "status_asc", "status_desc")}
               </th>
-              <th className="px-4 py-3 text-left font-medium">Preflight</th>
-              <th className="px-4 py-3 text-left font-medium">Postflight</th>
+              <th className="px-4 py-3 text-left font-medium">Checklists</th>
+              <th className="px-4 py-3 text-left font-medium">Logbook</th>
+              <th className="px-4 py-3 text-left font-medium">Costs</th>
               <th className="px-4 py-3 text-left font-medium">ADS-B</th>
               <th className="px-4 py-3 text-right font-medium">Next action</th>
             </tr>
@@ -143,7 +159,7 @@ export function FlightsTable({ flights, currentSort, searchParams }: FlightsTabl
                     href={`/flights/${flight.id}`}
                     className="block -mx-4 -my-3 px-4 py-3"
                   >
-                    {decisionBadge(flight.preflightDecision)}
+                    {decisionBadge(flight.checklistsStatus)}
                   </Link>
                 </td>
                 <td className="px-4 py-3">
@@ -151,7 +167,7 @@ export function FlightsTable({ flights, currentSort, searchParams }: FlightsTabl
                     href={`/flights/${flight.id}`}
                     className="block -mx-4 -my-3 px-4 py-3"
                   >
-                    {decisionBadge(flight.postflightDecision)}
+                    {decisionBadge(flight.logbookStatus)}
                   </Link>
                 </td>
                 <td className="px-4 py-3">
@@ -159,9 +175,17 @@ export function FlightsTable({ flights, currentSort, searchParams }: FlightsTabl
                     href={`/flights/${flight.id}`}
                     className="block -mx-4 -my-3 px-4 py-3"
                   >
-                    {flight.adsbStatus === "Imported" ? (
+                    {decisionBadge(flight.costsStatus)}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/flights/${flight.id}`}
+                    className="block -mx-4 -my-3 px-4 py-3"
+                  >
+                    {flight.adsbStatus === "Complete" ? (
                       <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-700 dark:bg-sky-500/20 dark:text-sky-200">
-                        Imported
+                        Complete
                       </span>
                     ) : (
                       <span className="text-xs uppercase tracking-wide text-slate-500">—</span>

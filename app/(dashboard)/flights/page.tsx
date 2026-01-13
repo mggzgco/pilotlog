@@ -197,41 +197,72 @@ export default async function FlightsPage({
     );
     const preflightDecision = decisionLabel(preflightRun);
     const postflightDecision = decisionLabel(postflightRun);
-    const isPostflightAccepted = postflightDecision === "Accepted";
-    const isImported = Boolean(
-      flight.importedProvider ||
-        flight.providerFlightId ||
-        ["IMPORTED", "COMPLETED"].includes(flight.status)
-    );
     const hasClosedLogbookEntry = flight.logbookEntries.some(
       (entry) => entry.status === "CLOSED"
     );
-    const isLandedFromAdsb = Boolean(
-      flight.importedProvider && flight.providerFlightId && flight.endTime
-    );
-    const derivedStatus: FlightStatus =
-      isLandedFromAdsb || hasClosedLogbookEntry ? "COMPLETED" : flight.status;
     const hasLogbookEntry = flight.logbookEntries.length > 0;
     const hasCosts = flight.costItems.length > 0;
     const hasReceipts = flight.receiptDocuments.length > 0;
-    const checklistAvailable =
-      preflightRun && preflightRun.status !== "NOT_AVAILABLE";
+    const adsbComplete = Boolean(
+      flight.importedProvider && flight.providerFlightId && flight.endTime
+    );
+
+    const checklistRuns = flight.checklistRuns.filter((run) =>
+      run.phase === "PREFLIGHT" || run.phase === "POSTFLIGHT"
+    );
+    const checklistsComplete =
+      checklistRuns.length === 0 || checklistRuns.every((run) => run.status === "SIGNED");
+    const logbookComplete = hasClosedLogbookEntry;
+    const costsComplete = hasCosts;
+
+    // Overall status: Planned (pre-departure), Landed (ADS-B landed), Completed (everything done).
+    const now = new Date();
+    const isPreDeparture = Boolean(displayTime && displayTime.getTime() > now.getTime() && !adsbComplete);
+    const derivedStatus: FlightStatus | "LANDED" =
+      adsbComplete && checklistsComplete && logbookComplete && costsComplete
+        ? "COMPLETED"
+        : adsbComplete
+          ? "LANDED"
+          : isPreDeparture
+            ? "PLANNED"
+            : flight.status === "COMPLETED"
+              ? "IMPORTED"
+              : flight.status;
+
+    const checklistStatus =
+      checklistsComplete
+        ? "Complete"
+        : checklistRuns.some((run) => Boolean(run.startedAt) && run.status !== "SIGNED")
+          ? "In progress"
+          : checklistRuns.length > 0
+            ? "Pending"
+            : "—";
+
+    const logbookStatus =
+      logbookComplete
+        ? "Complete"
+        : hasLogbookEntry
+          ? "Open"
+          : "—";
+
+    const costsStatus = costsComplete ? "Added" : "—";
+    const adsbStatus = adsbComplete ? "Complete" : "—";
 
     const nextAction =
-      derivedStatus === "PLANNED" && checklistAvailable && preflightDecision === "—"
-        ? linkAction("Start Preflight", `/flights/${flight.id}`)
-        : preflightDecision === "Accepted" && postflightDecision === "—"
+      derivedStatus === "PLANNED" && preflightDecision === "—"
+        ? linkAction("Start checklist", `/flights/${flight.id}/checklists`)
+        : preflightRun?.status === "SIGNED" && postflightDecision === "—"
           ? formAction(
               "Start Postflight",
               `/api/flights/${flight.id}/checklists/start-postflight`
             )
-          : isPostflightAccepted && !isImported
+          : adsbComplete === false && postflightRun?.status === "SIGNED"
             ? linkAction("Import ADS-B", `/flights/${flight.id}/match`)
-            : isPostflightAccepted && !hasLogbookEntry
+            : postflightRun?.status === "SIGNED" && !hasLogbookEntry
               ? linkAction("Log Hours", `/flights/${flight.id}`)
-              : isPostflightAccepted && !hasCosts
+              : postflightRun?.status === "SIGNED" && !hasCosts
                 ? linkAction("Add Costs", `/flights/${flight.id}`)
-                : isPostflightAccepted && !hasReceipts
+                : postflightRun?.status === "SIGNED" && !hasReceipts
                   ? linkAction("Upload Receipts", `/flights/${flight.id}#receipt-upload`)
                 : linkAction("Open", `/flights/${flight.id}`);
 
@@ -248,9 +279,10 @@ export default async function FlightsPage({
         destination: flight.destination
       }),
       status: derivedStatus,
-      preflightDecision,
-      postflightDecision,
-      adsbStatus: isImported ? "Imported" : "—",
+      checklistsStatus: checklistStatus,
+      logbookStatus,
+      costsStatus,
+      adsbStatus,
       nextAction,
       menuItems: [
         { label: "Open", href: `/flights/${flight.id}` },

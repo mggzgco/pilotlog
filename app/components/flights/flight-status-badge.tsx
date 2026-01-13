@@ -27,6 +27,11 @@ const statusStyles: Record<
     className:
       "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100"
   },
+  LANDED: {
+    label: "Landed",
+    className:
+      "bg-sky-50 text-sky-800 dark:bg-sky-500/20 dark:text-sky-100"
+  },
   COMPLETED: {
     label: "Completed",
     className:
