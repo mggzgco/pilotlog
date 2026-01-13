@@ -51,8 +51,19 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const getRedirectUrl = () => {
+    const origin = new URL(request.url).origin;
+    const referer = request.headers.get("referer");
+    const refererUrl = referer ? new URL(referer) : null;
+    // If called from the flight detail page, keep the user there.
+    if (refererUrl && refererUrl.origin === origin && refererUrl.pathname.startsWith(`/flights/${params.id}`)) {
+      return buildRedirectUrl(request, refererUrl.pathname + refererUrl.search);
+    }
+    return buildRedirectUrl(request, `/flights/${params.id}/logbook`);
+  };
+
   const redirectWithToast = (message: string, toastType: "success" | "error") => {
-    const redirectUrl = buildRedirectUrl(request, `/flights/${params.id}/logbook`);
+    const redirectUrl = getRedirectUrl();
     redirectUrl.searchParams.set("toast", message);
     redirectUrl.searchParams.set("toastType", toastType);
     return NextResponse.redirect(redirectUrl, { status: 303 });
@@ -165,8 +176,11 @@ export async function POST(
       });
     }
 
-    const redirectUrl = new URL(`/flights/${flight.id}/logbook`, request.url);
-    redirectUrl.searchParams.set("participantId", participant.id);
+    const redirectUrl = getRedirectUrl();
+    // If we're already on the logbook page, preserve the participant selection.
+    if (redirectUrl.pathname.endsWith(`/flights/${flight.id}/logbook`)) {
+      redirectUrl.searchParams.set("participantId", participant.id);
+    }
     redirectUrl.searchParams.set("toast", `Logbook updated. (${saved.id.slice(0, 6)})`);
     redirectUrl.searchParams.set("toastType", "success");
     return NextResponse.redirect(redirectUrl, { status: 303 });

@@ -414,7 +414,7 @@ export default async function FlightsPage({
         />
       ) : (
         <div className="flex-1">
-          <FlightsTable flights={flightRows} />
+          <FlightsTable flights={flightRows} currentSort={sort} searchParams={searchParams} />
         </div>
       )}
     </div>

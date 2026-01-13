@@ -3,6 +3,8 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/app/components/ui/toast-provider";
 
 type LogbookRowMenuProps = {
   entryId: string;
@@ -10,6 +12,9 @@ type LogbookRowMenuProps = {
 };
 
 export function LogbookRowMenu({ entryId, flightId }: LogbookRowMenuProps) {
+  const router = useRouter();
+  const { addToast } = useToast();
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
@@ -48,14 +53,27 @@ export function LogbookRowMenu({ entryId, flightId }: LogbookRowMenuProps) {
           ) : null}
           <DropdownMenu.Separator className="my-1 h-px bg-slate-200 dark:bg-slate-800" />
           <DropdownMenu.Item asChild>
-            <form action={`/api/logbook/${entryId}/delete`} method="post" className="w-full">
-              <button
-                type="submit"
-                className="block w-full cursor-pointer px-3 py-2 text-left text-rose-600 outline-none transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
-              >
-                Delete entry
-              </button>
-            </form>
+            <button
+              type="button"
+              className="block w-full cursor-pointer px-3 py-2 text-left text-rose-600 outline-none transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+              onClick={async () => {
+                const ok = window.confirm("Delete this logbook entry? This cannot be undone.");
+                if (!ok) return;
+                const res = await fetch(`/api/logbook/${entryId}/delete`, {
+                  method: "POST",
+                  headers: { accept: "application/json" }
+                });
+                const payload = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+                if (!res.ok) {
+                  addToast(payload?.error ?? "Failed to delete logbook entry.", "error");
+                  return;
+                }
+                addToast("Logbook entry deleted.", "success");
+                router.refresh();
+              }}
+            >
+              Delete entry
+            </button>
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

@@ -24,9 +24,40 @@ export interface FlightRow {
 
 interface FlightsTableProps {
   flights: FlightRow[];
+  currentSort?: string;
+  searchParams?: Record<string, string | string[] | undefined>;
 }
 
-export function FlightsTable({ flights }: FlightsTableProps) {
+export function FlightsTable({ flights, currentSort, searchParams }: FlightsTableProps) {
+  const buildSortHref = (sort: string) => {
+    const params = new URLSearchParams();
+    if (searchParams) {
+      for (const [key, value] of Object.entries(searchParams)) {
+        if (value === undefined) continue;
+        if (Array.isArray(value)) {
+          value.forEach((v) => params.append(key, v));
+        } else if (String(value).length > 0) {
+          params.set(key, String(value));
+        }
+      }
+    }
+    params.set("sort", sort);
+    const qs = params.toString();
+    return qs ? `/flights?${qs}` : "/flights";
+  };
+
+  const sortLabel = (label: string, asc: string, desc: string) => {
+    const activeAsc = currentSort === asc;
+    const activeDesc = currentSort === desc;
+    const next = activeDesc ? asc : desc;
+    const arrow = activeAsc ? " ↑" : activeDesc ? " ↓" : "";
+    return (
+      <Link href={buildSortHref(next)} className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100">
+        <span>{label}</span>
+        <span className="text-[11px] text-slate-400">{arrow}</span>
+      </Link>
+    );
+  };
   const decisionBadge = (decision: string) => {
     if (decision === "Accepted") {
       return (
@@ -53,10 +84,16 @@ export function FlightsTable({ flights }: FlightsTableProps) {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Date/time</th>
-              <th className="px-4 py-3 text-left font-medium">Aircraft</th>
+              <th className="px-4 py-3 text-left font-medium">
+                {sortLabel("Date/time", "date_asc", "date_desc")}
+              </th>
+              <th className="px-4 py-3 text-left font-medium">
+                {sortLabel("Aircraft", "tail_asc", "tail_desc")}
+              </th>
               <th className="px-4 py-3 text-left font-medium">Route</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
+              <th className="px-4 py-3 text-left font-medium">
+                {sortLabel("Status", "status_asc", "status_desc")}
+              </th>
               <th className="px-4 py-3 text-left font-medium">Preflight</th>
               <th className="px-4 py-3 text-left font-medium">Postflight</th>
               <th className="px-4 py-3 text-left font-medium">ADS-B</th>

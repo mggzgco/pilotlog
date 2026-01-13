@@ -11,6 +11,7 @@ import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 type AircraftSearchParams = {
   search?: string;
   category?: string;
+  sort?: string;
 };
 
 export default async function AircraftPage({ searchParams }: { searchParams?: AircraftSearchParams }) {
@@ -18,6 +19,7 @@ export default async function AircraftPage({ searchParams }: { searchParams?: Ai
 
   const search = (searchParams?.search ?? "").trim();
   const category = (searchParams?.category ?? "").trim();
+  const sort = (searchParams?.sort ?? "").trim() || "added_desc";
   const allowedCategories = new Set([
     "SINGLE_ENGINE_PISTON",
     "MULTI_ENGINE_PISTON",
@@ -29,6 +31,28 @@ export default async function AircraftPage({ searchParams }: { searchParams?: Ai
     "OTHER"
   ]);
   const categoryFilter = allowedCategories.has(category) ? category : "";
+
+  const orderBy = (() => {
+    switch (sort) {
+      case "tail_asc":
+        return [{ tailNumber: "asc" as const }];
+      case "tail_desc":
+        return [{ tailNumber: "desc" as const }];
+      case "manufacturer_asc":
+        return [{ manufacturer: "asc" as const }, { tailNumber: "asc" as const }];
+      case "manufacturer_desc":
+        return [{ manufacturer: "desc" as const }, { tailNumber: "asc" as const }];
+      case "model_asc":
+        return [{ model: "asc" as const }, { tailNumber: "asc" as const }];
+      case "model_desc":
+        return [{ model: "desc" as const }, { tailNumber: "asc" as const }];
+      case "added_asc":
+        return [{ createdAt: "asc" as const }];
+      case "added_desc":
+      default:
+        return [{ createdAt: "desc" as const }];
+    }
+  })();
 
   const [aircraft] = await Promise.all([
     prisma.aircraft.findMany({
@@ -55,9 +79,31 @@ export default async function AircraftPage({ searchParams }: { searchParams?: Ai
         preflightChecklistTemplate: true,
         postflightChecklistTemplate: true
       },
-      orderBy: { createdAt: "desc" }
+      orderBy
     })
   ]);
+
+  const sortHref = (next: string) => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (categoryFilter) params.set("category", categoryFilter);
+    params.set("sort", next);
+    const qs = params.toString();
+    return qs ? `/aircraft?${qs}` : "/aircraft";
+  };
+
+  const sortHeader = (label: string, asc: string, desc: string) => {
+    const activeAsc = sort === asc;
+    const activeDesc = sort === desc;
+    const next = activeDesc ? asc : desc;
+    const arrow = activeAsc ? " ↑" : activeDesc ? " ↓" : "";
+    return (
+      <Link href={sortHref(next)} className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100">
+        <span>{label}</span>
+        <span className="text-[11px] text-slate-400">{arrow}</span>
+      </Link>
+    );
+  };
 
   const categoryLabel = (value: string | null | undefined) => {
     switch (value) {
@@ -148,12 +194,20 @@ export default async function AircraftPage({ searchParams }: { searchParams?: Ai
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Tail</th>
-                  <th className="px-4 py-3 text-left font-medium">Manufacturer</th>
-                  <th className="px-4 py-3 text-left font-medium">Model</th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {sortHeader("Tail", "tail_asc", "tail_desc")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {sortHeader("Manufacturer", "manufacturer_asc", "manufacturer_desc")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {sortHeader("Model", "model_asc", "model_desc")}
+                  </th>
                   <th className="px-4 py-3 text-left font-medium">Type</th>
                   <th className="px-4 py-3 text-left font-medium">Checklist readiness</th>
-                  <th className="px-4 py-3 text-left font-medium">Added</th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {sortHeader("Added", "added_asc", "added_desc")}
+                  </th>
                   <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>

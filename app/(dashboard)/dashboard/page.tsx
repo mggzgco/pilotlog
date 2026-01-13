@@ -261,9 +261,8 @@ export default async function DashboardPage() {
   ) => {
     const entryTotalHours = (entry: { totalTime: unknown; flight: { durationMinutes: number | null } | null }) => {
       const totalRaw = Number(entry.totalTime);
-      return Number.isFinite(totalRaw) && totalRaw > 0
-        ? totalRaw
-        : (entry.flight?.durationMinutes ?? 0) / 60;
+      // Dashboard time details come strictly from logbook entries (not ADS-B/import duration).
+      return Number.isFinite(totalRaw) && totalRaw > 0 ? totalRaw : 0;
     };
 
     const totals = {
@@ -320,10 +319,7 @@ export default async function DashboardPage() {
       const key = entry.date.toISOString().slice(0, 10);
       if (!byDay.has(key)) continue;
       const totalRaw = Number(entry.totalTime);
-      const total =
-        Number.isFinite(totalRaw) && totalRaw > 0
-          ? totalRaw
-          : (entry.flight?.durationMinutes ?? 0) / 60;
+      const total = Number.isFinite(totalRaw) && totalRaw > 0 ? totalRaw : 0;
       byDay.set(key, (byDay.get(key) ?? 0) + total);
     }
 

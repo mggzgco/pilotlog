@@ -15,6 +15,7 @@ import { formatFlightRouteLabel } from "@/app/lib/flights/route-label";
 import { formatDateTime24 } from "@/app/lib/utils";
 import { EditFlightModal } from "@/app/components/flights/edit-flight-modal";
 import { FlightPhotoThumbGrid } from "@/app/components/flights/flight-photo-lightbox";
+import { Pencil, Radar, RefreshCw, Upload, ClipboardList, Receipt, BookOpen, BarChart3, StickyNote, Image as ImageIcon } from "lucide-react";
 
 const formatPersonName = (person: {
   name?: string | null;
@@ -246,6 +247,7 @@ export default async function FlightDetailPage({
       where: { flightId: flight.id },
       select: {
         id: true,
+        userId: true,
         status: true,
         totalTime: true,
         dayTakeoffs: true,
@@ -386,6 +388,10 @@ export default async function FlightDetailPage({
     { totalHours: 0, takeoffs: 0, landings: 0 }
   );
 
+  const currentUserParticipantId =
+    flight.participants.find((p) => p.userId === user.id)?.id ?? null;
+  const currentUserLogbookEntry = logbookEntries.find((e) => e.userId === user.id) ?? null;
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -409,125 +415,107 @@ export default async function FlightDetailPage({
               </p>
             ) : null}
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Quick actions
-            </p>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <Link href={`/flights/${flight.id}/match`}>ADS-B match</Link>
-              </Button>
+          <div className="flex flex-wrap items-center justify-start gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+            <EditFlightModal
+              flightId={flight.id}
+              triggerLabel="Edit"
+              triggerVariant="ghost"
+              triggerSize="icon"
+              triggerClassName="h-9 w-9"
+              triggerIcon={<Pencil className="h-4 w-4" />}
+              aircraftOptions={aircraftOptions}
+              personOptions={people.map((p) => ({
+                id: p.id,
+                label: p.name || p.email || "—"
+              }))}
+              initial={{
+                aircraftId: flight.aircraftId,
+                tailNumber: flight.tailNumberSnapshot ?? flight.tailNumber,
+                origin: flight.origin,
+                destination: flight.destination,
+                selfRole: flight.participants.find((p) => p.userId === user.id)?.role ?? "PIC",
+                plannedStartTime: flight.plannedStartTime
+                  ? flight.plannedStartTime.toISOString().slice(0, 16)
+                  : null,
+                plannedEndTime: flight.plannedEndTime
+                  ? flight.plannedEndTime.toISOString().slice(0, 16)
+                  : null,
+                startTime: flight.startTime ? flight.startTime.toISOString().slice(0, 16) : null,
+                endTime: flight.endTime ? flight.endTime.toISOString().slice(0, 16) : null,
+                stops: flight.stops.map((s) => s.label),
+                peopleParticipants: flight.peopleParticipants.map((p) => ({
+                  id: p.personId,
+                  role: p.role
+                }))
+              }}
+            />
 
-              <EditFlightModal
-                flightId={flight.id}
-                triggerLabel="Edit flight"
-                triggerClassName="w-full justify-start"
-                aircraftOptions={aircraftOptions}
-                personOptions={people.map((p) => ({
-                  id: p.id,
-                  label: p.name || p.email || "—"
-                }))}
-                initial={{
-                  aircraftId: flight.aircraftId,
-                  tailNumber: flight.tailNumberSnapshot ?? flight.tailNumber,
-                  origin: flight.origin,
-                  destination: flight.destination,
-                  selfRole:
-                    flight.participants.find((p) => p.userId === user.id)?.role ?? "PIC",
-                  plannedStartTime: flight.plannedStartTime
-                    ? flight.plannedStartTime.toISOString().slice(0, 16)
-                    : null,
-                  plannedEndTime: flight.plannedEndTime
-                    ? flight.plannedEndTime.toISOString().slice(0, 16)
-                    : null,
-                  startTime: flight.startTime ? flight.startTime.toISOString().slice(0, 16) : null,
-                  endTime: flight.endTime ? flight.endTime.toISOString().slice(0, 16) : null,
-                  stops: flight.stops.map((s) => s.label),
-                  peopleParticipants: flight.peopleParticipants.map((p) => ({
-                    id: p.personId,
-                    role: p.role
-                  }))
-                }}
-              />
+            <Button asChild size="icon" variant="ghost" title="ADS-B match" aria-label="ADS-B match">
+              <Link href={`/flights/${flight.id}/match`}>
+                <Radar className="h-4 w-4" />
+              </Link>
+            </Button>
 
-              {flight.importedProvider === "aeroapi" && flight.providerFlightId ? (
-                <form action={`/api/flights/${flight.id}/adsb/refresh`} method="post">
-                  <FormSubmitButton
-                    type="submit"
-                    size="sm"
-                    variant="outline"
-                    pendingText="Refreshing..."
-                    className="w-full justify-start"
-                  >
-                    Refresh ADS-B
-                  </FormSubmitButton>
-                </form>
-              ) : null}
+            {flight.importedProvider === "aeroapi" && flight.providerFlightId ? (
+              <form action={`/api/flights/${flight.id}/adsb/refresh`} method="post">
+                <FormSubmitButton
+                  type="submit"
+                  size="icon"
+                  variant="ghost"
+                  pendingText=""
+                  title="Refresh ADS-B"
+                  aria-label="Refresh ADS-B"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </FormSubmitButton>
+              </form>
+            ) : null}
 
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <Link href={`/import?flightId=${flight.id}`}>Manual import</Link>
-              </Button>
+            <Button asChild size="icon" variant="ghost" title="Manual import" aria-label="Manual import">
+              <Link href={`/import?flightId=${flight.id}`}>
+                <Upload className="h-4 w-4" />
+              </Link>
+            </Button>
 
-              {hasAnyAssignedChecklistTemplate ? (
-                <Button asChild size="sm" variant="outline" className="justify-start">
-                  <Link href={`/flights/${flight.id}/checklists`}>Checklists</Link>
-                </Button>
-              ) : null}
+            {hasAnyAssignedChecklistTemplate ? (
+              <Button asChild size="icon" variant="ghost" title="Checklists" aria-label="Checklists">
+                <Link href={`/flights/${flight.id}/checklists`}>
+                  <ClipboardList className="h-4 w-4" />
+                </Link>
+              </Button>
+            ) : null}
 
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <Link href={`/flights/${flight.id}/costs`}>Costs</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <Link href={`/flights/${flight.id}/logbook`}>Logbook</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <Link href="#stats">Stats</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <Link href="#notes">Notes</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <Link href="#photos">Photos</Link>
-              </Button>
-            </div>
+            <Button asChild size="icon" variant="ghost" title="Costs" aria-label="Costs">
+              <Link href={`/flights/${flight.id}/costs`}>
+                <Receipt className="h-4 w-4" />
+              </Link>
+            </Button>
+
+            <Button asChild size="icon" variant="ghost" title="Logbook" aria-label="Logbook">
+              <Link href={`/flights/${flight.id}/logbook`}>
+                <BookOpen className="h-4 w-4" />
+              </Link>
+            </Button>
+
+            <Button asChild size="icon" variant="ghost" title="Jump to stats" aria-label="Jump to stats">
+              <Link href="#stats">
+                <BarChart3 className="h-4 w-4" />
+              </Link>
+            </Button>
+
+            <Button asChild size="icon" variant="ghost" title="Jump to notes" aria-label="Jump to notes">
+              <Link href="#notes">
+                <StickyNote className="h-4 w-4" />
+              </Link>
+            </Button>
+
+            <Button asChild size="icon" variant="ghost" title="Jump to photos" aria-label="Jump to photos">
+              <Link href="#photos">
+                <ImageIcon className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
         </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <p className="text-sm text-slate-400">Route map</p>
-          </CardHeader>
-          <CardContent>
-            {flight.trackPoints.length > 1 ? (
-              <div className="h-96">
-                <FlightMap track={flight.trackPoints ?? undefined} />
-              </div>
-            ) : (
-              <EmptyState
-                title="No track data yet"
-                description="Import ADS-B data to view the flight track."
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <p className="text-sm text-slate-400">Altitude profile</p>
-          </CardHeader>
-          <CardContent>
-            {altitudePointsDisplay.length > 1 ? (
-              <AltitudeChart points={plotPointsDisplay} />
-            ) : (
-              <EmptyState
-                title="No altitude profile yet"
-                description="Import ADS-B data to see the altitude profile."
-              />
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       <Card id="stats">
@@ -652,6 +640,42 @@ export default async function FlightDetailPage({
         </CardContent>
       </Card>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Route map</p>
+          </CardHeader>
+          <CardContent>
+            {flight.trackPoints.length > 1 ? (
+              <div className="h-96">
+                <FlightMap track={flight.trackPoints ?? undefined} />
+              </div>
+            ) : (
+              <EmptyState
+                title="No track data yet"
+                description="Import ADS-B data to view the flight track."
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Altitude profile</p>
+          </CardHeader>
+          <CardContent>
+            {altitudePointsDisplay.length > 1 ? (
+              <AltitudeChart points={plotPointsDisplay} />
+            ) : (
+              <EmptyState
+                title="No altitude profile yet"
+                description="Import ADS-B data to see the altitude profile."
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-3">
       {showAutoImportRunning ? (
         <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
@@ -754,6 +778,38 @@ export default async function FlightDetailPage({
                 <p className="text-xs text-slate-500 dark:text-slate-400">Day + night</p>
               </div>
             </div>
+
+            {currentUserParticipantId ? (
+              <form
+                action={`/api/flights/${flight.id}/update-logbook`}
+                method="post"
+                className="mt-4 flex flex-wrap items-end gap-3"
+              >
+                <input type="hidden" name="participantId" value={currentUserParticipantId} />
+                <input type="hidden" name="status" value="OPEN" />
+                <input type="hidden" name="date" value={flight.startTime.toISOString().slice(0, 10)} />
+                <label className="min-w-0 flex-1 text-sm text-slate-600 dark:text-slate-400 sm:min-w-[240px]">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Total time (hrs)
+                  </span>
+                  <Input
+                    name="totalTime"
+                    type="number"
+                    step="0.1"
+                    placeholder="1.4"
+                    defaultValue={currentUserLogbookEntry?.totalTime?.toString?.() ?? ""}
+                  />
+                </label>
+                <FormSubmitButton type="submit" pendingText="Saving...">
+                  Save
+                </FormSubmitButton>
+              </form>
+            ) : (
+              <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+                Add yourself as a flight participant to log hours.
+              </p>
+            )}
+
             {!hasAnyLogbookEntry ? (
               <div className="mt-4 rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
                 No logbook entry yet — log hours and remarks.

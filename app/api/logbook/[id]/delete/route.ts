@@ -19,13 +19,22 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const redirectUrl =
     refererUrl && refererUrl.origin === origin ? refererUrl : new URL("/logbook", request.url);
 
+  const wantsJson = request.headers.get("accept")?.includes("application/json");
+
   if (!entry) {
+    if (wantsJson) {
+      return NextResponse.json({ error: "Logbook entry not found." }, { status: 404 });
+    }
     redirectUrl.searchParams.set("toast", "Logbook entry not found.");
     redirectUrl.searchParams.set("toastType", "error");
     return NextResponse.redirect(redirectUrl, { status: 303 });
   }
 
   await prisma.logbookEntry.delete({ where: { id: entry.id } });
+
+  if (wantsJson) {
+    return NextResponse.json({ ok: true });
+  }
 
   redirectUrl.searchParams.set("toast", "Logbook entry deleted.");
   redirectUrl.searchParams.set("toastType", "success");

@@ -26,6 +26,7 @@ type LogbookSearchParams = {
   search?: string;
   flightId?: string;
   metrics?: string | string[];
+  sort?: string;
 };
 
 const toHours = (value: number | string | { toString(): string } | null | undefined) => {
@@ -84,6 +85,7 @@ export default async function LogbookPage({
   const aircraftFilter = searchParams?.aircraft?.trim() || "";
   const searchFilter = searchParams?.search?.trim() || "";
   const flightIdFilter = searchParams?.flightId?.trim() || "";
+  const sort = searchParams?.sort?.trim() || "date_desc";
 
   const flights = await prisma.flight.findMany({
     where: { userId: user.id },
@@ -202,9 +204,73 @@ export default async function LogbookPage({
     entryFilters.AND = andFilters;
   }
 
+  const sortHref = (next: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    if (aircraftFilter) params.set("aircraft", aircraftFilter);
+    if (searchFilter) params.set("search", searchFilter);
+    if (flightIdFilter) params.set("flightId", flightIdFilter);
+    const metricsParam = Array.isArray(searchParams?.metrics)
+      ? searchParams?.metrics.join(",")
+      : searchParams?.metrics;
+    if (metricsParam) params.set("metrics", metricsParam);
+    params.set("sort", next);
+    const qs = params.toString();
+    return qs ? `/logbook?${qs}` : "/logbook";
+  };
+
+  const sortHeader = (label: string, asc: string, desc: string) => {
+    const activeAsc = sort === asc;
+    const activeDesc = sort === desc;
+    const next = activeDesc ? asc : desc;
+    const arrow = activeAsc ? " ↑" : activeDesc ? " ↓" : "";
+    return (
+      <Link href={sortHref(next)} className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100">
+        <span>{label}</span>
+        <span className="text-[11px] text-slate-400">{arrow}</span>
+      </Link>
+    );
+  };
+
+  const entryOrderBy: Prisma.LogbookEntryOrderByWithRelationInput[] = (() => {
+    switch (sort) {
+      case "date_asc":
+        return [{ date: "asc" }];
+      case "date_desc":
+        return [{ date: "desc" }];
+      case "status_asc":
+        return [{ status: "asc" }, { date: "desc" }];
+      case "status_desc":
+        return [{ status: "desc" }, { date: "desc" }];
+      case "total_asc":
+        return [{ totalTime: "asc" }, { date: "desc" }];
+      case "total_desc":
+        return [{ totalTime: "desc" }, { date: "desc" }];
+      case "pic_asc":
+        return [{ picTime: "asc" }, { date: "desc" }];
+      case "pic_desc":
+        return [{ picTime: "desc" }, { date: "desc" }];
+      case "sic_asc":
+        return [{ sicTime: "asc" }, { date: "desc" }];
+      case "sic_desc":
+        return [{ sicTime: "desc" }, { date: "desc" }];
+      case "night_asc":
+        return [{ nightTime: "asc" }, { date: "desc" }];
+      case "night_desc":
+        return [{ nightTime: "desc" }, { date: "desc" }];
+      case "inst_asc":
+        return [{ instrumentTime: "asc" }, { date: "desc" }];
+      case "inst_desc":
+        return [{ instrumentTime: "desc" }, { date: "desc" }];
+      default:
+        return [{ date: "desc" }];
+    }
+  })();
+
   const entries = await prisma.logbookEntry.findMany({
     where: entryFilters,
-    orderBy: { date: "desc" },
+    orderBy: entryOrderBy,
     include: {
       flight: {
         select: {
@@ -422,15 +488,15 @@ export default async function LogbookPage({
               <table className="min-w-full text-left text-sm text-slate-900 dark:text-slate-100">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                   <tr>
-                    <th className="px-4 py-2">Date</th>
-                    <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2">{sortHeader("Date", "date_asc", "date_desc")}</th>
+                    <th className="px-4 py-2">{sortHeader("Status", "status_asc", "status_desc")}</th>
                     <th className="px-4 py-2">Aircraft</th>
                     <th className="px-4 py-2">Route</th>
-                    <th className="px-4 py-2">Total</th>
-                    <th className="px-4 py-2">PIC</th>
-                    <th className="px-4 py-2">SIC</th>
-                    <th className="px-4 py-2">Night</th>
-                    <th className="px-4 py-2">Instrument</th>
+                    <th className="px-4 py-2">{sortHeader("Total", "total_asc", "total_desc")}</th>
+                    <th className="px-4 py-2">{sortHeader("PIC", "pic_asc", "pic_desc")}</th>
+                    <th className="px-4 py-2">{sortHeader("SIC", "sic_asc", "sic_desc")}</th>
+                    <th className="px-4 py-2">{sortHeader("Night", "night_asc", "night_desc")}</th>
+                    <th className="px-4 py-2">{sortHeader("Instrument", "inst_asc", "inst_desc")}</th>
                     <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
