@@ -140,18 +140,8 @@ export async function POST(
     const data = {
       date: parsed.data.date,
       status: parsed.data.status,
-      totalTime: (() => {
-        if (parsed.data.totalTime !== null && parsed.data.totalTime !== undefined) {
-          return parsed.data.totalTime;
-        }
-        if (parsed.data.hobbsOut !== null && parsed.data.hobbsIn !== null) {
-          const diff = parsed.data.hobbsIn - parsed.data.hobbsOut;
-          if (Number.isFinite(diff) && diff >= 0) {
-            return Math.round(diff * 10) / 10;
-          }
-        }
-        return null;
-      })(),
+      // Total time is user-entered only (no auto-calculations).
+      totalTime: parsed.data.totalTime ?? null,
       picTime: parsed.data.picTime,
       sicTime: parsed.data.sicTime,
       dualReceivedTime: parsed.data.dualReceivedTime,

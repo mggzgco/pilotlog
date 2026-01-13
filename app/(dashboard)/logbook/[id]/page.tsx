@@ -24,18 +24,6 @@ const formatHours = (value: number | string | { toString(): string } | null | un
   return numeric === null ? "—" : numeric.toFixed(1);
 };
 
-const computeHobbsTotal = (
-  hobbsOut: number | string | { toString(): string } | null | undefined,
-  hobbsIn: number | string | { toString(): string } | null | undefined
-) => {
-  const out = toHours(hobbsOut);
-  const inn = toHours(hobbsIn);
-  if (out === null || inn === null) return null;
-  const diff = inn - out;
-  if (!Number.isFinite(diff) || diff < 0) return null;
-  return Math.round(diff * 10) / 10;
-};
-
 export default async function LogbookEntryDetailPage({
   params
 }: {
@@ -53,6 +41,7 @@ export default async function LogbookEntryDetailPage({
           origin: true,
           destination: true,
           startTime: true,
+          durationMinutes: true,
           tailNumber: true,
           tailNumberSnapshot: true,
           aircraft: { select: { tailNumber: true, model: true } }
@@ -87,9 +76,13 @@ export default async function LogbookEntryDetailPage({
     entry.tailNumberSnapshot ||
     "—";
 
+  // Total time is user-entered only (no Hobbs/time calculations).
+  // As a convenience, suggest the ADS-B duration when linked.
   const suggestedTotalTime =
     toHours(entry.totalTime) ??
-    computeHobbsTotal(entry.hobbsOut, entry.hobbsIn);
+    (typeof entry.flight?.durationMinutes === "number" && Number.isFinite(entry.flight.durationMinutes)
+      ? Math.round((entry.flight.durationMinutes / 60) * 10) / 10
+      : null);
 
   return (
     <div className="space-y-6">

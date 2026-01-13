@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/app/lib/db";
 import { requireUser } from "@/app/lib/session";
 import { logbookSchema } from "@/app/lib/validation";
-import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
 
 function redirectWithToast(
   path: string,
@@ -36,19 +35,6 @@ export async function createLogbookEntryAction(formData: FormData) {
   }
   const linkedFlightId = flight?.id ?? null;
 
-  const computedTotalTime = computeTotalTimeHours({
-    hobbsOut: parsed.data.hobbsOut,
-    hobbsIn: parsed.data.hobbsIn,
-    timeOut: parsed.data.timeOut,
-    timeIn: parsed.data.timeIn,
-    picTime: parsed.data.picTime,
-    sicTime: parsed.data.sicTime,
-    dualReceivedTime: parsed.data.dualReceivedTime,
-    soloTime: parsed.data.soloTime,
-    groundTime: parsed.data.groundTime,
-    simulatorTime: parsed.data.simulatorTime
-  });
-
   const toNumberOrNull = (value?: string) => {
     if (!value) return null;
     const numeric = Number(value);
@@ -68,7 +54,8 @@ export async function createLogbookEntryAction(formData: FormData) {
     timeIn: parsed.data.timeIn?.trim() || null,
     hobbsOut: toNumberOrNull(parsed.data.hobbsOut),
     hobbsIn: toNumberOrNull(parsed.data.hobbsIn),
-    totalTime: computedTotalTime,
+    // Total time is user-entered only (no auto-calculations).
+    totalTime: toNumberOrNull(parsed.data.totalTime),
     picTime: toNumberOrNull(parsed.data.picTime),
     sicTime: toNumberOrNull(parsed.data.sicTime),
     dualReceivedTime: toNumberOrNull(parsed.data.dualReceivedTime),

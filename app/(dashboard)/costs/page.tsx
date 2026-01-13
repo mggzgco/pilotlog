@@ -7,6 +7,7 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { CollapsibleCard } from "@/app/components/ui/collapsible-card";
 import { CreateCostModal } from "@/app/components/costs/create-cost-modal";
+import { CostDeleteIconButton } from "@/app/components/costs/cost-delete-icon-button";
 import {
   costCategoryOptions,
   costCategoryValues,
@@ -348,12 +349,13 @@ export default async function CostsPage({
                   <th className="px-4 py-3 text-left font-medium">Receipts</th>
                   <th className="px-4 py-3 text-left font-medium">Amount</th>
                   <th className="px-4 py-3 text-left font-medium">Links</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {costs.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={9}>
+                    <td className="px-4 py-4 text-sm text-slate-500" colSpan={10}>
                       No expenses logged.
                     </td>
                   </tr>
@@ -374,14 +376,19 @@ export default async function CostsPage({
                       ? `${tailNumber} · ${cost.flight.aircraft.model}`
                       : tailNumber;
                     const logbookCount = cost.flight?.logbookEntries.length ?? 0;
+                    const rowHref = `/costs/${cost.id}`;
 
                     return (
                       <tr key={cost.id} className="text-slate-900 dark:text-slate-100">
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                          {cost.date.toDateString()}
+                          <Link href={rowHref} className="block -mx-4 -my-3 px-4 py-3">
+                            {cost.date.toDateString()}
+                          </Link>
                         </td>
                         <td className="px-4 py-3">
-                          {getCostCategoryLabel(cost.category)}
+                          <Link href={rowHref} className="block -mx-4 -my-3 px-4 py-3">
+                            {getCostCategoryLabel(cost.category)}
+                          </Link>
                         </td>
                         <td className="px-4 py-3">
                           {cost.flight ? (
@@ -400,9 +407,21 @@ export default async function CostsPage({
                             </p>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{aircraftLabel}</td>
-                        <td className="px-4 py-3">{cost.vendor ?? "—"}</td>
-                        <td className="px-4 py-3">{cost.notes ?? "—"}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          <Link href={rowHref} className="block -mx-4 -my-3 px-4 py-3">
+                            {aircraftLabel}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={rowHref} className="block -mx-4 -my-3 px-4 py-3">
+                            {cost.vendor ?? "—"}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={rowHref} className="block -mx-4 -my-3 px-4 py-3">
+                            {cost.notes ?? "—"}
+                          </Link>
+                        </td>
                         <td className="px-4 py-3">
                           {cost.receipts.length === 0 ? (
                             <span className="text-slate-500">No receipts</span>
@@ -422,7 +441,9 @@ export default async function CostsPage({
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          {currencyFormatter.format(cost.amountCents / 100)}
+                          <Link href={rowHref} className="block -mx-4 -my-3 px-4 py-3">
+                            {currencyFormatter.format(cost.amountCents / 100)}
+                          </Link>
                         </td>
                         <td className="px-4 py-3">
                           {cost.flight ? (
@@ -435,6 +456,9 @@ export default async function CostsPage({
                           ) : (
                             <span className="text-slate-500">No flight</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <CostDeleteIconButton costId={cost.id} />
                         </td>
                       </tr>
                     );

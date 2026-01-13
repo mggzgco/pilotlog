@@ -73,7 +73,14 @@ export default async function FlightDetailPage({
         }
       },
       checklistRuns: {
-        select: { id: true, phase: true, status: true, decision: true, startedAt: true }
+        select: {
+          id: true,
+          phase: true,
+          status: true,
+          decision: true,
+          decisionNote: true,
+          startedAt: true
+        }
       }
     }
   });

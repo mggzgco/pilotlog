@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/db";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import type { LogTenRowNormalized } from "@/app/lib/logten/sync";
-import { computeTotalTimeHours } from "@/app/lib/logbook/compute";
 
 export const runtime = "nodejs";
 
@@ -46,24 +45,6 @@ export async function POST(request: Request) {
       continue;
     }
 
-    const totalTime = computeTotalTimeHours({
-      hobbsOut: row.hobbsOut,
-      hobbsIn: row.hobbsIn,
-      timeOut: row.timeOut,
-      timeIn: row.timeIn,
-      picTime: row.picTime,
-      sicTime: row.sicTime,
-      dualReceivedTime: row.dualReceivedTime,
-      soloTime: row.soloTime,
-      nightTime: row.nightTime,
-      xcTime: row.xcTime,
-      simulatedInstrumentTime: row.simulatedInstrumentTime,
-      instrumentTime: row.instrumentTime,
-      groundTime: row.groundTime,
-      simulatorTime: row.simulatorTime
-    });
-    const resolvedTotalTime = row.totalTime ?? totalTime;
-
     const date = new Date(row.date);
     if (Number.isNaN(date.getTime())) {
       skipped++;
@@ -83,7 +64,8 @@ export async function POST(request: Request) {
         timeIn: row.timeIn,
         hobbsOut: row.hobbsOut,
         hobbsIn: row.hobbsIn,
-        totalTime: resolvedTotalTime,
+        // Total time is user-entered / source-of-truth (no auto-calculations on import).
+        totalTime: row.totalTime ?? null,
         picTime: row.picTime,
         sicTime: row.sicTime,
         dualReceivedTime: row.dualReceivedTime,

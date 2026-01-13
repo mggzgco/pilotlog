@@ -47,7 +47,8 @@ export function Sidebar({ user }: { user: any }) {
   return (
     <aside
       className={[
-        "app-sidebar hidden h-dvh flex-col border-r border-slate-200 bg-white py-6 dark:border-slate-800 dark:bg-slate-950 lg:flex",
+        // Keep nav above maps (Leaflet/Mapbox) which can have aggressive z-index stacking.
+        "app-sidebar relative z-[1000] hidden h-dvh flex-col border-r border-slate-200 bg-white py-6 dark:border-slate-800 dark:bg-slate-950 lg:flex",
         collapsed ? "w-16 px-2" : "w-64 px-5"
       ].join(" ")}
     >
