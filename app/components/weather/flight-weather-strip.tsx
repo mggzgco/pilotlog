@@ -87,10 +87,16 @@ function skyLabel(metar: MetarParsed | null) {
 
 function windLabel(metar: MetarParsed | null) {
   if (!metar) return "—";
-  const spd = metar.wind.speedKt;
+  const spd = metar.wind?.speedKt ?? null;
+  const dirDeg = metar.wind?.directionDeg ?? null;
+  const gustKt = metar.wind?.gustKt ?? null;
+  const variable = Boolean(metar.wind?.variable);
+
   if (spd === null) return "—";
-  const gust = metar.wind.gustKt ? `G${metar.wind.gustKt}` : "";
-  const dir = metar.wind.variable ? "VRB" : metar.wind.directionDeg?.toString().padStart(3, "0") ?? "—";
+  if (spd === 0) return "Calm";
+
+  const gust = gustKt !== null && gustKt > 0 ? `G${gustKt}` : "";
+  const dir = variable ? "VRB" : dirDeg !== null ? dirDeg.toString().padStart(3, "0") : "—";
   return `${dir}° ${spd}${gust} kt`;
 }
 
@@ -126,7 +132,7 @@ export function FlightWeatherStrip({
       })
       .catch(() => {
         if (cancelled) return;
-        setData({ origin: null, destination: null, error: "Failed to load weather." });
+        setData({ error: "Failed to load weather." });
       })
       .finally(() => {
         if (cancelled) return;
@@ -166,14 +172,20 @@ export function FlightWeatherStrip({
     "ARR";
 
   return (
-    <div className={cn("h-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40", className)}>
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <div
+      className={cn(
+        "flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white px-2 py-2 dark:border-slate-800 dark:bg-slate-950/40",
+        className
+      )}
+      title={active?.rawText ?? ""}
+    >
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[10px] dark:border-slate-800 dark:bg-slate-900/60">
             <button
               type="button"
               className={cn(
-                "rounded-md px-2 py-1 font-semibold",
+                "rounded-md px-2 py-0.5 font-semibold",
                 stationChoice === "origin"
                   ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
                   : "text-slate-600 dark:text-slate-300"
@@ -185,7 +197,7 @@ export function FlightWeatherStrip({
             <button
               type="button"
               className={cn(
-                "rounded-md px-2 py-1 font-semibold",
+                "rounded-md px-2 py-0.5 font-semibold",
                 stationChoice === "destination"
                   ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
                   : "text-slate-600 dark:text-slate-300"
@@ -213,7 +225,7 @@ export function FlightWeatherStrip({
             variant="ghost"
             size="sm"
             onClick={() => setUnit((u) => (u === "C" ? "F" : "C"))}
-            className="h-7 px-2 text-xs"
+            className="h-6 px-2 text-[10px]"
             title="Toggle temperature units"
           >
             °{unit === "C" ? "C" : "F"}
@@ -221,54 +233,52 @@ export function FlightWeatherStrip({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 dark:border-slate-800 dark:bg-slate-900/40">
+      <div className="mt-1 grid grid-cols-3 gap-1">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 dark:border-slate-800 dark:bg-slate-900/40">
           <div className="flex items-center gap-2">
             <SkyIcon metar={active} />
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Sky</p>
+            <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Sky</p>
           </div>
-          <p className="mt-1 truncate text-[11px] text-slate-600 dark:text-slate-300">
+          <p className="mt-0.5 truncate text-[10px] text-slate-600 dark:text-slate-300">
             {skyLabel(active)}
           </p>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 dark:border-slate-800 dark:bg-slate-900/40">
           <div className="flex items-center gap-2">
             <div className="relative h-4 w-4">
               <Wind className="h-4 w-4 text-slate-500 dark:text-slate-300" />
-              {active?.wind.directionDeg !== null ? (
+              {active?.wind?.directionDeg !== null && (active?.wind?.speedKt ?? 0) > 0 ? (
                 <Navigation2
                   className="absolute -right-1 -top-1 h-3 w-3 text-slate-700 dark:text-slate-200"
                   style={{ transform: `rotate(${active?.wind.directionDeg ?? 0}deg)` }}
                 />
               ) : null}
             </div>
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Wind</p>
+            <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Wind</p>
           </div>
-          <p className="mt-1 truncate text-[11px] text-slate-600 dark:text-slate-300">
+          <p className="mt-0.5 truncate text-[10px] text-slate-600 dark:text-slate-300">
             {windLabel(active)}
           </p>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 dark:border-slate-800 dark:bg-slate-900/40">
           <div className="flex items-center gap-2">
             <Thermometer className="h-4 w-4 text-slate-500 dark:text-slate-300" />
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Temp</p>
+            <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Temp</p>
           </div>
-          <p className="mt-1 truncate text-[11px] text-slate-600 dark:text-slate-300">
+          <p className="mt-0.5 truncate text-[10px] text-slate-600 dark:text-slate-300">
             {tempLabel(active, unit)}
           </p>
         </div>
       </div>
 
-      {active?.rawText ? (
-        <p className="mt-2 line-clamp-1 text-[10px] text-slate-500 dark:text-slate-400">
-          {active.rawText}
+      {data && "error" in data ? (
+        <p className="mt-1 truncate text-[10px] text-rose-600 dark:text-rose-300">
+          {data.error}
         </p>
-      ) : data && "error" in data ? (
-        <p className="mt-2 text-[10px] text-rose-600 dark:text-rose-300">{data.error}</p>
-      ) : snapshot?.unavailable ? (
-        <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
+      ) : snapshot?.unavailable && !loading ? (
+        <p className="mt-1 truncate text-[10px] text-slate-500 dark:text-slate-400">
           Weather unavailable for this flight.
         </p>
       ) : null}

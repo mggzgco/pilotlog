@@ -51,6 +51,18 @@ function normalizeStation(code: string | null) {
   return null;
 }
 
+async function resolveStation(label: string | null) {
+  const normalized = normalizeStation(label);
+  if (normalized) return normalized;
+  const raw = (label ?? "").trim().toUpperCase();
+  if (!raw) return null;
+  const airport = await prisma.airport.findFirst({
+    where: { OR: [{ icao: raw }, { iata: raw }, { icao: `K${raw}` }] },
+    select: { icao: true, iata: true }
+  });
+  return normalizeStation(airport?.icao ?? airport?.iata ?? null);
+}
+
 function parseMetar(rawText: string, station: string, observedAt: string | null): MetarParsed {
   const tokens = rawText.split(/\s+/).filter(Boolean);
 
@@ -191,21 +203,32 @@ function pickLatestRawTextFromCsv(csv: string) {
 }
 
 async function fetchHistoricalMetar(station: string, at: Date) {
-  // Look +/- 2 hours around the event time.
-  const start = new Date(at.getTime() - 2 * 60 * 60 * 1000).toISOString();
-  const end = new Date(at.getTime() + 2 * 60 * 60 * 1000).toISOString();
-  const url =
-    `https://aviationweather.gov/cgi-bin/data/dataserver.php?` +
-    new URLSearchParams({
-      dataSource: "metars",
-      requestType: "retrieve",
-      format: "csv",
-      stationString: station,
-      startTime: start,
-      endTime: end
-    }).toString();
-  const csv = await fetchDataserverCsv(url);
-  return pickLatestRawTextFromCsv(csv);
+  // AviationWeather migrated off dataserver.php. Use the new Data API which supports a
+  // historical lookup via `date=` (returns the METAR valid at/just before the time).
+  const url = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(
+    station
+  )}&format=json&date=${encodeURIComponent(at.toISOString())}`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) {
+    throw new Error(`METAR historical fetch failed (${res.status})`);
+  }
+  const json = (await res.json().catch(() => null)) as any;
+  if (!Array.isArray(json) || json.length === 0) {
+    return null;
+  }
+  const row = json[0] ?? null;
+  const rawText =
+    (typeof row?.rawOb === "string" ? row.rawOb : null) ??
+    (typeof row?.raw_text === "string" ? row.raw_text : null) ??
+    null;
+  if (!rawText) return null;
+  const observedAt =
+    typeof row?.reportTime === "string"
+      ? row.reportTime
+      : typeof row?.report_time === "string"
+        ? row.report_time
+        : null;
+  return { rawText, observedAt };
 }
 
 export async function saveFlightWeatherSnapshot({
@@ -233,9 +256,10 @@ export async function saveFlightWeatherSnapshot({
   const startAt = flight.startTime;
   const endAt = flight.endTime ?? flight.startTime;
   const originStation =
-    normalizeStation(flight.originAirport?.icao ?? null) ?? normalizeStation(flight.origin ?? null);
+    normalizeStation(flight.originAirport?.icao ?? null) ?? (await resolveStation(flight.origin ?? null));
   const destStation =
-    normalizeStation(flight.destinationAirport?.icao ?? null) ?? normalizeStation(flight.destination ?? null);
+    normalizeStation(flight.destinationAirport?.icao ?? null) ??
+    (await resolveStation(flight.destination ?? null));
 
   const existingStats =
     flight.statsJson && typeof flight.statsJson === "object" && !Array.isArray(flight.statsJson)

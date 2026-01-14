@@ -38,6 +38,18 @@ function normalizeStation(code: string | null) {
   return null;
 }
 
+async function resolveStation(label: string | null) {
+  const normalized = normalizeStation(label);
+  if (normalized) return normalized;
+  const raw = (label ?? "").trim().toUpperCase();
+  if (!raw) return null;
+  const airport = await prisma.airport.findFirst({
+    where: { OR: [{ icao: raw }, { iata: raw }, { icao: `K${raw}` }] },
+    select: { icao: true, iata: true }
+  });
+  return normalizeStation(airport?.icao ?? airport?.iata ?? null);
+}
+
 async function fetchCurrentMetar(station: string) {
   const url = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(station)}&format=json`;
   const res = await fetch(url, { next: { revalidate: 300 } });
@@ -51,11 +63,13 @@ async function fetchCurrentMetar(station: string) {
     null;
   if (!rawText) return null;
   const observedAt =
-    typeof row?.obsTime === "string"
-      ? row.obsTime
-      : typeof row?.observation_time === "string"
-        ? row.observation_time
-        : null;
+    typeof row?.reportTime === "string"
+      ? row.reportTime
+      : typeof row?.report_time === "string"
+        ? row.report_time
+        : typeof row?.observation_time === "string"
+          ? row.observation_time
+          : null;
   return { rawText, observedAt };
 }
 
@@ -151,7 +165,7 @@ function parseMetar(rawText: string, station: string, observedAt: string | null)
     return { cover, ceilingFt };
   })();
 
-  return { station, observedAt, rawText, wind, temperatureC, sky, wx };
+  return { station, observedAt: null, rawText, wind, temperatureC, sky, wx };
 }
 
 function parseTafForTime(rawText: string, station: string, forTimeUtc: Date, temperatureC: number | null): MetarParsed {
@@ -238,21 +252,10 @@ function parseTafForTime(rawText: string, station: string, forTimeUtc: Date, tem
     return { cover, ceilingFt };
   })();
 
-  return {
-    station,
-    observedAt: null,
-    rawText,
-    wind,
-    temperatureC,
-    sky,
-    wx
-  };
+  return { station, observedAt: null, rawText, wind, temperatureC, sky, wx };
 }
 
-export async function GET(
-  _request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const user = await requireUser();
 
   const flight = await prisma.flight.findFirst({
@@ -265,7 +268,9 @@ export async function GET(
       endTime: true,
       plannedStartTime: true,
       plannedEndTime: true,
-      statsJson: true
+      statsJson: true,
+      originAirport: { select: { icao: true, iata: true } },
+      destinationAirport: { select: { icao: true, iata: true } }
     }
   });
 
@@ -279,7 +284,7 @@ export async function GET(
       : {};
 
   const existingSnapshot = (stats as any).weatherSnapshot ?? null;
-  if (existingSnapshot) {
+  if (existingSnapshot && !existingSnapshot.unavailable) {
     return NextResponse.json({ mode: "snapshot", snapshot: existingSnapshot });
   }
 
@@ -289,8 +294,12 @@ export async function GET(
 
   // Planned flights: show forecast via the generic aviation endpoint (live).
   if (plannedAt && plannedAt.getTime() > now.getTime()) {
-    const originStation = normalizeStation(flight.origin ?? null);
-    const destStation = normalizeStation(flight.destination ?? null);
+    const originStation =
+      normalizeStation(flight.originAirport?.icao ?? flight.originAirport?.iata ?? null) ??
+      (await resolveStation(flight.origin ?? null));
+    const destStation =
+      normalizeStation(flight.destinationAirport?.icao ?? flight.destinationAirport?.iata ?? null) ??
+      (await resolveStation(flight.destination ?? null));
 
     const [originMetar, destMetar, originTaf, destTaf] = await Promise.all([
       originStation ? fetchCurrentMetar(originStation) : Promise.resolve(null),
@@ -336,10 +345,29 @@ export async function GET(
       ? (refreshed.statsJson as Record<string, unknown>)
       : {};
   const snapshot = (refreshedStats as any).weatherSnapshot ?? null;
+  const debug = new URL(request.url).searchParams.get("debug") === "1";
 
   return NextResponse.json({
     mode: snapshot ? "snapshot" : "unavailable",
-    snapshot
+    snapshot,
+    ...(debug
+      ? {
+          debug: {
+            originResolved:
+              normalizeStation(flight.originAirport?.icao ?? flight.originAirport?.iata ?? null) ??
+              (await resolveStation(flight.origin ?? null)),
+            destinationResolved:
+              normalizeStation(flight.destinationAirport?.icao ?? flight.destinationAirport?.iata ?? null) ??
+              (await resolveStation(flight.destination ?? null)),
+            usedTimes: {
+              startTime: flight.startTime ? flight.startTime.toISOString() : null,
+              endTime: flight.endTime ? flight.endTime.toISOString() : null,
+              plannedStartTime: flight.plannedStartTime ? flight.plannedStartTime.toISOString() : null,
+              plannedEndTime: flight.plannedEndTime ? flight.plannedEndTime.toISOString() : null
+            }
+          }
+        }
+      : {})
   });
 }
 

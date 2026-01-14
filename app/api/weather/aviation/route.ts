@@ -99,12 +99,12 @@ function parseMetar(rawText: string): Omit<MetarParsed, "station" | "observedAt"
   };
 }
 
-async function fetchMetar(station: string) {
+async function fetchMetar(station: string, date: string | null) {
   // AviationWeather.gov provides a simple JSON endpoint (no key) for current METAR.
   // If this ever changes, the parser still works as long as we can get raw METAR text.
   const url = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(
     station
-  )}&format=json`;
+  )}&format=json${date ? `&date=${encodeURIComponent(date)}` : ""}`;
   const res = await fetch(url, {
     // Cache for a short period to avoid hammering the upstream and keep dashboard snappy.
     next: { revalidate: 600 }
@@ -123,11 +123,13 @@ async function fetchMetar(station: string) {
     null;
   if (!rawText) return null;
   const observedAt =
-    typeof row?.obsTime === "string"
-      ? row.obsTime
-      : typeof row?.observation_time === "string"
-        ? row.observation_time
-        : null;
+    typeof row?.reportTime === "string"
+      ? row.reportTime
+      : typeof row?.report_time === "string"
+        ? row.report_time
+        : typeof row?.observation_time === "string"
+          ? row.observation_time
+          : null;
   return { rawText, observedAt };
 }
 
@@ -135,6 +137,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = normalizeStation(url.searchParams.get("origin"));
   const destination = normalizeStation(url.searchParams.get("destination"));
+  const date = url.searchParams.get("date");
 
   if (!origin && !destination) {
     return NextResponse.json(
@@ -145,7 +148,7 @@ export async function GET(request: Request) {
 
   const getFor = async (station: string | null) => {
     if (!station) return null;
-    const metar = await fetchMetar(station);
+    const metar = await fetchMetar(station, date);
     if (!metar) return null;
     const parsed = parseMetar(metar.rawText);
     const result: MetarParsed = {

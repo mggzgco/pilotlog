@@ -627,7 +627,7 @@ export default async function DashboardPage() {
                   </div>
                 )}
               </div>
-              <div className="h-20 shrink-0 overflow-hidden">
+              <div className="h-24 shrink-0">
                 <FlightWeatherStrip flightId={latestFlight?.id ?? null} />
               </div>
             </div>

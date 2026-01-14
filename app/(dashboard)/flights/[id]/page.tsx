@@ -693,7 +693,7 @@ export default async function FlightDetailPage({
                   </div>
                 )}
               </div>
-              <div className="h-20 shrink-0 overflow-hidden">
+              <div className="h-24 shrink-0">
                 <FlightWeatherStrip flightId={flight.id} />
               </div>
             </div>
