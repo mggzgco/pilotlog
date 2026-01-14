@@ -30,6 +30,9 @@ type MetarParsed = {
   wx: { kind: WxKind; token: string | null };
 };
 
+type SourceKind = "TAF" | "METAR" | "NWS" | "NONE";
+type WeatherSource = { kind: SourceKind; detail: string; url?: string | null };
+
 function normalizeStation(code: string | null) {
   const raw = (code ?? "").trim().toUpperCase();
   if (!raw) return null;
@@ -48,6 +51,144 @@ async function resolveStation(label: string | null) {
     select: { icao: true, iata: true }
   });
   return normalizeStation(airport?.icao ?? airport?.iata ?? null);
+}
+
+function hoursBetween(now: Date, future: Date) {
+  return (future.getTime() - now.getTime()) / (1000 * 60 * 60);
+}
+
+function mphToKt(mph: number) {
+  return mph * 0.868976;
+}
+
+function parseNwsWindSpeedMph(raw: string | null) {
+  const t = (raw ?? "").trim();
+  if (!t) return null;
+  const m = t.match(/(\d+)(?:\s*to\s*(\d+))?\s*mph/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function compassToDeg(compass: string | null) {
+  const t = (compass ?? "").trim().toUpperCase();
+  if (!t) return null;
+  const map: Record<string, number> = {
+    N: 0,
+    NNE: 22.5,
+    NE: 45,
+    ENE: 67.5,
+    E: 90,
+    ESE: 112.5,
+    SE: 135,
+    SSE: 157.5,
+    S: 180,
+    SSW: 202.5,
+    SW: 225,
+    WSW: 247.5,
+    W: 270,
+    WNW: 292.5,
+    NW: 315,
+    NNW: 337.5
+  };
+  return map[t] ?? null;
+}
+
+function wxFromText(text: string): WxKind {
+  const t = text.toLowerCase();
+  if (t.includes("thunder")) return "thunderstorm";
+  if (t.includes("snow") || t.includes("sleet") || t.includes("flurr")) return "snow";
+  if (t.includes("rain") || t.includes("showers") || t.includes("drizzle")) return "rain";
+  if (t.includes("fog")) return "fog";
+  if (t.includes("mist") || t.includes("haze")) return "mist";
+  return "none";
+}
+
+function skyFromText(text: string): SkyCover {
+  const t = text.toLowerCase();
+  if (t.includes("clear") || t.includes("sunny")) return "clear";
+  if (t.includes("mostly sunny")) return "few";
+  if (t.includes("partly cloudy")) return "scattered";
+  if (t.includes("mostly cloudy")) return "broken";
+  if (t.includes("cloudy") || t.includes("overcast")) return "overcast";
+  return "unknown";
+}
+
+function toTempC(temp: number, unit: string | null) {
+  if (!Number.isFinite(temp)) return null;
+  const u = (unit ?? "").toUpperCase();
+  if (u === "C") return temp;
+  if (u === "F") return ((temp - 32) * 5) / 9;
+  return null;
+}
+
+async function fetchNwsForecastForTime({
+  station,
+  latitude,
+  longitude,
+  forTime
+}: {
+  station: string;
+  latitude: number;
+  longitude: number;
+  forTime: Date;
+}): Promise<{ metar: MetarParsed | null; source: WeatherSource }> {
+  const ua = "FlightTraks (weather)"; // NWS requires a UA; keep it simple.
+  const headers = { "User-Agent": ua, Accept: "application/geo+json" };
+
+  const pointsUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
+  const pointsRes = await fetch(pointsUrl, { headers, next: { revalidate: 3600 } });
+  if (!pointsRes.ok) {
+    return { metar: null, source: { kind: "NONE", detail: "NWS forecast unavailable.", url: "https://api.weather.gov" } };
+  }
+  const pointsJson = (await pointsRes.json().catch(() => null)) as any;
+  const forecastUrl = pointsJson?.properties?.forecast as string | undefined;
+  if (!forecastUrl) {
+    return { metar: null, source: { kind: "NONE", detail: "NWS forecast unavailable.", url: "https://api.weather.gov" } };
+  }
+
+  const forecastRes = await fetch(forecastUrl, { headers, next: { revalidate: 3600 } });
+  if (!forecastRes.ok) {
+    return { metar: null, source: { kind: "NONE", detail: "NWS forecast unavailable.", url: "https://api.weather.gov" } };
+  }
+  const forecastJson = (await forecastRes.json().catch(() => null)) as any;
+  const periods = (forecastJson?.properties?.periods ?? []) as any[];
+  if (!Array.isArray(periods) || periods.length === 0) {
+    return { metar: null, source: { kind: "NONE", detail: "NWS forecast unavailable.", url: "https://api.weather.gov" } };
+  }
+
+  const period =
+    periods.find((p) => {
+      const start = new Date(p?.startTime);
+      const end = new Date(p?.endTime);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+      return forTime >= start && forTime < end;
+    }) ?? periods[0];
+
+  const shortForecast = typeof period?.shortForecast === "string" ? period.shortForecast : "Forecast";
+  const windDirDeg = compassToDeg(typeof period?.windDirection === "string" ? period.windDirection : null);
+  const windMph = parseNwsWindSpeedMph(typeof period?.windSpeed === "string" ? period.windSpeed : null);
+  const speedKt = windMph !== null ? Math.round(mphToKt(windMph)) : null;
+  const temperatureC = typeof period?.temperature === "number" ? toTempC(period.temperature, period.temperatureUnit ?? null) : null;
+
+  const metar: MetarParsed = {
+    station,
+    observedAt: forTime.toISOString(),
+    rawText: `NWS ${shortForecast}`,
+    wind: { directionDeg: windDirDeg, speedKt, gustKt: null, variable: false },
+    temperatureC,
+    sky: { cover: skyFromText(shortForecast), ceilingFt: null },
+    wx: { kind: wxFromText(shortForecast), token: shortForecast }
+  };
+
+  return {
+    metar,
+    source: {
+      kind: "NWS",
+      detail: "NWS 7-day grid forecast (12h periods).",
+      url: forecastUrl
+    }
+  };
 }
 
 async function fetchCurrentMetar(station: string) {
@@ -269,8 +410,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
       plannedStartTime: true,
       plannedEndTime: true,
       statsJson: true,
-      originAirport: { select: { icao: true, iata: true } },
-      destinationAirport: { select: { icao: true, iata: true } }
+      originAirport: { select: { icao: true, iata: true, latitude: true, longitude: true } },
+      destinationAirport: { select: { icao: true, iata: true, latitude: true, longitude: true } }
     }
   });
 
@@ -285,7 +426,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   const existingSnapshot = (stats as any).weatherSnapshot ?? null;
   if (existingSnapshot && !existingSnapshot.unavailable) {
-    return NextResponse.json({ mode: "snapshot", snapshot: existingSnapshot });
+    return NextResponse.json({
+      mode: "snapshot",
+      snapshot: existingSnapshot,
+      sources: {
+        origin: { kind: "METAR", detail: "AviationWeather historical METAR at takeoff time.", url: "https://aviationweather.gov/api/data/metar" },
+        destination: { kind: "METAR", detail: "AviationWeather historical METAR at landing time.", url: "https://aviationweather.gov/api/data/metar" }
+      }
+    });
   }
 
   const now = new Date();
@@ -294,6 +442,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   // Planned flights: show forecast via the generic aviation endpoint (live).
   if (plannedAt && plannedAt.getTime() > now.getTime()) {
+    const maxTafHours = 24;
+    const maxNwsHours = 7 * 24;
+
     const originStation =
       normalizeStation(flight.originAirport?.icao ?? flight.originAirport?.iata ?? null) ??
       (await resolveStation(flight.origin ?? null));
@@ -301,34 +452,95 @@ export async function GET(request: Request, { params }: { params: { id: string }
       normalizeStation(flight.destinationAirport?.icao ?? flight.destinationAirport?.iata ?? null) ??
       (await resolveStation(flight.destination ?? null));
 
-    const [originMetar, destMetar, originTaf, destTaf] = await Promise.all([
-      originStation ? fetchCurrentMetar(originStation) : Promise.resolve(null),
-      destStation ? fetchCurrentMetar(destStation) : Promise.resolve(null),
-      originStation ? fetchCurrentTaf(originStation) : Promise.resolve(null),
-      destStation ? fetchCurrentTaf(destStation) : Promise.resolve(null)
-    ]);
+    const depHours = hoursBetween(now, plannedAt);
+    const arrHours = plannedArrAt ? hoursBetween(now, plannedArrAt) : depHours;
 
-    const originTempC = originMetar?.rawText ? parseMetar(originMetar.rawText, originStation!, originMetar.observedAt).temperatureC : null;
-    const destTempC = destMetar?.rawText ? parseMetar(destMetar.rawText, destStation!, destMetar.observedAt).temperatureC : null;
+    // <=24h: TAF when available, else current METAR fallback.
+    if (depHours <= maxTafHours && arrHours <= maxTafHours) {
+      const [originMetar, destMetar, originTaf, destTaf] = await Promise.all([
+        originStation ? fetchCurrentMetar(originStation) : Promise.resolve(null),
+        destStation ? fetchCurrentMetar(destStation) : Promise.resolve(null),
+        originStation ? fetchCurrentTaf(originStation) : Promise.resolve(null),
+        destStation ? fetchCurrentTaf(destStation) : Promise.resolve(null)
+      ]);
 
-    const originForecast =
-      originStation && originTaf?.rawText
-        ? parseTafForTime(originTaf.rawText, originStation, plannedAt, originTempC)
-        : originStation && originMetar?.rawText
-          ? parseMetar(originMetar.rawText, originStation, originMetar.observedAt)
-          : null;
-    const destForecast =
-      destStation && destTaf?.rawText
-        ? parseTafForTime(destTaf.rawText, destStation, plannedArrAt ?? plannedAt, destTempC)
-        : destStation && destMetar?.rawText
-          ? parseMetar(destMetar.rawText, destStation, destMetar.observedAt)
-          : null;
+      const originTempC = originMetar?.rawText
+        ? parseMetar(originMetar.rawText, originStation!, originMetar.observedAt).temperatureC
+        : null;
+      const destTempC = destMetar?.rawText
+        ? parseMetar(destMetar.rawText, destStation!, destMetar.observedAt).temperatureC
+        : null;
 
+      const originHasTaf = Boolean(originTaf?.rawText);
+      const destHasTaf = Boolean(destTaf?.rawText);
+
+      const originForecast =
+        originStation && originTaf?.rawText
+          ? parseTafForTime(originTaf.rawText, originStation, plannedAt, originTempC)
+          : originStation && originMetar?.rawText
+            ? parseMetar(originMetar.rawText, originStation, originMetar.observedAt)
+            : null;
+      const destForecast =
+        destStation && destTaf?.rawText
+          ? parseTafForTime(destTaf.rawText, destStation, plannedArrAt ?? plannedAt, destTempC)
+          : destStation && destMetar?.rawText
+            ? parseMetar(destMetar.rawText, destStation, destMetar.observedAt)
+            : null;
+
+      return NextResponse.json({
+        mode: "forecast",
+        forTime: plannedAt.toISOString(),
+        origin: originForecast,
+        destination: destForecast,
+        sources: {
+          origin: originHasTaf
+            ? ({ kind: "TAF", detail: "AviationWeather TAF (typically <= 24h).", url: "https://aviationweather.gov/api/data/taf" } satisfies WeatherSource)
+            : ({ kind: "METAR", detail: "TAF unavailable; showing current METAR.", url: "https://aviationweather.gov/api/data/metar" } satisfies WeatherSource),
+          destination: destHasTaf
+            ? ({ kind: "TAF", detail: "AviationWeather TAF (typically <= 24h).", url: "https://aviationweather.gov/api/data/taf" } satisfies WeatherSource)
+            : ({ kind: "METAR", detail: "TAF unavailable; showing current METAR.", url: "https://aviationweather.gov/api/data/metar" } satisfies WeatherSource)
+        },
+        notice: !originHasTaf || !destHasTaf ? "Some airports do not publish TAFs. Falling back to current METAR where needed." : null
+      });
+    }
+
+    // 24h–7d: use NWS grid forecast if we have coordinates; otherwise provide a clear note.
+    if (depHours <= maxNwsHours || arrHours <= maxNwsHours) {
+      const originLat = flight.originAirport?.latitude ?? null;
+      const originLon = flight.originAirport?.longitude ?? null;
+      const destLat = flight.destinationAirport?.latitude ?? null;
+      const destLon = flight.destinationAirport?.longitude ?? null;
+
+      const [originNws, destNws] = await Promise.all([
+        originStation && originLat !== null && originLon !== null
+          ? fetchNwsForecastForTime({ station: originStation, latitude: originLat, longitude: originLon, forTime: plannedAt })
+          : Promise.resolve({ metar: null, source: { kind: "NONE", detail: "NWS forecast unavailable (missing airport coordinates).", url: "https://api.weather.gov" } as WeatherSource }),
+        destStation && destLat !== null && destLon !== null
+          ? fetchNwsForecastForTime({ station: destStation, latitude: destLat, longitude: destLon, forTime: plannedArrAt ?? plannedAt })
+          : Promise.resolve({ metar: null, source: { kind: "NONE", detail: "NWS forecast unavailable (missing airport coordinates).", url: "https://api.weather.gov" } as WeatherSource })
+      ]);
+
+      return NextResponse.json({
+        mode: "forecast",
+        forTime: plannedAt.toISOString(),
+        origin: originNws.metar,
+        destination: destNws.metar,
+        sources: { origin: originNws.source, destination: destNws.source },
+        notice: "TAF coverage is typically <= 24h. For longer-range planned flights we use NWS grid forecasts (up to ~7 days)."
+      });
+    }
+
+    // Too far out.
     return NextResponse.json({
       mode: "forecast",
       forTime: plannedAt.toISOString(),
-      origin: originForecast,
-      destination: destForecast
+      origin: null,
+      destination: null,
+      sources: {
+        origin: { kind: "NONE", detail: "No forecast yet (too far in the future).", url: null } as WeatherSource,
+        destination: { kind: "NONE", detail: "No forecast yet (too far in the future).", url: null } as WeatherSource
+      },
+      notice: "Forecasts are not available yet for this flight date. Check back closer to departure (<=7 days for NWS, <=24h for TAF)."
     });
   }
 

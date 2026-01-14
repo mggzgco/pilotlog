@@ -15,8 +15,15 @@ type WeatherSnapshot = {
 };
 
 type WeatherResponse =
-  | { mode: "snapshot"; snapshot: WeatherSnapshot }
-  | { mode: "forecast"; origin: MetarParsed | null; destination: MetarParsed | null; forTime: string }
+  | { mode: "snapshot"; snapshot: WeatherSnapshot; sources?: Record<string, any>; notice?: string | null }
+  | {
+      mode: "forecast";
+      origin: MetarParsed | null;
+      destination: MetarParsed | null;
+      forTime: string;
+      sources?: { origin?: { kind: string; detail: string; url?: string | null }; destination?: { kind: string; detail: string; url?: string | null } };
+      notice?: string | null;
+    }
   | { mode: "unavailable"; snapshot: null }
   | { error: string };
 
@@ -171,6 +178,28 @@ export function FlightWeatherStrip({
     snapshot?.destination?.station ??
     "ARR";
 
+  const sourceFor = (which: StationChoice) => {
+    if (!data || !("mode" in data)) return null;
+    if (data.mode === "forecast") {
+      return which === "origin" ? data.sources?.origin?.kind ?? null : data.sources?.destination?.kind ?? null;
+    }
+    if (data.mode === "snapshot") {
+      return "METAR";
+    }
+    return null;
+  };
+
+  const sourceDetailFor = (which: StationChoice) => {
+    if (!data || !("mode" in data)) return null;
+    if (data.mode === "forecast") {
+      return which === "origin" ? data.sources?.origin?.detail ?? null : data.sources?.destination?.detail ?? null;
+    }
+    if (data.mode === "snapshot") {
+      return "Snapshot captured from historical METAR at takeoff/landing time.";
+    }
+    return null;
+  };
+
   return (
     <div
       className={cn(
@@ -211,7 +240,7 @@ export function FlightWeatherStrip({
             {loading
               ? "Loading weather…"
               : data && "mode" in data && data.mode === "forecast"
-                ? `Forecast for ${new Date(data.forTime).toLocaleString()}`
+                ? `Forecast (${sourceFor(stationChoice) ?? "—"})`
                 : active?.observedAt
                   ? `METAR ${active.observedAt}`
                   : snapshot?.capturedAt
@@ -272,6 +301,19 @@ export function FlightWeatherStrip({
           </p>
         </div>
       </div>
+
+      {data && "mode" in data && (data as any).notice ? (
+        <p className="mt-1 truncate text-[10px] text-slate-500 dark:text-slate-400" title={(data as any).notice}>
+          {(data as any).notice}
+        </p>
+      ) : (
+        <p
+          className="mt-1 truncate text-[10px] text-slate-500 dark:text-slate-400"
+          title={sourceDetailFor(stationChoice) ?? ""}
+        >
+          {sourceDetailFor(stationChoice) ? `Source: ${sourceDetailFor(stationChoice)}` : ""}
+        </p>
+      )}
 
       {data && "error" in data ? (
         <p className="mt-1 truncate text-[10px] text-rose-600 dark:text-rose-300">
