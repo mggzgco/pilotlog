@@ -16,6 +16,7 @@ import { formatFlightRouteLabel } from "@/app/lib/flights/route-label";
 import { formatDateTime24 } from "@/app/lib/utils";
 import { EditFlightModal } from "@/app/components/flights/edit-flight-modal";
 import { FlightPhotoThumbGrid } from "@/app/components/flights/flight-photo-lightbox";
+import { FlightDeleteIconButton } from "@/app/components/flights/flight-delete-icon-button";
 import { Pencil, Radar, RefreshCw, Upload, ClipboardList, Receipt, BookOpen, BarChart3, StickyNote, Image as ImageIcon } from "lucide-react";
 
 const formatPersonName = (person: {
@@ -530,6 +531,8 @@ export default async function FlightDetailPage({
                 <ImageIcon className="h-4 w-4" />
               </Link>
             </Button>
+
+            <FlightDeleteIconButton flightId={flight.id} />
           </div>
         </div>
       </div>

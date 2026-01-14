@@ -57,6 +57,6 @@ export async function POST(
   const redirectUrl = new URL("/flights", request.url);
   redirectUrl.searchParams.set("toast", "Flight deleted.");
   redirectUrl.searchParams.set("toastType", "success");
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(redirectUrl, { status: 303 });
 }
 
