@@ -74,7 +74,8 @@ export function SidebarAccount({ user, onLogout, collapsed = false }: SidebarAcc
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="z-50 w-60 rounded-lg border border-slate-200 bg-white p-2 text-sm text-slate-900 shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+          // Sidebar sits at z-[1000]; keep the account menu above it (and above maps).
+          className="z-[1200] w-60 rounded-lg border border-slate-200 bg-white p-2 text-sm text-slate-900 shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
           side="top"
           align={collapsed ? "center" : "start"}
           sideOffset={10}
