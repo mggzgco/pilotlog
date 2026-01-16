@@ -25,7 +25,12 @@ export function getReplyToAddress() {
 }
 
 export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
-  await verifyMailer();
+  try {
+    await verifyMailer();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Mailer verification failed.";
+    throw new Error(`Mailer unavailable: ${message}`);
+  }
   return mailer.sendMail({
     from: getFromAddress(),
     to,

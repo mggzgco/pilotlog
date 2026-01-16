@@ -5,6 +5,7 @@ import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import { formatDateTime24 } from "@/app/lib/utils";
+import { checkMailerStatus } from "@/app/lib/email/mailer";
 import { applyTemplate, emailTemplateDefinitions } from "@/app/lib/auth/email-templates";
 import {
   rollbackEmailTemplateAction,
@@ -192,6 +193,7 @@ function TemplateCard({
 export default async function AdminEmailTemplatesPage() {
   await requireAdmin();
 
+  const mailerStatus = await checkMailerStatus();
   const storedTemplates = await prisma.emailTemplate.findMany();
   const templateKeys = emailTemplateDefinitions.map((template) => template.key);
   const storedVersions = await prisma.emailTemplateVersion.findMany({
@@ -220,6 +222,12 @@ export default async function AdminEmailTemplatesPage() {
           Update the HTML and text sent during the account lifecycle. Use the placeholder
           chips to insert dynamic values.
         </p>
+        {!mailerStatus.ok ? (
+          <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+            Mailer warning: {mailerStatus.error ?? "Mailer verification failed."} Emails will not send
+            until SMTP credentials are fixed.
+          </div>
+        ) : null}
       </div>
 
       {emailTemplateDefinitions.map((template) => {
