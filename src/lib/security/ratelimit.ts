@@ -1,5 +1,7 @@
 const LOGIN_LIMIT = 5;
 const PASSWORD_RESET_LIMIT = 3;
+const REGISTER_LIMIT = 3;
+const RESEND_VERIFICATION_LIMIT = 3;
 const WINDOW_MS = 15 * 60 * 1000;
 
 type RateLimitState = { count: number; resetAt: number };
@@ -12,6 +14,8 @@ type RateLimitResult = {
 
 const loginAttempts = new Map<string, RateLimitState>();
 const passwordResetAttempts = new Map<string, RateLimitState>();
+const registrationAttempts = new Map<string, RateLimitState>();
+const resendAttempts = new Map<string, RateLimitState>();
 
 function consumeAttempt(
   map: Map<string, RateLimitState>,
@@ -59,6 +63,52 @@ export function formatRateLimitError(resetAt: number) {
 export function formatPasswordResetRateLimitError(resetAt: number) {
   const { minutes, label } = formatRemainingMinutes(resetAt);
   return `Too many reset requests. Try again in ${minutes} ${label}.`;
+}
+
+export function consumeRegistrationAttempt({
+  ipAddress,
+  email
+}: {
+  ipAddress: string;
+  email: string;
+}) {
+  const ipKey = `ip:${ipAddress}`;
+  const emailKey = `email:${email}`;
+  const ipResult = consumeAttempt(registrationAttempts, ipKey, REGISTER_LIMIT);
+  const emailResult = consumeAttempt(registrationAttempts, emailKey, REGISTER_LIMIT);
+  if (!ipResult.allowed || !emailResult.allowed) {
+    const resetAt = Math.max(ipResult.resetAt ?? 0, emailResult.resetAt ?? 0);
+    return { allowed: false, resetAt };
+  }
+  return { allowed: true, resetAt: Math.max(ipResult.resetAt, emailResult.resetAt) };
+}
+
+export function formatRegistrationRateLimitError(resetAt: number) {
+  const { minutes, label } = formatRemainingMinutes(resetAt);
+  return `Too many registration attempts. Try again in ${minutes} ${label}.`;
+}
+
+export function consumeResendVerificationAttempt({
+  ipAddress,
+  email
+}: {
+  ipAddress: string;
+  email: string;
+}) {
+  const ipKey = `ip:${ipAddress}`;
+  const emailKey = `email:${email}`;
+  const ipResult = consumeAttempt(resendAttempts, ipKey, RESEND_VERIFICATION_LIMIT);
+  const emailResult = consumeAttempt(resendAttempts, emailKey, RESEND_VERIFICATION_LIMIT);
+  if (!ipResult.allowed || !emailResult.allowed) {
+    const resetAt = Math.max(ipResult.resetAt ?? 0, emailResult.resetAt ?? 0);
+    return { allowed: false, resetAt };
+  }
+  return { allowed: true, resetAt: Math.max(ipResult.resetAt, emailResult.resetAt) };
+}
+
+export function formatResendVerificationRateLimitError(resetAt: number) {
+  const { minutes, label } = formatRemainingMinutes(resetAt);
+  return `Too many verification emails. Try again in ${minutes} ${label}.`;
 }
 
 export function consumePasswordResetAttempt({

@@ -20,7 +20,9 @@ export async function POST(request: Request) {
 
   await recordAuditEvent({
     userId: sessionInfo?.user?.id ?? null,
-    action: "auth.logout"
+    action: "AUTH_LOGOUT",
+    ipAddress: request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for") ?? null,
+    userAgent: request.headers.get("user-agent")
   });
 
   return NextResponse.json({ success: true });

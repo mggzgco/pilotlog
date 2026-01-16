@@ -30,7 +30,8 @@ export const lucia = new Lucia(adapter, {
       name: attributes.name,
       phone: attributes.phone,
       role: attributes.role,
-      status: attributes.status
+      status: attributes.status,
+      emailVerifiedAt: (attributes as any).emailVerifiedAt ?? null
     };
   }
 });

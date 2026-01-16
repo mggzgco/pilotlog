@@ -100,7 +100,12 @@ model User {
   passwordHash       String
   status             UserStatus             @default(PENDING)
   role               UserRole               @default(USER)
+  emailVerifiedAt    DateTime?
+  failedLoginCount   Int                    @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
   createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
   sessions           Session[]
   flights            Flight[]
   people             Person[]
@@ -112,11 +117,51 @@ model User {
   flightParticipants FlightParticipant[]
   resetTokens        PasswordResetToken[]
   approvalTokens     AccountApprovalToken[]
+  emailVerificationTokens EmailVerificationToken[]
   receiptDocuments   ReceiptDocument[]
   aircraftDocuments  AircraftDocument[]
   auditEvents        AuditEvent[]
   checklistTemplates ChecklistTemplate[]
   checklistSignoffs  FlightChecklistRun[]   @relation("ChecklistRunSignedBy")
+
+  xAccount        XAccount?
+  flightShareLinks FlightShareLink[]
+}
+
+model XAccount {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  providerUserId String?
+  username      String?
+  name          String?
+  accessToken   String
+  refreshToken  String?
+  scope         String?
+  tokenType     String?
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([providerUserId])
+  @@index([username])
+}
+
+model FlightShareLink {
+  id        String   @id @default(cuid())
+  userId    String
+  flightId  String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, flightId])
+  @@index([flightId])
+  @@index([userId])
 }
 
 model Session {
@@ -162,6 +207,7 @@ model Flight {
   trackPoints         TrackPoint[]
   checklistRuns       FlightChecklistRun[]
   receiptDocuments    ReceiptDocument[]
+  shareLinks          FlightShareLink[]
 
   @@unique([userId, importedProvider, providerFlightId])
   @@index([aircraftId])
@@ -411,6 +457,8 @@ model AuditEvent {
   action     String
   entityType String?
   entityId   String?
+  ipAddress  String?
+  userAgent  String?
   metadata   Json?
   createdAt  DateTime @default(now())
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -418,13 +466,28 @@ model AuditEvent {
   @@index([userId, createdAt])
 }
 
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
 model AccountApprovalToken {
   id        String   @id @default(cuid())
   userId    String
   tokenHash String   @unique
   expiresAt DateTime
+  usedAt    DateTime?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model PasswordResetToken {
@@ -433,7 +496,10 @@ model PasswordResetToken {
   tokenHash String   @unique
   expiresAt DateTime
   usedAt    DateTime?
+  createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model ChecklistTemplate {

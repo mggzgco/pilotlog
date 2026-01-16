@@ -5,6 +5,8 @@ type AuditInput = {
   action: string;
   entityType?: string | null;
   entityId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
   metadata?: Record<string, unknown> | null;
 };
 
@@ -16,6 +18,8 @@ export async function recordAuditEvent(input: AuditInput) {
         action: input.action,
         entityType: input.entityType ?? null,
         entityId: input.entityId ?? null,
+        ipAddress: input.ipAddress ?? null,
+        userAgent: input.userAgent ?? null,
         metadata: input.metadata ? (input.metadata as any) : undefined
       }
     });

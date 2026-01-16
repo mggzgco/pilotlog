@@ -17,6 +17,7 @@ import { formatDateTime24 } from "@/app/lib/utils";
 import { EditFlightModal } from "@/app/components/flights/edit-flight-modal";
 import { FlightPhotoThumbGrid } from "@/app/components/flights/flight-photo-lightbox";
 import { FlightDeleteIconButton } from "@/app/components/flights/flight-delete-icon-button";
+import { ShareToXButton } from "@/app/components/flights/share-to-x-button";
 import { Pencil, Radar, RefreshCw, Upload, ClipboardList, Receipt, BookOpen, BarChart3, StickyNote, Image as ImageIcon } from "lucide-react";
 
 const formatPersonName = (person: {
@@ -335,11 +336,11 @@ export default async function FlightDetailPage({
     if (run.status === "SIGNED") {
       if (run.decision === "REJECTED" && run.decisionNote?.toLowerCase().startsWith("skipped")) {
         return "Complete (skipped)";
-      }
-      if (run.decision === "REJECTED") {
+    }
+    if (run.decision === "REJECTED") {
         return "Complete (rejected)";
-      }
-      if (run.decision === "ACCEPTED") {
+    }
+    if (run.decision === "ACCEPTED") {
         return "Complete";
       }
       return "Complete";
@@ -414,11 +415,11 @@ export default async function FlightDetailPage({
       <div className="space-y-2">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-semibold">Flight details</h2>
-              <FlightStatusBadge status={flight.status} />
-            </div>
-            <p className="text-sm text-slate-400">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-semibold">Flight details</h2>
+          <FlightStatusBadge status={flight.status} />
+        </div>
+        <p className="text-sm text-slate-400">
               {flight.tailNumberSnapshot ?? flight.tailNumber} ·{" "}
               {formatFlightRouteLabel({
                 origin: flight.origin,
@@ -431,7 +432,7 @@ export default async function FlightDetailPage({
                 People: {flightPeople.map((person) => `${person.name} (${person.role})`).join(", ")}
               </p>
             ) : null}
-          </div>
+      </div>
           <div className="flex flex-wrap items-center justify-start gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
             <EditFlightModal
               flightId={flight.id}
@@ -532,6 +533,8 @@ export default async function FlightDetailPage({
               </Link>
             </Button>
 
+            <ShareToXButton flightId={flight.id} />
+
             <FlightDeleteIconButton flightId={flight.id} />
           </div>
         </div>
@@ -562,8 +565,8 @@ export default async function FlightDetailPage({
                 )}
                 <div className="min-w-0">
                   <p className="text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-100">
-                    {flight.tailNumberSnapshot ?? flight.tailNumber}
-                  </p>
+                {flight.tailNumberSnapshot ?? flight.tailNumber}
+              </p>
                   <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">
                     {aircraftMakeModelLabel}
                   </p>
@@ -576,7 +579,7 @@ export default async function FlightDetailPage({
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/aircraft/${aircraftForDisplay.id}`}>Full aircraft page</Link>
                       </Button>
-                    </div>
+            </div>
                   ) : null}
                 </div>
               </div>
@@ -744,7 +747,7 @@ export default async function FlightDetailPage({
             </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+      <Card>
         <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-slate-600 dark:text-slate-400">Costs</p>
@@ -760,7 +763,7 @@ export default async function FlightDetailPage({
                 <p className="text-lg font-semibold">
                   {costTotalCents > 0 ? currencyFormatter.format(costTotalCents / 100) : "—"}
                 </p>
-                    </div>
+            </div>
               <div>
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Receipts</p>
                 <p className="text-lg font-semibold">{receiptCount}</p>
@@ -774,7 +777,7 @@ export default async function FlightDetailPage({
         </CardContent>
       </Card>
 
-        <Card>
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-slate-600 dark:text-slate-400">Logbook</p>
@@ -785,26 +788,26 @@ export default async function FlightDetailPage({
         </CardHeader>
         <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
-              <div>
+            <div>
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Total hours</p>
-                <p className="text-lg font-semibold">
+              <p className="text-lg font-semibold">
                   {hasAnyLogbookEntry ? logbookTotals.totalHours.toFixed(1) : "—"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {logbookStatusLabel}
                   {logbookEntryCount ? ` · ${logbookEntryCount} entry${logbookEntryCount === 1 ? "" : "ies"}` : ""}
-                </p>
-              </div>
-              <div>
+              </p>
+            </div>
+            <div>
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Takeoffs</p>
                 <p className="text-lg font-semibold">{hasAnyLogbookEntry ? logbookTotals.takeoffs : "—"}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Day + night</p>
-              </div>
-              <div>
+            </div>
+            <div>
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Landings</p>
                 <p className="text-lg font-semibold">{hasAnyLogbookEntry ? logbookTotals.landings : "—"}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Day + night</p>
-              </div>
+            </div>
             </div>
 
             <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
@@ -816,8 +819,8 @@ export default async function FlightDetailPage({
                 No logbook entry yet — log hours and remarks.
             </div>
           ) : null}
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -846,36 +849,36 @@ export default async function FlightDetailPage({
       </Card>
 
         <Card id="photos">
-        <CardHeader>
+          <CardHeader>
             <p className="text-sm text-slate-400">Flight photos</p>
-        </CardHeader>
-        <CardContent>
-            <form
-              action={`/api/flights/${flight.id}/receipts/upload`}
-              method="post"
-              encType="multipart/form-data"
+          </CardHeader>
+          <CardContent>
+                  <form
+                    action={`/api/flights/${flight.id}/receipts/upload`}
+                    method="post"
+                    encType="multipart/form-data"
               className="grid gap-3"
             >
               <input type="hidden" name="kind" value="photo" />
-              <Input
-                name="receipts"
-                type="file"
+                    <Input
+                      name="receipts"
+                      type="file"
                 accept="image/png,image/jpeg"
-                multiple
-                required
+                      multiple
+                      required
               />
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
                 <FormSubmitButton type="submit" pendingText="Uploading photos...">
                   Upload photos
-                </FormSubmitButton>
+                      </FormSubmitButton>
                      <span>JPG/PNG up to 20MB each.</span>
-            </div>
-            </form>
+                    </div>
+                  </form>
 
             {flight.receiptDocuments.length === 0 ? (
               <div className="mt-4 rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-400">
                 No photos uploaded yet.
-                  </div>
+                    </div>
                 ) : (
               <div className="mt-4 space-y-3">
                 <FlightPhotoThumbGrid
@@ -886,7 +889,7 @@ export default async function FlightDetailPage({
                 <p className="text-xs text-slate-400">
                   Tip: click a photo to view. Hover a photo thumbnail to delete it.
                 </p>
-              </div>
+                    </div>
               )}
         </CardContent>
       </Card>
@@ -928,14 +931,14 @@ export default async function FlightDetailPage({
                         ? ` · ${preflightRemainingRequired} required remaining`
                         : ""}
                     </p>
-                  </div>
+            </div>
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/checklists?tab=preflight`}>
                       {preflightRun ? "Continue" : "Start"}
                     </Link>
-                  </Button>
+              </Button>
                 </div>
-              ) : null}
+          ) : null}
 
               {assignedPostflightTemplateId ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
@@ -944,7 +947,7 @@ export default async function FlightDetailPage({
                       Post-flight
                     </p>
                     <FlightChecklistTemplateSelector
-                      flightId={flight.id}
+            flightId={flight.id}
                       phase="POSTFLIGHT"
                       templates={postflightTemplates}
                       defaultTemplateId={assignedPostflightTemplateId}
@@ -962,11 +965,11 @@ export default async function FlightDetailPage({
                       ) : (
                         "Locked until pre-flight is signed (or flight completes)"
                       )}
-                    </p>
-                  </div>
+                          </p>
+                        </div>
                   <Button
-                    size="sm"
-                    variant="outline"
+                              size="sm"
+                              variant="outline"
                     asChild
                     disabled={!canStartPostflight}
                   >
@@ -974,9 +977,9 @@ export default async function FlightDetailPage({
                       {postflightRun ? "Continue" : "Start"}
                     </Link>
                   </Button>
-                </div>
+                        </div>
               ) : null}
-            </div>
+                      </div>
           )}
         </CardContent>
       </Card>
@@ -1006,7 +1009,7 @@ export default async function FlightDetailPage({
                       Open pre-flight
                     </Link>
                   </Button>
-                </div>
+              </div>
               ) : null}
               {needsPostflightChecklist ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
@@ -1021,14 +1024,14 @@ export default async function FlightDetailPage({
                       Open post-flight
                     </Link>
                   </Button>
-                </div>
-              ) : null}
+            </div>
+                ) : null}
               {needsAdsB ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
                   <span>Attach ADS-B track data (optional, but unlocks stats/map).</span>
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/match`}>Find match</Link>
-                  </Button>
+                </Button>
                 </div>
               ) : null}
               {needsLogbook ? (
@@ -1036,7 +1039,7 @@ export default async function FlightDetailPage({
                   <span>Create a logbook entry for the flight.</span>
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/logbook`}>Open logbook</Link>
-                  </Button>
+                    </Button>
                 </div>
               ) : null}
               {needsCosts ? (
@@ -1044,20 +1047,20 @@ export default async function FlightDetailPage({
                   <span>Add costs (fuel, rental, maintenance, etc.).</span>
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/costs`}>Add costs</Link>
-                  </Button>
+                    </Button>
                 </div>
               ) : null}
               {needsReceipts ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 px-4 py-3">
                   <span>Upload receipts and link them to cost items.</span>
-                  <Button size="sm" variant="outline" asChild>
+                              <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/costs`}>Upload receipts</Link>
-                  </Button>
-                </div>
+                              </Button>
+                            </div>
               ) : null}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
       )}
     </div>
   );

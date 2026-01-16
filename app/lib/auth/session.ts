@@ -15,6 +15,7 @@ export type AppUser = {
   phone: string | null;
   role: AppUserRole;
   status: AppUserStatus;
+  emailVerifiedAt?: string | Date | null;
 };
 
 export async function getCurrentUser(): Promise<{ session: any; user: AppUser | null }> {
@@ -71,7 +72,18 @@ export async function requireUser(): Promise<AppUser> {
     } catch {
       // ignore cookie write errors in edge cases
     }
-    redirect("/login");
+    redirect(user.status === "DISABLED" ? "/account-disabled" : "/account-pending");
+  }
+
+  if (!user.emailVerifiedAt) {
+    try {
+      await lucia.invalidateSession(session.id);
+      const sessionCookie = lucia.createBlankSessionCookie();
+      cookies().set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+    } catch {
+      // ignore cookie write errors in edge cases
+    }
+    redirect("/account-pending");
   }
 
   return user;

@@ -53,7 +53,7 @@ export default async function ProfilePage() {
     }
   }
 
-  const [user, people] = await Promise.all([
+  const [user, people, xAccount] = await Promise.all([
     prisma.user.findUnique({
     where: { id: sessionUser.id },
     select: {
@@ -72,6 +72,10 @@ export default async function ProfilePage() {
       where: { userId: sessionUser.id },
       orderBy: { name: "asc" },
       select: { id: true, name: true, email: true, linkedUserId: true }
+    }),
+    prisma.xAccount.findFirst({
+      where: { userId: sessionUser.id },
+      select: { username: true, name: true }
     })
   ]);
 
@@ -157,6 +161,46 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-400">Integrations</p>
+              <p className="text-xs text-slate-500">
+                Connect external services for sharing and automation.
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">X (x.com)</p>
+            <p className="text-xs text-slate-500">
+              {xAccount ? (
+                <>
+                  Connected as <span className="font-semibold">@{xAccount.username ?? "unknown"}</span>.
+                </>
+              ) : (
+                "Not connected."
+              )}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {xAccount ? (
+              <form action="/api/integrations/x/disconnect" method="post">
+                <Button type="submit" variant="outline">
+                  Disconnect
+                </Button>
+              </form>
+            ) : (
+              <Button asChild>
+                <a href="/api/integrations/x/start">Connect X</a>
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

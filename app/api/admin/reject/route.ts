@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/app/lib/db";
 import { hashApprovalToken } from "@/app/lib/auth/approvals";
 import { recordAuditEvent } from "@/app/lib/audit";
+import { sendAccountRejectedEmail } from "@/app/lib/auth/email";
 
 const tokenSchema = z.object({
   token: z.string().min(20)
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
     include: { user: true }
   });
 
-  if (!record || record.expiresAt < new Date()) {
+  if (!record || record.expiresAt < new Date() || record.usedAt) {
     return NextResponse.json({ error: "Token expired or invalid." }, { status: 400 });
   }
 
@@ -33,16 +34,28 @@ export async function GET(request: Request) {
       where: { id: record.userId },
       data: { status: "DISABLED" }
     }),
-    prisma.accountApprovalToken.delete({
-      where: { id: record.id }
+    prisma.accountApprovalToken.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() }
     })
   ]);
 
+  try {
+    await sendAccountRejectedEmail({
+      recipientEmail: record.user.email,
+      recipientName: record.user.name
+    });
+  } catch (error) {
+    console.error("Failed to send rejection email", error);
+  }
+
   await recordAuditEvent({
     userId: record.userId,
-    action: "admin.reject.token",
+    action: "AUTH_REJECTED",
     entityType: "User",
     entityId: record.userId,
+    ipAddress: request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for") ?? null,
+    userAgent: request.headers.get("user-agent"),
     metadata: { email: record.user.email }
   });
 

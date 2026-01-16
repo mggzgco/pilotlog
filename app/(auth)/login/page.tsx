@@ -4,7 +4,7 @@ import { LoginForm } from "@/app/components/forms/auth-forms";
 export default function LoginPage({
   searchParams
 }: {
-  searchParams?: { registered?: string; approved?: string; rejected?: string };
+  searchParams?: { registered?: string; approved?: string; rejected?: string; verified?: string };
 }) {
   // UX-005: clear status messaging on auth screens
   return (
@@ -23,6 +23,11 @@ export default function LoginPage({
       {searchParams?.approved && (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
           Approval complete. You can now sign in.
+        </div>
+      )}
+      {searchParams?.verified && (
+        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 p-3 text-sm text-sky-200">
+          Email verified. Your account is pending approval.
         </div>
       )}
       {searchParams?.rejected && (

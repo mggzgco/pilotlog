@@ -6,6 +6,11 @@ import { prisma } from "@/app/lib/db";
 import { requireAdmin } from "@/app/lib/auth/session";
 import { recordAuditEvent } from "@/app/lib/audit";
 import { validateCsrf } from "@/app/lib/auth/csrf";
+import {
+  sendAccountApprovedEmail,
+  sendAccountRejectedEmail,
+  sendWelcomeEmail
+} from "@/app/lib/auth/email";
 
 function redirectWithToast(
   path: string,
@@ -38,18 +43,44 @@ export async function approveUserAction(formData: FormData) {
   }
 
   // ADMIN-001: approve pending accounts
-  const updated = await prisma.user.update({
-    where: { id: parsed.data.userId },
+  const updated = await prisma.user.findUnique({
+    where: { id: parsed.data.userId }
+  });
+  if (!updated) {
+    redirectWithToast("/admin/approvals", "User not found.", "error");
+    return;
+  }
+  if (!updated.emailVerifiedAt) {
+    redirectWithToast("/admin/approvals", "Email not verified yet.", "error");
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: updated.id },
     data: { status: "ACTIVE" }
   });
 
-  await prisma.accountApprovalToken.deleteMany({
-    where: { userId: updated.id }
+  await prisma.accountApprovalToken.updateMany({
+    where: { userId: updated.id, usedAt: null },
+    data: { usedAt: new Date() }
   });
+
+  try {
+    await sendAccountApprovedEmail({
+      recipientEmail: updated.email,
+      recipientName: updated.name
+    });
+    await sendWelcomeEmail({
+      recipientEmail: updated.email,
+      recipientName: updated.name
+    });
+  } catch (error) {
+    console.error("Failed to send approval/welcome email", error);
+  }
 
   await recordAuditEvent({
     userId: admin.id,
-    action: "admin.approve",
+    action: "AUTH_APPROVED",
     entityType: "User",
     entityId: updated.id,
     metadata: {
@@ -77,18 +108,35 @@ export async function rejectUserAction(formData: FormData) {
     return;
   }
 
-  const updated = await prisma.user.update({
-    where: { id: parsed.data.userId },
+  const updated = await prisma.user.findUnique({
+    where: { id: parsed.data.userId }
+  });
+  if (!updated) {
+    redirectWithToast("/admin/approvals", "User not found.", "error");
+    return;
+  }
+  await prisma.user.update({
+    where: { id: updated.id },
     data: { status: "DISABLED" }
   });
 
-  await prisma.accountApprovalToken.deleteMany({
-    where: { userId: updated.id }
+  await prisma.accountApprovalToken.updateMany({
+    where: { userId: updated.id, usedAt: null },
+    data: { usedAt: new Date() }
   });
+
+  try {
+    await sendAccountRejectedEmail({
+      recipientEmail: updated.email,
+      recipientName: updated.name
+    });
+  } catch (error) {
+    console.error("Failed to send rejection email", error);
+  }
 
   await recordAuditEvent({
     userId: admin.id,
-    action: "admin.reject",
+    action: "AUTH_REJECTED",
     entityType: "User",
     entityId: updated.id,
     metadata: {

@@ -57,6 +57,20 @@ export default async function AdminHomePage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Email templates</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-500">
+              Preview lifecycle emails and verify formatting.
+            </p>
+            <Button asChild>
+              <Link href="/admin/email-templates">View templates</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

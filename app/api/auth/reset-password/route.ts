@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resetPasswordSchema } from "@/app/lib/validation";
 import { resetPassword } from "@/app/lib/auth/password-reset";
+import { validateRequestCsrf } from "@/app/lib/auth/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrf = validateRequestCsrf(request);
+  if (!csrf.ok) {
+    return NextResponse.json({ error: csrf.error ?? "CSRF validation failed." }, { status: 403 });
+  }
   const payload = await request.json().catch(() => null);
   const parsed = resetPasswordSchema.safeParse(payload);
   if (!parsed.success) {
@@ -11,7 +16,9 @@ export async function POST(request: NextRequest) {
 
   const result = await resetPassword({
     token: parsed.data.token,
-    password: parsed.data.password
+    password: parsed.data.password,
+    ipAddress: request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for") ?? undefined,
+    userAgent: request.headers.get("user-agent") ?? undefined
   });
 
   if ("error" in result) {

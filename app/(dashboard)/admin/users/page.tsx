@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/app/lib/db";
 import { requireAdmin } from "@/app/lib/auth/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
@@ -5,6 +6,7 @@ import { Button } from "@/app/components/ui/button";
 import {
   adminDeleteUserAction,
   adminForcePasswordResetAction,
+  adminResendVerificationAction,
   adminUpdateUserRoleAction,
   adminUpdateUserStatusAction
 } from "@/app/lib/actions/admin-user-actions";
@@ -25,20 +27,12 @@ export default async function AdminUsersPage({
       phone: true,
       role: true,
       status: true,
-      createdAt: true
+      createdAt: true,
+      emailVerifiedAt: true,
+      lastLoginAt: true
     }
   });
 
-  const lastLogins = await prisma.auditEvent.groupBy({
-    by: ["userId"],
-    where: { action: "auth.login", userId: { not: null } },
-    _max: { createdAt: true }
-  });
-  const lastLoginByUserId = new Map(
-    lastLogins
-      .filter((r) => r.userId)
-      .map((r) => [r.userId as string, r._max.createdAt ?? null])
-  );
   const inactiveCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
   return (
@@ -82,7 +76,7 @@ export default async function AdminUsersPage({
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {users.map((u) => {
                   const isSelf = u.id === admin.id;
-                  const lastLogin = lastLoginByUserId.get(u.id) ?? null;
+                  const lastLogin = u.lastLoginAt ?? null;
                   const isInactive =
                     u.status === "ACTIVE" &&
                     ((lastLogin && lastLogin < inactiveCutoff) ||
@@ -91,14 +85,21 @@ export default async function AdminUsersPage({
                     u.status === "PENDING"
                       ? "PENDING"
                       : u.status === "DISABLED"
-                        ? "SUSPENDED"
+                        ? "DISABLED"
                         : isInactive
                           ? "INACTIVE"
                           : "ACTIVE";
                   return (
                     <tr key={u.id} className="text-slate-900 dark:text-slate-100">
                       <td className="px-4 py-3">
-                        <div className="font-semibold">{u.email}</div>
+                        <div className="font-semibold">
+                          <Link
+                            href={`/admin/users/${u.id}`}
+                            className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
+                          >
+                            {u.email}
+                          </Link>
+                        </div>
                         <div className="text-xs text-slate-500">
                           {u.phone ?? "—"} · Created {u.createdAt.toDateString()}
                           {lastLogin ? ` · Last sign-in ${lastLogin.toDateString()}` : ""}
@@ -118,7 +119,7 @@ export default async function AdminUsersPage({
                             <option value="INACTIVE" disabled>
                               Inactive (90+ days)
                             </option>
-                            <option value="SUSPENDED">Suspended</option>
+                            <option value="DISABLED">Disabled</option>
                             <option value="PENDING">Pending</option>
                           </select>
                           <Button type="submit" variant="outline" size="sm" disabled={isSelf}>
@@ -145,6 +146,17 @@ export default async function AdminUsersPage({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-2">
+                          <span className="self-center text-xs text-slate-500">
+                            {u.emailVerifiedAt ? "Verified" : "Unverified"}
+                          </span>
+                          {!u.emailVerifiedAt ? (
+                            <form action={adminResendVerificationAction}>
+                              <input type="hidden" name="userId" value={u.id} />
+                              <Button type="submit" variant="outline" size="sm">
+                                Resend verify
+                              </Button>
+                            </form>
+                          ) : null}
                           <form action={adminForcePasswordResetAction}>
                             <input type="hidden" name="userId" value={u.id} />
                             <Button type="submit" variant="outline" size="sm">

@@ -10,7 +10,14 @@ export default async function ApprovalsPage() {
   // ADMIN-002: list pending accounts for approval
   const pending = await prisma.user.findMany({
     where: { status: "PENDING" },
-    orderBy: { createdAt: "asc" }
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      emailVerifiedAt: true
+    }
   });
 
   return (
@@ -39,7 +46,10 @@ export default async function ApprovalsPage() {
                 <div>
                   <p className="text-lg font-semibold">{pendingUser.name ?? "—"}</p>
                   <p className="text-xs text-slate-400">{pendingUser.email}</p>
-                  <p className="text-xs text-slate-500">{pendingUser.phone ?? "No phone"}</p>
+                  <p className="text-xs text-slate-500">
+                    {pendingUser.phone ?? "No phone"} ·{" "}
+                    {pendingUser.emailVerifiedAt ? "Email verified" : "Email not verified"}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <form action={approveUserAction}>

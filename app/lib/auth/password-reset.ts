@@ -3,11 +3,7 @@ import { prisma } from "@/app/lib/db";
 import { hashPassword } from "@/app/lib/password";
 import { sendPasswordResetEmail } from "@/app/lib/auth/email";
 import { recordAuditEvent } from "@/app/lib/audit";
-import { handleActionError } from "@/src/lib/security/errors";
-import {
-  consumePasswordResetAttempt,
-  formatPasswordResetRateLimitError
-} from "@/src/lib/security/ratelimit";
+import { consumePasswordResetAttempt } from "@/src/lib/security/ratelimit";
 
 const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -27,10 +23,12 @@ function createResetToken() {
 
 export async function requestPasswordReset({
   email,
-  ipAddress
+  ipAddress,
+  userAgent
 }: {
   email: string;
   ipAddress: string;
+  userAgent?: string;
 }) {
   try {
     const normalizedEmail = email.toLowerCase();
@@ -39,19 +37,20 @@ export async function requestPasswordReset({
       email: normalizedEmail
     });
     if (!limiter.allowed) {
-      return { error: formatPasswordResetRateLimitError(limiter.resetAt) };
+      return { success: "If the email exists, a reset link will be sent." };
     }
 
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     await recordAuditEvent({
       userId: user?.id ?? null,
-      action: "auth.password_reset.requested",
+      action: "AUTH_PASSWORD_RESET_REQUESTED",
       entityType: user?.id ? "User" : null,
       entityId: user?.id ?? null,
+      ipAddress,
+      userAgent: userAgent ?? null,
       metadata: {
         email: normalizedEmail,
-        ipAddress,
         status: user?.status ?? "UNKNOWN"
       }
     });
@@ -87,11 +86,8 @@ export async function requestPasswordReset({
 
     return { success: "If the email exists, a reset link will be sent." };
   } catch (error) {
-    return handleActionError(
-      error,
-      "auth.password-reset.request",
-      "Unable to process password reset request."
-    );
+    console.error("password-reset.request failed", error);
+    return { success: "If the email exists, a reset link will be sent." };
   }
 }
 
@@ -115,10 +111,14 @@ export async function validatePasswordResetToken(token: string) {
 
 export async function resetPassword({
   token,
-  password
+  password,
+  ipAddress,
+  userAgent
 }: {
   token: string;
   password: string;
+  ipAddress?: string;
+  userAgent?: string;
 }) {
   try {
     const validation = await validatePasswordResetToken(token);
@@ -141,6 +141,15 @@ export async function resetPassword({
         where: { userId: validation.record.userId }
       })
     ]);
+
+    await recordAuditEvent({
+      userId: validation.record.userId,
+      action: "AUTH_PASSWORD_RESET_COMPLETED",
+      entityType: "User",
+      entityId: validation.record.userId,
+      ipAddress: ipAddress ?? null,
+      userAgent: userAgent ?? null
+    });
 
     return { success: "Password reset. Please log in." };
   } catch (error) {

@@ -12,7 +12,9 @@ import { sendApprovalEmail } from "@/app/lib/auth/email";
 import { getCurrentUser } from "@/app/lib/auth/session";
 import {
   consumeLoginAttempt,
+  consumeRegistrationAttempt,
   formatRateLimitError,
+  formatRegistrationRateLimitError,
   resetLoginAttempts
 } from "@/src/lib/security/ratelimit";
 import {
@@ -25,15 +27,20 @@ import {
   requestPasswordReset,
   resetPassword as performPasswordReset
 } from "@/app/lib/auth/password-reset";
+import { createEmailVerificationToken, sendVerification } from "@/app/lib/auth/email-verification";
 
 export type AuthFormState = { error?: string; success?: string };
 
 function getClientIp() {
   const forwarded = headers().get("x-forwarded-for");
   if (forwarded) {
-    return forwarded.split(",")[0]?.trim();
+    return forwarded.split(",")[0]?.trim() ?? "unknown";
   }
   return headers().get("x-real-ip") ?? "unknown";
+}
+
+function getUserAgent() {
+  return headers().get("user-agent") ?? "unknown";
 }
 
 export async function registerAction(formData: FormData): Promise<AuthFormState> {
@@ -50,10 +57,26 @@ export async function registerAction(formData: FormData): Promise<AuthFormState>
 
   const { email, name, password, phone } = parsed.data;
   const normalizedEmail = email.toLowerCase();
+  const ipAddress = getClientIp();
+  const userAgent = getUserAgent();
+
+  const limiter = consumeRegistrationAttempt({ ipAddress, email: normalizedEmail });
+  if (!limiter.allowed) {
+    return { error: formatRegistrationRateLimitError(limiter.resetAt) };
+  }
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
-    return { error: "Account already exists." };
+    await recordAuditEvent({
+      userId: existing.id,
+      action: "AUTH_REGISTER_REQUESTED",
+      entityType: "User",
+      entityId: existing.id,
+      ipAddress,
+      userAgent,
+      metadata: { email: normalizedEmail, alreadyExists: true }
+    });
+    redirect("/account-pending");
   }
 
   // AUTH-001: never store plaintext passwords
@@ -69,8 +92,27 @@ export async function registerAction(formData: FormData): Promise<AuthFormState>
     }
   });
 
+  await recordAuditEvent({
+    userId: user.id,
+    action: "AUTH_REGISTER_REQUESTED",
+    entityType: "User",
+    entityId: user.id,
+    ipAddress,
+    userAgent,
+    metadata: { email: user.email }
+  });
+
+  const { token: verifyToken, tokenHash, expiresAt } = createEmailVerificationToken();
+  await prisma.emailVerificationToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt
+    }
+  });
+
   // AUTH-006: notify approver about new account registration
-  const approverEmail = process.env.APPROVER_EMAIL || "groendykm@icloud.com";
+  const approverEmail = process.env.APPROVER_EMAIL ?? "";
   const token = createApprovalToken();
   const tokenHash = hashApprovalToken(token);
   const expiresAt = approvalTokenExpiry();
@@ -87,35 +129,51 @@ export async function registerAction(formData: FormData): Promise<AuthFormState>
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_URL ||
     "http://localhost:3000";
+  const verifyUrl = new URL(`/verify-email?token=${verifyToken}`, baseUrl).toString();
   const approveUrl = new URL(`/api/admin/approve?token=${token}`, baseUrl).toString();
   const rejectUrl = new URL(`/api/admin/reject?token=${token}`, baseUrl).toString();
 
-  try {
-    await sendApprovalEmail({
-      approverEmail,
-      applicantName: user.name,
-      applicantEmail: user.email,
-      applicantPhone: user.phone,
-      approveUrl,
-      rejectUrl
-    });
-  } catch (error) {
-    // If SMTP isn't configured, the admin can still approve via /admin/approvals.
-    console.error("Failed to send approval email", error);
+  await sendVerification({
+    userId: user.id,
+    recipientEmail: user.email,
+    recipientName: user.name,
+    verifyUrl,
+    ipAddress,
+    userAgent
+  });
+
+  if (approverEmail) {
+    try {
+      await sendApprovalEmail({
+        approverEmail,
+        applicantName: user.name,
+        applicantEmail: user.email,
+        applicantPhone: user.phone,
+        approveUrl,
+        rejectUrl
+      });
+    } catch (error) {
+      // If SMTP isn't configured, the admin can still approve via /admin/approvals.
+      console.error("Failed to send approval email", error);
+    }
+  } else {
+    console.warn("APPROVER_EMAIL is not configured; approval email not sent.");
   }
 
   await recordAuditEvent({
     userId: user.id,
-    action: "auth.registered",
+    action: "AUTH_APPROVAL_REQUESTED",
     entityType: "User",
     entityId: user.id,
+    ipAddress,
+    userAgent,
     metadata: {
       email: user.email,
-      approverEmail
+      approverEmail: approverEmail || null
     }
   });
 
-  redirect("/login?registered=1");
+  redirect("/account-pending");
 }
 
 export async function loginAction(formData: FormData): Promise<AuthFormState> {
@@ -137,15 +195,18 @@ export async function loginAction(formData: FormData): Promise<AuthFormState> {
   if (!limiter.allowed) {
     return { error: formatRateLimitError(limiter.resetAt) };
   }
+  const ipAddress = getClientIp();
+  const userAgent = getUserAgent();
 
   const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user) {
     await recordAuditEvent({
-      action: "auth.login.failed",
+      action: "AUTH_LOGIN_FAILED",
+      ipAddress,
+      userAgent,
       metadata: {
         email: normalizedEmail,
-        reason: "not_found",
-        ipAddress: getClientIp()
+        reason: "not_found"
       }
     });
     return { error: "Invalid credentials." };
@@ -155,44 +216,76 @@ export async function loginAction(formData: FormData): Promise<AuthFormState> {
   if (user.status === "PENDING") {
     await recordAuditEvent({
       userId: user.id,
-      action: "auth.login.failed",
+      action: "AUTH_LOGIN_FAILED",
       entityType: "User",
       entityId: user.id,
+      ipAddress,
+      userAgent,
       metadata: {
         email: user.email,
-        reason: "pending",
-        ipAddress: getClientIp()
+        reason: "pending"
       }
     });
-    return { error: "Account pending approval. Please wait for an admin to approve." };
+    return { error: "Account pending approval. Please verify your email first." };
   }
 
   if (user.status === "DISABLED") {
     await recordAuditEvent({
       userId: user.id,
-      action: "auth.login.failed",
+      action: "AUTH_LOGIN_FAILED",
       entityType: "User",
       entityId: user.id,
+      ipAddress,
+      userAgent,
       metadata: {
         email: user.email,
-        reason: "disabled",
-        ipAddress: getClientIp()
+        reason: "disabled"
       }
     });
     return { error: "Account disabled. Contact support for help." };
   }
 
-  const valid = await verifyPassword(user.passwordHash, password);
-  if (!valid) {
+  if (!user.emailVerifiedAt) {
     await recordAuditEvent({
       userId: user.id,
-      action: "auth.login.failed",
+      action: "AUTH_LOGIN_FAILED",
       entityType: "User",
       entityId: user.id,
+      ipAddress,
+      userAgent,
       metadata: {
         email: user.email,
-        reason: "invalid_password",
-        ipAddress: getClientIp()
+        reason: "email_unverified"
+      }
+    });
+    return { error: "Email not verified. Check your email for the verification link." };
+  }
+
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    return { error: "Account temporarily locked. Try again later." };
+  }
+
+  const valid = await verifyPassword(user.passwordHash, password);
+  if (!valid) {
+    const nextFailed = (user.failedLoginCount ?? 0) + 1;
+    const shouldLock = nextFailed >= 5;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginCount: nextFailed,
+        lockedUntil: shouldLock ? new Date(Date.now() + 15 * 60 * 1000) : user.lockedUntil
+      }
+    });
+    await recordAuditEvent({
+      userId: user.id,
+      action: "AUTH_LOGIN_FAILED",
+      entityType: "User",
+      entityId: user.id,
+      ipAddress,
+      userAgent,
+      metadata: {
+        email: user.email,
+        reason: "invalid_password"
       }
     });
     return { error: "Invalid credentials." };
@@ -204,13 +297,23 @@ export async function loginAction(formData: FormData): Promise<AuthFormState> {
   cookies().set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 
   resetLoginAttempts(limiterKey);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      failedLoginCount: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date()
+    }
+  });
   await recordAuditEvent({
     userId: user.id,
-    action: "auth.login",
+    action: "AUTH_LOGIN_SUCCESS",
     entityType: "User",
     entityId: user.id,
+    ipAddress,
+    userAgent,
     metadata: {
-      ipAddress: getClientIp()
+      email: user.email
     }
   });
 
@@ -233,7 +336,9 @@ export async function logoutAction() {
   // AUTH-007: logout clears session cookie
   await recordAuditEvent({
     userId: user?.id ?? null,
-    action: "auth.logout"
+    action: "AUTH_LOGOUT",
+    ipAddress: getClientIp(),
+    userAgent: getUserAgent()
   });
   redirect("/login");
 }
@@ -246,7 +351,11 @@ export async function forgotPasswordAction(formData: FormData): Promise<AuthForm
   }
 
   const { email } = parsed.data;
-  const result = await requestPasswordReset({ email, ipAddress: getClientIp() });
+  const result = await requestPasswordReset({
+    email,
+    ipAddress: getClientIp(),
+    userAgent: getUserAgent()
+  });
   if ("error" in result) {
     return { error: result.error };
   }
@@ -261,7 +370,12 @@ export async function resetPasswordAction(formData: FormData): Promise<AuthFormS
   }
 
   const { token, password } = parsed.data;
-  const result = await performPasswordReset({ token, password });
+  const result = await performPasswordReset({
+    token,
+    password,
+    ipAddress: getClientIp(),
+    userAgent: getUserAgent()
+  });
   if ("error" in result) {
     return { error: result.error };
   }
