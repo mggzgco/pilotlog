@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="96" viewBox="0 0 420 96">
+  <defs>
+    <linearGradient id="ft-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="0.45" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="420" height="96" rx="16" fill="#0f172a"/>
+  <g transform="translate(22 24)">
+    <circle cx="24" cy="24" r="24" fill="url(#ft-gradient)"/>
+    <path d="M18 24h24" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M30 14l12 10-12 10" fill="none" stroke="#0f172a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="80" y="58" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700" fill="#f8fafc" letter-spacing="1">
+    FlightTraks
+  </text>
+</svg>

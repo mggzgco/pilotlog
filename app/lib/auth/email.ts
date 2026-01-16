@@ -1,11 +1,12 @@
-import nodemailer from "nodemailer";
-
-type EmailPayload = {
-  to: string;
-  subject: string;
-  text: string;
-  html: string;
-};
+import { prisma } from "@/app/lib/db";
+import { sendEmail, getReplyToAddress } from "@/app/lib/email/send-email";
+import {
+  EMAIL_TEMPLATE_KEYS,
+  applyTemplate,
+  getDefaultEmailTemplate,
+  type EmailTemplateContent,
+  type EmailTemplateKey
+} from "@/app/lib/auth/email-templates";
 
 type ApprovalEmailInput = {
   approverEmail: string;
@@ -38,193 +39,209 @@ type RejectionEmailInput = {
   recipientName: string | null;
 };
 
-function getTransport() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT ?? 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host) {
-    throw new Error("SMTP_HOST is not configured.");
-  }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: process.env.SMTP_SECURE === "true" || port === 465,
-    auth: user && pass ? { user, pass } : undefined
-  });
-}
-
-function getFromAddress() {
+function getSupportEmail() {
   return (
-    process.env.EMAIL_FROM ||
-    process.env.SMTP_FROM ||
-    process.env.SMTP_USER ||
-    "FlightTraks <No_Reply@flighttraks.com>"
+    process.env.SUPPORT_EMAIL ||
+    getReplyToAddress() ||
+    "support@flighttraks.com"
   );
 }
 
-async function sendEmail(payload: EmailPayload) {
-  const from = getFromAddress();
-  const transporter = getTransport();
-  await transporter.sendMail({
-    from,
-    to: payload.to,
-    subject: payload.subject,
-    text: payload.text,
-    html: payload.html
-  });
+function getBaseUrl() {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    "https://app.flighttraks.com"
+  );
+}
+
+function buildContext(values: Record<string, string | number | null | undefined>) {
+  const appUrl = getBaseUrl();
+  return {
+    appUrl,
+    logoUrl: `${appUrl}/brand/flighttraks-logo.svg`,
+    supportEmail: getSupportEmail(),
+    ...values
+  };
+}
+
+async function resolveTemplate(
+  key: EmailTemplateKey,
+  context: Record<string, string | number | null | undefined>
+): Promise<EmailTemplateContent> {
+  const stored = await prisma.emailTemplate.findUnique({ where: { key } });
+  const base = stored ?? getDefaultEmailTemplate(key);
+  return {
+    subject: applyTemplate(base.subject, context),
+    html: applyTemplate(base.html, context),
+    text: applyTemplate(base.text, context)
+  };
 }
 
 export function buildApprovalEmail(payload: ApprovalEmailInput) {
-  const subject = `Account approval requested for ${payload.applicantEmail}`;
-  const text = [
-    "A new pilot account is awaiting approval.",
-    "",
-    `Name: ${payload.applicantName ?? "N/A"}`,
-    `Email: ${payload.applicantEmail}`,
-    `Phone: ${payload.applicantPhone ?? "N/A"}`,
-    "",
-    `Approve: ${payload.approveUrl}`,
-    `Reject: ${payload.rejectUrl}`
-  ].join("\n");
-  const html = `
-    <p>A new pilot account is awaiting approval.</p>
-    <p><strong>Name:</strong> ${payload.applicantName ?? "N/A"}<br/>
-    <strong>Email:</strong> ${payload.applicantEmail}<br/>
-    <strong>Phone:</strong> ${payload.applicantPhone ?? "N/A"}</p>
-    <p><a href="${payload.approveUrl}">Approve</a> · <a href="${payload.rejectUrl}">Reject</a></p>
-  `;
-  return { subject, text, html };
+  const context = buildContext({
+    approverEmail: payload.approverEmail,
+    applicantName: payload.applicantName ?? "N/A",
+    applicantEmail: payload.applicantEmail,
+    applicantPhone: payload.applicantPhone ?? "N/A",
+    approveUrl: payload.approveUrl,
+    rejectUrl: payload.rejectUrl
+  });
+  const base = getDefaultEmailTemplate(EMAIL_TEMPLATE_KEYS.APPROVAL_REQUEST);
+  return {
+    subject: applyTemplate(base.subject, context),
+    text: applyTemplate(base.text, context),
+    html: applyTemplate(base.html, context)
+  };
 }
 
 export function buildVerificationEmail(payload: VerificationEmailInput) {
-  const subject = "Verify your FlightTraks email";
-  const text = [
-    `Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},`,
-    "",
-    "Please verify your email address to continue your FlightTraks registration.",
-    "",
-    payload.verifyUrl,
-    "",
-    "If you did not request this, you can ignore this email."
-  ].join("\n");
-  const html = `
-    <p>Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},</p>
-    <p>Please verify your email address to continue your FlightTraks registration.</p>
-    <p><a href="${payload.verifyUrl}">Verify email</a></p>
-    <p>If you did not request this, you can ignore this email.</p>
-  `;
-  return { subject, text, html };
+  const context = buildContext({
+    name: payload.recipientName ?? "there",
+    email: payload.recipientEmail,
+    verifyUrl: payload.verifyUrl
+  });
+  const base = getDefaultEmailTemplate(EMAIL_TEMPLATE_KEYS.VERIFY_EMAIL);
+  return {
+    subject: applyTemplate(base.subject, context),
+    text: applyTemplate(base.text, context),
+    html: applyTemplate(base.html, context)
+  };
 }
 
 export function buildAccountApprovedEmail(payload: AccountStatusEmailInput) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "";
-  const loginUrl = appUrl ? `${appUrl}/login` : "";
-  const subject = "Your FlightTraks account is approved";
-  const text = [
-    `Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},`,
-    "",
-    "Your FlightTraks account has been approved. You can now sign in.",
-    "",
-    loginUrl || "Please sign in at the FlightTraks web app."
-  ].join("\n");
-  const html = `
-    <p>Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},</p>
-    <p>Your FlightTraks account has been approved. You can now sign in.</p>
-    ${loginUrl ? `<p><a href="${loginUrl}">Sign in</a></p>` : ""}
-  `;
-  return { subject, text, html };
+  const baseUrl = getBaseUrl();
+  const context = buildContext({
+    name: payload.recipientName ?? "there",
+    email: payload.recipientEmail,
+    loginUrl: `${baseUrl}/login`
+  });
+  const base = getDefaultEmailTemplate(EMAIL_TEMPLATE_KEYS.ACCOUNT_APPROVED);
+  return {
+    subject: applyTemplate(base.subject, context),
+    text: applyTemplate(base.text, context),
+    html: applyTemplate(base.html, context)
+  };
 }
 
 export function buildWelcomeEmail(payload: AccountStatusEmailInput) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "";
-  const dashboardUrl = appUrl ? `${appUrl}/dashboard` : "";
-  const subject = "Welcome to FlightTraks";
-  const text = [
-    `Welcome${payload.recipientName ? ` ${payload.recipientName}` : ""}!`,
-    "",
-    "We’re excited to have you on FlightTraks.",
-    "",
-    dashboardUrl || "Open the FlightTraks web app to get started."
-  ].join("\n");
-  const html = `
-    <p>Welcome${payload.recipientName ? ` ${payload.recipientName}` : ""}!</p>
-    <p>We’re excited to have you on FlightTraks.</p>
-    ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open dashboard</a></p>` : ""}
-  `;
-  return { subject, text, html };
+  const baseUrl = getBaseUrl();
+  const context = buildContext({
+    name: payload.recipientName ?? "there",
+    email: payload.recipientEmail,
+    dashboardUrl: `${baseUrl}/dashboard`
+  });
+  const base = getDefaultEmailTemplate(EMAIL_TEMPLATE_KEYS.WELCOME);
+  return {
+    subject: applyTemplate(base.subject, context),
+    text: applyTemplate(base.text, context),
+    html: applyTemplate(base.html, context)
+  };
 }
 
 export function buildRejectionEmail(payload: RejectionEmailInput) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "";
-  const supportUrl = appUrl ? `${appUrl}/login` : "";
-  const subject = "Your FlightTraks account request was not approved";
-  const text = [
-    `Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},`,
-    "",
-    "We reviewed your request to access FlightTraks.",
-    "At this time, the request was not approved.",
-    "",
-    supportUrl || "Contact support if you believe this is a mistake."
-  ].join("\n");
-  const html = `
-    <p>Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},</p>
-    <p>We reviewed your request to access FlightTraks.</p>
-    <p>At this time, the request was not approved.</p>
-    ${supportUrl ? `<p>If this is unexpected, please contact support.</p>` : ""}
-  `;
-  return { subject, text, html };
+  const baseUrl = getBaseUrl();
+  const context = buildContext({
+    name: payload.recipientName ?? "there",
+    email: payload.recipientEmail,
+    supportUrl: `${baseUrl}/login`
+  });
+  const base = getDefaultEmailTemplate(EMAIL_TEMPLATE_KEYS.ACCOUNT_REJECTED);
+  return {
+    subject: applyTemplate(base.subject, context),
+    text: applyTemplate(base.text, context),
+    html: applyTemplate(base.html, context)
+  };
 }
 
 export function buildPasswordResetEmail(payload: PasswordResetEmailInput) {
-  const subject = "Reset your FlightTraks password";
-  const text = [
-    `Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},`,
-    "",
-    "We received a request to reset your FlightTraks password.",
-    "Use the link below to set a new password. This link expires in 60 minutes.",
-    "",
-    payload.resetUrl,
-    "",
-    "If you did not request this, you can safely ignore this email."
-  ].join("\n");
-  const html = `
-    <p>Hello${payload.recipientName ? ` ${payload.recipientName}` : ""},</p>
-    <p>We received a request to reset your FlightTraks password.</p>
-    <p><a href="${payload.resetUrl}">Reset password</a></p>
-    <p>If you did not request this, you can safely ignore this email.</p>
-  `;
-  return { subject, text, html };
+  const context = buildContext({
+    name: payload.recipientName ?? "there",
+    email: payload.recipientEmail,
+    resetUrl: payload.resetUrl
+  });
+  const base = getDefaultEmailTemplate(EMAIL_TEMPLATE_KEYS.PASSWORD_RESET);
+  return {
+    subject: applyTemplate(base.subject, context),
+    text: applyTemplate(base.text, context),
+    html: applyTemplate(base.html, context)
+  };
 }
 
 export async function sendApprovalEmail(payload: ApprovalEmailInput) {
-  const { subject, text, html } = buildApprovalEmail(payload);
+  const { subject, text, html } = await resolveTemplate(
+    EMAIL_TEMPLATE_KEYS.APPROVAL_REQUEST,
+    buildContext({
+      approverEmail: payload.approverEmail,
+      applicantName: payload.applicantName ?? "N/A",
+      applicantEmail: payload.applicantEmail,
+      applicantPhone: payload.applicantPhone ?? "N/A",
+      approveUrl: payload.approveUrl,
+      rejectUrl: payload.rejectUrl
+    })
+  );
   await sendEmail({ to: payload.approverEmail, subject, text, html });
 }
 
 export async function sendVerificationEmail(payload: VerificationEmailInput) {
-  const { subject, text, html } = buildVerificationEmail(payload);
+  const { subject, text, html } = await resolveTemplate(
+    EMAIL_TEMPLATE_KEYS.VERIFY_EMAIL,
+    buildContext({
+      name: payload.recipientName ?? "there",
+      email: payload.recipientEmail,
+      verifyUrl: payload.verifyUrl
+    })
+  );
   await sendEmail({ to: payload.recipientEmail, subject, text, html });
 }
 
 export async function sendAccountApprovedEmail(payload: AccountStatusEmailInput) {
-  const { subject, text, html } = buildAccountApprovedEmail(payload);
+  const baseUrl = getBaseUrl();
+  const { subject, text, html } = await resolveTemplate(
+    EMAIL_TEMPLATE_KEYS.ACCOUNT_APPROVED,
+    buildContext({
+      name: payload.recipientName ?? "there",
+      email: payload.recipientEmail,
+      loginUrl: `${baseUrl}/login`
+    })
+  );
   await sendEmail({ to: payload.recipientEmail, subject, text, html });
 }
 
 export async function sendWelcomeEmail(payload: AccountStatusEmailInput) {
-  const { subject, text, html } = buildWelcomeEmail(payload);
+  const baseUrl = getBaseUrl();
+  const { subject, text, html } = await resolveTemplate(
+    EMAIL_TEMPLATE_KEYS.WELCOME,
+    buildContext({
+      name: payload.recipientName ?? "there",
+      email: payload.recipientEmail,
+      dashboardUrl: `${baseUrl}/dashboard`
+    })
+  );
   await sendEmail({ to: payload.recipientEmail, subject, text, html });
 }
 
 export async function sendAccountRejectedEmail(payload: RejectionEmailInput) {
-  const { subject, text, html } = buildRejectionEmail(payload);
+  const baseUrl = getBaseUrl();
+  const { subject, text, html } = await resolveTemplate(
+    EMAIL_TEMPLATE_KEYS.ACCOUNT_REJECTED,
+    buildContext({
+      name: payload.recipientName ?? "there",
+      email: payload.recipientEmail,
+      supportUrl: `${baseUrl}/login`
+    })
+  );
   await sendEmail({ to: payload.recipientEmail, subject, text, html });
 }
 
 export async function sendPasswordResetEmail(payload: PasswordResetEmailInput) {
-  const { subject, text, html } = buildPasswordResetEmail(payload);
+  const { subject, text, html } = await resolveTemplate(
+    EMAIL_TEMPLATE_KEYS.PASSWORD_RESET,
+    buildContext({
+      name: payload.recipientName ?? "there",
+      email: payload.recipientEmail,
+      resetUrl: payload.resetUrl
+    })
+  );
   await sendEmail({ to: payload.recipientEmail, subject, text, html });
 }
