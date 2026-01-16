@@ -21,8 +21,8 @@ export default function AccountPendingPage({
           className={[
             "rounded-lg border p-3 text-sm",
             searchParams.toastType === "error"
-              ? "border-rose-500/40 bg-rose-500/10 text-rose-200"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+              ? "border-rose-500/40 bg-rose-50 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200"
+              : "border-emerald-500/40 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200"
           ].join(" ")}
         >
           {searchParams.toast}

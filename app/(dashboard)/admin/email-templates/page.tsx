@@ -223,7 +223,7 @@ export default async function AdminEmailTemplatesPage() {
           chips to insert dynamic values.
         </p>
         {!mailerStatus.ok ? (
-          <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+          <div className="rounded-lg border border-rose-500/40 bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">
             Mailer warning: {mailerStatus.error ?? "Mailer verification failed."} Emails will not send
             until SMTP credentials are fixed.
           </div>

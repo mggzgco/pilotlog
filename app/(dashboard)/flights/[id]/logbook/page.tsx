@@ -130,7 +130,7 @@ export default async function FlightLogbookPage({
         </CardHeader>
         <CardContent>
           {showLogbookPrompt ? (
-            <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
               This flight has ADS-B attached—log your time to finish it. Logbook time is
               independent from ADS-B.
             </div>

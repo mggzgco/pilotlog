@@ -4,18 +4,27 @@ import { prisma } from "@/app/lib/db";
 import { requireAdmin } from "@/app/lib/auth/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import { FormSubmitButton } from "@/app/components/ui/form-submit-button";
 import {
+  adminCompleteOnboardingAction,
+  adminGeneratePasswordResetLinkAction,
+  adminGenerateVerificationLinkAction,
   adminForcePasswordResetAction,
+  adminMarkEmailVerifiedAction,
   adminResendVerificationAction,
   adminSendApprovalEmailAction,
   adminSendRejectionEmailAction,
-  adminSendWelcomeEmailAction
+  adminSendWelcomeEmailAction,
+  adminUpdateUserProfileAction
 } from "@/app/lib/actions/admin-user-actions";
 
 export default async function AdminUserDetailPage({
-  params
+  params,
+  searchParams
 }: {
   params: { id: string };
+  searchParams?: { manualLinkType?: string; manualLink?: string };
 }) {
   await requireAdmin();
 
@@ -31,6 +40,7 @@ export default async function AdminUserDetailPage({
       createdAt: true,
       lastLoginAt: true,
       emailVerifiedAt: true,
+        deletedAt: true,
       auditEvents: {
         orderBy: { createdAt: "desc" },
         take: 50
@@ -64,10 +74,104 @@ export default async function AdminUserDetailPage({
           <div>Status: {user.status}</div>
           <div>Role: {user.role}</div>
           <div>Email verified: {user.emailVerifiedAt ? "Yes" : "No"}</div>
+          <div>Deleted: {user.deletedAt ? user.deletedAt.toDateString() : "No"}</div>
           <div>Last login: {user.lastLoginAt ? user.lastLoginAt.toDateString() : "—"}</div>
           <div>Created: {user.createdAt.toDateString()}</div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-slate-400">Edit profile</p>
+        </CardHeader>
+        <CardContent>
+          <form action={adminUpdateUserProfileAction} className="grid gap-4 sm:grid-cols-2">
+            <input type="hidden" name="userId" value={user.id} />
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Email
+              </p>
+              <Input name="email" type="email" required defaultValue={user.email} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Name
+              </p>
+              <Input name="name" defaultValue={user.name ?? ""} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Phone
+              </p>
+              <Input name="phone" defaultValue={user.phone ?? ""} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Role
+              </p>
+              <select
+                name="role"
+                defaultValue={user.role}
+                className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Status
+              </p>
+              <select
+                name="status"
+                defaultValue={user.status}
+                className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <option value="PENDING">Pending</option>
+                <option value="ACTIVE">Active</option>
+                <option value="DISABLED">Disabled</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 pt-6 text-sm text-slate-600 dark:text-slate-400">
+              <input
+                id="verified"
+                name="verified"
+                value="true"
+                type="checkbox"
+                className="h-4 w-4"
+                defaultChecked={Boolean(user.emailVerifiedAt)}
+              />
+              <label htmlFor="verified">Email verified</label>
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Admin note (optional)
+              </p>
+              <Input name="reason" placeholder="Reason for changes" />
+            </div>
+            <div className="sm:col-span-2 flex justify-end">
+              <FormSubmitButton pendingText="Saving...">Save changes</FormSubmitButton>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {searchParams?.manualLink ? (
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Manual link</p>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-slate-200">
+            <p className="text-slate-400">
+              Share this {searchParams.manualLinkType ?? "manual"} link with the user.
+            </p>
+            <Input value={decodeURIComponent(searchParams.manualLink)} readOnly />
+            <p className="text-xs text-slate-500">
+              For security, treat this link like a password reset. It is visible only to admins.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -108,6 +212,43 @@ export default async function AdminUserDetailPage({
           </form>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-slate-400">Manual onboarding</p>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <form action={adminMarkEmailVerifiedAction}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Input name="reason" placeholder="Reason" className="mb-2 h-9 w-48" />
+            <Button type="submit" variant="outline">
+              Mark email verified
+            </Button>
+          </form>
+          <form action={adminCompleteOnboardingAction}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Input name="reason" placeholder="Reason" className="mb-2 h-9 w-48" />
+            <Button type="submit" variant="outline">
+              Complete onboarding
+            </Button>
+          </form>
+          <form action={adminGenerateVerificationLinkAction}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Input name="reason" placeholder="Reason" className="mb-2 h-9 w-48" />
+            <Button type="submit" variant="outline">
+              Generate verification link
+            </Button>
+          </form>
+          <form action={adminGeneratePasswordResetLinkAction}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Input name="reason" placeholder="Reason" className="mb-2 h-9 w-48" />
+            <Button type="submit" variant="outline">
+              Generate reset link
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader>

@@ -50,6 +50,10 @@ export async function approveUserAction(formData: FormData) {
     redirectWithToast("/admin/approvals", "User not found.", "error");
     return;
   }
+  if (updated.deletedAt) {
+    redirectWithToast("/admin/approvals", "User is deleted.", "error");
+    return;
+  }
   if (!updated.emailVerifiedAt) {
     redirectWithToast("/admin/approvals", "Email not verified yet.", "error");
     return;
@@ -113,6 +117,10 @@ export async function rejectUserAction(formData: FormData) {
   });
   if (!updated) {
     redirectWithToast("/admin/approvals", "User not found.", "error");
+    return;
+  }
+  if (updated.deletedAt) {
+    redirectWithToast("/admin/approvals", "User is deleted.", "error");
     return;
   }
   await prisma.user.update({

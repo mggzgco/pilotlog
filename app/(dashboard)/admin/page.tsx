@@ -2,9 +2,11 @@ import Link from "next/link";
 import { requireAdmin } from "@/app/lib/auth/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { checkMailerStatus } from "@/app/lib/email/mailer";
 
 export default async function AdminHomePage() {
   await requireAdmin();
+  const mailerStatus = await checkMailerStatus();
 
   return (
     <div className="space-y-6">
@@ -71,7 +73,28 @@ export default async function AdminHomePage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <p className="text-sm text-slate-400">Audit log</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-500">
+              Review admin actions, approvals, and authentication activity.
+            </p>
+            <Button asChild>
+              <Link href="/admin/audit">View audit log</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+
+      {!mailerStatus.ok ? (
+        <div className="rounded-lg border border-rose-500/40 bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">
+          Mailer warning: {mailerStatus.error ?? "Mailer verification failed."} Emails will not send
+          until SMTP credentials are fixed.
+        </div>
+      ) : null}
     </div>
   );
 }

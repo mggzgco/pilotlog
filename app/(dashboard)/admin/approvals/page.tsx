@@ -9,7 +9,7 @@ export default async function ApprovalsPage() {
 
   // ADMIN-002: list pending accounts for approval
   const pending = await prisma.user.findMany({
-    where: { status: "PENDING" },
+    where: { status: "PENDING", deletedAt: null },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
@@ -60,7 +60,10 @@ export default async function ApprovalsPage() {
                   <form action={rejectUserAction}>
                     <input type="hidden" name="userId" value={pendingUser.id} />
                     {/* ADMIN-004: reject pending account */}
-                    <Button type="submit" className="bg-rose-500/20 text-rose-100">
+                    <Button
+                      type="submit"
+                      className="bg-rose-50 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200"
+                    >
                       Reject
                     </Button>
                   </form>

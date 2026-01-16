@@ -709,7 +709,7 @@ export default async function FlightDetailPage({
 
       <div className="grid gap-3">
       {showAutoImportRunning ? (
-        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+        <div className="rounded-lg border border-sky-500/40 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 animate-pulse rounded-full bg-sky-300" />
             Importing ADS-B…
@@ -718,7 +718,7 @@ export default async function FlightDetailPage({
       ) : null}
 
       {showAutoImportNotFound ? (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
           <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
             <span>No ADS-B match found. Manually import and attach.</span>
             <Button size="sm" variant="outline" asChild>
@@ -729,7 +729,7 @@ export default async function FlightDetailPage({
       ) : null}
 
       {showAutoImportMatchCta ? (
-        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+        <div className="rounded-lg border border-sky-500/40 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
           <div className="flex flex-col gap-2 lg:flex-row md:items-center md:justify-between">
             <span>Multiple ADS-B matches found. Choose the best one to attach.</span>
             <Button size="sm" variant="outline" asChild>
@@ -740,7 +740,7 @@ export default async function FlightDetailPage({
       ) : null}
 
       {showAutoImportFailed ? (
-        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="rounded-lg border border-rose-500/40 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">
           ADS-B import failed. Please try again or manually attach a flight.
         </div>
       ) : null}
@@ -1027,7 +1027,7 @@ export default async function FlightDetailPage({
             </div>
                 ) : null}
               {needsAdsB ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
                   <span>Attach ADS-B track data (optional, but unlocks stats/map).</span>
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/flights/${flight.id}/match`}>Find match</Link>

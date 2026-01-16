@@ -241,7 +241,7 @@ export default async function ProfilePage() {
                       </td>
                       <td className="px-4 py-3">
                         {person.linkedUserId ? (
-                          <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-200">
+                          <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">
                             Linked
                           </span>
                         ) : (

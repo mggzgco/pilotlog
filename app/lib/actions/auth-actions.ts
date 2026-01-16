@@ -245,6 +245,22 @@ export async function loginAction(formData: FormData): Promise<AuthFormState> {
     return { error: "Account disabled. Contact support for help." };
   }
 
+  if (user.deletedAt) {
+    await recordAuditEvent({
+      userId: user.id,
+      action: "AUTH_LOGIN_FAILED",
+      entityType: "User",
+      entityId: user.id,
+      ipAddress,
+      userAgent,
+      metadata: {
+        email: user.email,
+        reason: "deleted"
+      }
+    });
+    return { error: "Account disabled. Contact support for help." };
+  }
+
   if (!user.emailVerifiedAt) {
     await recordAuditEvent({
       userId: user.id,

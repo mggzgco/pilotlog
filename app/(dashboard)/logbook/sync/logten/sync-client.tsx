@@ -73,7 +73,29 @@ export function LogTenSyncClient() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "pilotlog-logten-export.csv";
+      a.download = "pilotlog-logten-export.tsv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadFullExportForLogTen() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/logten/export", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ all: true })
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pilotlog-logten-export.tsv";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -85,6 +107,20 @@ export function LogTenSyncClient() {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Export for LogTen</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Download your entire FlightTraks logbook in LogTen’s import format.
+            </p>
+          </div>
+          <Button onClick={downloadFullExportForLogTen} disabled={busy}>
+            {busy ? "Preparing..." : "Download LogTen export"}
+          </Button>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>

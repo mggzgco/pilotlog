@@ -25,6 +25,9 @@ const plannedFlightSchema = z.object({
   plannedEndClock: z.string().optional(),
   origin: z.string().optional(),
   destination: z.string().optional(),
+  // Dashboard form uses departure/arrival labels; accept both.
+  departureLabel: z.string().optional(),
+  arrivalLabel: z.string().optional(),
   stopLabel: z.union([z.string(), z.array(z.string())]).optional(),
   selfRole: z.string().optional()
 });
@@ -163,8 +166,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Selected aircraft was not found." }, { status: 404 });
   }
 
-  const originLabelRaw = String(parsed.data.origin ?? "").trim().toUpperCase();
-  const destinationLabelRaw = String(parsed.data.destination ?? "").trim().toUpperCase();
+  const originInput =
+    parsed.data.origin ?? parsed.data.departureLabel ?? "";
+  const destinationInput =
+    parsed.data.destination ?? parsed.data.arrivalLabel ?? "";
+  const originLabelRaw = String(originInput).trim().toUpperCase();
+  const destinationLabelRaw = String(destinationInput).trim().toUpperCase();
   const originLabel = originLabelRaw || "TBD";
   const destinationLabel = destinationLabelRaw || null;
   const stopLabels = (() => {

@@ -16,17 +16,14 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  if (!body || !Array.isArray(body.ids)) {
-    return jsonError("Invalid payload. Expected { ids: [...] }.");
-  }
-
-  const ids = body.ids as string[];
-  if (ids.length === 0) {
-    return jsonError("No ids provided.");
+  const exportAll = Boolean(body?.all);
+  const ids = Array.isArray(body?.ids) ? (body.ids as string[]) : [];
+  if (!exportAll && ids.length === 0) {
+    return jsonError("Invalid payload. Expected { ids: [...] } or { all: true }.");
   }
 
   const entries = await prisma.logbookEntry.findMany({
-    where: { userId: user.id, id: { in: ids } },
+    where: exportAll ? { userId: user.id } : { userId: user.id, id: { in: ids } },
     orderBy: { date: "asc" },
     select: {
       date: true,

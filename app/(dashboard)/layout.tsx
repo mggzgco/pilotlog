@@ -3,6 +3,7 @@ import { requireUser } from "@/app/lib/auth/session";
 import { Sidebar } from "@/app/components/layout/sidebar";
 import { Topbar } from "@/app/components/layout/topbar";
 import { ToastProvider } from "@/app/components/ui/toast-provider";
+import { LegalFooter } from "@/app/components/layout/legal-footer";
 
 export default async function DashboardLayout({
   children
@@ -21,6 +22,7 @@ export default async function DashboardLayout({
           <main className="app-main min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-6 dark:bg-slate-950">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
               {children}
+              <LegalFooter className="pt-6" />
             </div>
           </main>
         </div>

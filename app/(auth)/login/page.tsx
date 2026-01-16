@@ -16,22 +16,22 @@ export default function LoginPage({
         </p>
       </div>
       {searchParams?.registered && (
-        <div className="rounded-lg border border-brand-500/40 bg-brand-500/10 p-3 text-sm text-brand-200">
+        <div className="rounded-lg border border-brand-500/40 bg-brand-50 p-3 text-sm text-brand-800 dark:bg-brand-500/10 dark:text-brand-200">
           Your account request was submitted successfully. You’ll be notified as soon as it’s activated.
         </div>
       )}
       {searchParams?.approved && (
-        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
           Approval complete. You can now sign in.
         </div>
       )}
       {searchParams?.verified && (
-        <div className="rounded-lg border border-sky-500/40 bg-sky-500/10 p-3 text-sm text-sky-200">
+        <div className="rounded-lg border border-sky-500/40 bg-sky-50 p-3 text-sm text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
           Email verified. Your account is pending approval.
         </div>
       )}
       {searchParams?.rejected && (
-        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-500/40 bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">
           Your registration was rejected. Contact support if this is unexpected.
         </div>
       )}

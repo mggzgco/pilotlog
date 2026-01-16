@@ -3,35 +3,79 @@ import { prisma } from "@/app/lib/db";
 import { requireAdmin } from "@/app/lib/auth/session";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
-import {
-  adminDeleteUserAction,
-  adminForcePasswordResetAction,
-  adminResendVerificationAction,
-  adminUpdateUserRoleAction,
-  adminUpdateUserStatusAction
-} from "@/app/lib/actions/admin-user-actions";
+import { Input } from "@/app/components/ui/input";
+import { CreateUserModal } from "@/app/components/admin/create-user-modal";
+import { UserRowMenu } from "@/app/components/admin/user-row-menu";
 
 export default async function AdminUsersPage({
   searchParams
 }: {
-  searchParams?: { toast?: string; toastType?: string };
+  searchParams?: {
+    toast?: string;
+    toastType?: string;
+    q?: string;
+    status?: string;
+    role?: string;
+    verified?: string;
+    includeDeleted?: string;
+    page?: string;
+  };
 }) {
   const admin = await requireAdmin();
 
-  const users = await prisma.user.findMany({
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      phone: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      emailVerifiedAt: true,
-      lastLoginAt: true
-    }
-  });
+  const query = searchParams?.q?.trim();
+  const statusFilter = searchParams?.status?.trim();
+  const roleFilter = searchParams?.role?.trim();
+  const verifiedFilter = searchParams?.verified?.trim();
+  const includeDeleted = searchParams?.includeDeleted === "1";
+  const page = Math.max(1, Number(searchParams?.page ?? 1) || 1);
+  const pageSize = 25;
+
+  const where: Record<string, unknown> = {};
+  if (!includeDeleted) {
+    where.deletedAt = null;
+  }
+  if (statusFilter && statusFilter !== "ALL") {
+    where.status = statusFilter;
+  }
+  if (roleFilter && roleFilter !== "ALL") {
+    where.role = roleFilter;
+  }
+  if (verifiedFilter === "verified") {
+    where.emailVerifiedAt = { not: null };
+  }
+  if (verifiedFilter === "unverified") {
+    where.emailVerifiedAt = null;
+  }
+  if (query) {
+    where.OR = [
+      { email: { contains: query, mode: "insensitive" } },
+      { name: { contains: query, mode: "insensitive" } },
+      { phone: { contains: query, mode: "insensitive" } }
+    ];
+  }
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        emailVerifiedAt: true,
+        lastLoginAt: true,
+        deletedAt: true
+      }
+    }),
+    prisma.user.count({ where })
+  ]);
 
   const inactiveCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
@@ -42,6 +86,9 @@ export default async function AdminUsersPage({
         <p className="text-sm text-slate-400">
           Manage accounts, roles, approvals, and password resets.
         </p>
+        <div className="pt-2">
+          <CreateUserModal />
+        </div>
       </div>
 
       {searchParams?.toast ? (
@@ -49,8 +96,8 @@ export default async function AdminUsersPage({
           className={[
             "rounded-lg border p-3 text-sm",
             searchParams.toastType === "error"
-              ? "border-rose-500/40 bg-rose-500/10 text-rose-200"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+              ? "border-rose-500/40 bg-rose-50 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200"
+              : "border-emerald-500/40 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200"
           ].join(" ")}
         >
           {searchParams.toast}
@@ -62,6 +109,62 @@ export default async function AdminUsersPage({
           <p className="text-sm text-slate-400">All users</p>
         </CardHeader>
         <CardContent>
+          <form className="mb-4 flex flex-wrap items-end gap-3" method="get">
+            <div className="space-y-1">
+              <label className="text-xs uppercase text-slate-500">Search</label>
+              <Input name="q" defaultValue={query} placeholder="Email, name, phone" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs uppercase text-slate-500">Status</label>
+              <select
+                name="status"
+                defaultValue={statusFilter ?? "ALL"}
+                className="h-11 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <option value="ALL">All</option>
+                <option value="PENDING">Pending</option>
+                <option value="ACTIVE">Active</option>
+                <option value="DISABLED">Disabled</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs uppercase text-slate-500">Role</label>
+              <select
+                name="role"
+                defaultValue={roleFilter ?? "ALL"}
+                className="h-11 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <option value="ALL">All</option>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs uppercase text-slate-500">Verified</label>
+              <select
+                name="verified"
+                defaultValue={verifiedFilter ?? "all"}
+                className="h-11 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <option value="all">All</option>
+                <option value="verified">Verified</option>
+                <option value="unverified">Unverified</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                name="includeDeleted"
+                value="1"
+                defaultChecked={includeDeleted}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Include deleted
+            </label>
+            <Button type="submit" variant="outline" size="sm">
+              Apply
+            </Button>
+          </form>
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
@@ -82,13 +185,15 @@ export default async function AdminUsersPage({
                     ((lastLogin && lastLogin < inactiveCutoff) ||
                       (!lastLogin && u.createdAt < inactiveCutoff));
                   const statusLabel =
-                    u.status === "PENDING"
-                      ? "PENDING"
-                      : u.status === "DISABLED"
-                        ? "DISABLED"
-                        : isInactive
-                          ? "INACTIVE"
-                          : "ACTIVE";
+                    u.deletedAt
+                      ? "DELETED"
+                      : u.status === "PENDING"
+                        ? "PENDING"
+                        : u.status === "DISABLED"
+                          ? "DISABLED"
+                          : isInactive
+                            ? "INACTIVE"
+                            : "ACTIVE";
                   return (
                     <tr key={u.id} className="text-slate-900 dark:text-slate-100">
                       <td className="px-4 py-3">
@@ -103,78 +208,31 @@ export default async function AdminUsersPage({
                         <div className="text-xs text-slate-500">
                           {u.phone ?? "—"} · Created {u.createdAt.toDateString()}
                           {lastLogin ? ` · Last sign-in ${lastLogin.toDateString()}` : ""}
+                          {u.deletedAt ? ` · Deleted ${u.deletedAt.toDateString()}` : ""}
                         </div>
                       </td>
                       <td className="px-4 py-3">{u.name ?? "—"}</td>
                       <td className="px-4 py-3">
-                        <form action={adminUpdateUserStatusAction} className="flex items-center gap-2">
-                          <input type="hidden" name="userId" value={u.id} />
-                          <select
-                            name="status"
-                            defaultValue={statusLabel}
-                            disabled={isSelf}
-                            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                          >
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE" disabled>
-                              Inactive (90+ days)
-                            </option>
-                            <option value="DISABLED">Disabled</option>
-                            <option value="PENDING">Pending</option>
-                          </select>
-                          <Button type="submit" variant="outline" size="sm" disabled={isSelf}>
-                            Save
-                          </Button>
-                        </form>
+                        <div className="text-sm text-slate-700 dark:text-slate-200">
+                          {statusLabel}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {u.emailVerifiedAt ? "Verified" : "Unverified"}
+                        </div>
                       </td>
+                      <td className="px-4 py-3">{u.role}</td>
                       <td className="px-4 py-3">
-                        <form action={adminUpdateUserRoleAction} className="flex items-center gap-2">
-                          <input type="hidden" name="userId" value={u.id} />
-                          <select
-                            name="role"
-                            defaultValue={u.role}
-                            disabled={isSelf}
-                            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                          >
-                            <option value="USER">User</option>
-                            <option value="ADMIN">Admin</option>
-                          </select>
-                          <Button type="submit" variant="outline" size="sm" disabled={isSelf}>
-                            Save
-                          </Button>
-                        </form>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <span className="self-center text-xs text-slate-500">
-                            {u.emailVerifiedAt ? "Verified" : "Unverified"}
-                          </span>
-                          {!u.emailVerifiedAt ? (
-                            <form action={adminResendVerificationAction}>
-                              <input type="hidden" name="userId" value={u.id} />
-                              <Button type="submit" variant="outline" size="sm">
-                                Resend verify
-                              </Button>
-                            </form>
-                          ) : null}
-                          <form action={adminForcePasswordResetAction}>
-                            <input type="hidden" name="userId" value={u.id} />
-                            <Button type="submit" variant="outline" size="sm">
-                              Force reset
-                            </Button>
-                          </form>
-                          <form action={adminDeleteUserAction}>
-                            <input type="hidden" name="userId" value={u.id} />
-                            <Button
-                              type="submit"
-                              variant="outline"
-                              size="sm"
-                              className="border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
-                              disabled={isSelf}
-                            >
-                              Delete
-                            </Button>
-                          </form>
+                        <div className="flex justify-end">
+                          <UserRowMenu
+                            userId={u.id}
+                            email={u.email}
+                            name={u.name}
+                            phone={u.phone}
+                            role={u.role}
+                            emailVerifiedAt={u.emailVerifiedAt}
+                            status={u.status}
+                            deletedAt={u.deletedAt}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -182,6 +240,43 @@ export default async function AdminUsersPage({
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+            <span>
+              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+              >
+                <Link
+                  href={{
+                    pathname: "/admin/users",
+                    query: { ...searchParams, page: Math.max(1, page - 1).toString() }
+                  }}
+                >
+                  Prev
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                disabled={page * pageSize >= total}
+              >
+                <Link
+                  href={{
+                    pathname: "/admin/users",
+                    query: { ...searchParams, page: (page + 1).toString() }
+                  }}
+                >
+                  Next
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

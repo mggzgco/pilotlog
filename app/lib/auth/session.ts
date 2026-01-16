@@ -16,6 +16,7 @@ export type AppUser = {
   role: AppUserRole;
   status: AppUserStatus;
   emailVerifiedAt?: string | Date | null;
+  deletedAt?: string | Date | null;
 };
 
 export async function getCurrentUser(): Promise<{ session: any; user: AppUser | null }> {
@@ -62,6 +63,17 @@ export async function requireUser(): Promise<AppUser> {
   if (!user || !session) {
     // NFR-SEC-001: block unauthenticated access
     redirect("/login");
+  }
+
+  if (user.deletedAt) {
+    try {
+      await lucia.invalidateSession(session.id);
+      const sessionCookie = lucia.createBlankSessionCookie();
+      cookies().set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+    } catch {
+      // ignore cookie write errors in edge cases
+    }
+    redirect("/account-disabled");
   }
 
   if (user.status !== "ACTIVE") {

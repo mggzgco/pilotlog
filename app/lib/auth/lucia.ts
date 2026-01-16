@@ -31,7 +31,8 @@ export const lucia = new Lucia(adapter, {
       phone: attributes.phone,
       role: attributes.role,
       status: attributes.status,
-      emailVerifiedAt: (attributes as any).emailVerifiedAt ?? null
+      emailVerifiedAt: (attributes as any).emailVerifiedAt ?? null,
+      deletedAt: (attributes as any).deletedAt ?? null
     };
   }
 });
