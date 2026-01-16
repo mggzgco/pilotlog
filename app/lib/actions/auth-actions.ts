@@ -114,14 +114,14 @@ export async function registerAction(formData: FormData): Promise<AuthFormState>
   // AUTH-006: notify approver about new account registration
   const approverEmail = process.env.APPROVER_EMAIL ?? "";
   const token = createApprovalToken();
-  const tokenHash = hashApprovalToken(token);
-  const expiresAt = approvalTokenExpiry();
+  const approvalTokenHash = hashApprovalToken(token);
+  const approvalExpiresAt = approvalTokenExpiry();
 
   await prisma.accountApprovalToken.create({
     data: {
       userId: user.id,
-      tokenHash,
-      expiresAt
+      tokenHash: approvalTokenHash,
+      expiresAt: approvalExpiresAt
     }
   });
 
@@ -357,7 +357,9 @@ export async function forgotPasswordAction(formData: FormData): Promise<AuthForm
     userAgent: getUserAgent()
   });
   if ("error" in result) {
-    return { error: result.error };
+    return {
+      error: typeof result.error === "string" ? result.error : "Unable to process password reset."
+    };
   }
   return { success: result.success };
 }
@@ -377,7 +379,9 @@ export async function resetPasswordAction(formData: FormData): Promise<AuthFormS
     userAgent: getUserAgent()
   });
   if ("error" in result) {
-    return { error: result.error };
+    return {
+      error: typeof result.error === "string" ? result.error : "Unable to reset password."
+    };
   }
   return { error: undefined, success: result.success };
 }

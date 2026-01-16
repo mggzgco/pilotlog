@@ -153,10 +153,7 @@ export async function resetPassword({
 
     return { success: "Password reset. Please log in." };
   } catch (error) {
-    return handleActionError(
-      error,
-      "auth.password-reset.complete",
-      "Unable to reset password."
-    );
+    console.error("password-reset.complete failed", error);
+    return { error: "Unable to reset password." };
   }
 }
