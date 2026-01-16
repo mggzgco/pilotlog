@@ -242,7 +242,7 @@ export async function sendTestEmailAction(formData: FormData) {
   }
 
   const stored = await prisma.emailTemplate.findUnique({ where: { key: parsed.data.key } });
-  const template = stored ?? getDefaultEmailTemplate(parsed.data.key);
+  const template = stored ?? getDefaultEmailTemplate(parsed.data.key as EmailTemplateKey);
   const context = buildSampleContext();
   const subject = applyTemplate(template.subject, context);
   const html = applyTemplate(template.html, context);
